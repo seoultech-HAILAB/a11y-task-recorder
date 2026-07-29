@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <title>A11y Task Recorder NVDA 애드온</title>
+  </head>
+  <body>
+    <h1>A11y Task Recorder</h1>
+    <p>
+      진행 중인 로컬 A11y Task Recorder 세션에 NVDA 입력과 당시의 접근성 객체
+      메타데이터, 요소별로 병합한 발화와 발화 완료·중단 시각을 기록합니다.
+    </p>
+    <h2>단축키</h2>
+    <dl>
+      <dt>NVDA+Control+Shift+M</dt>
+      <dd>현재 지점을 불편 지점으로 표시합니다. 성공하면 높은 확인음이 납니다.</dd>
+      <dt>NVDA+Control+Shift+R</dt>
+      <dd>기록 상태를 확인합니다. 기록 중이면 상승음, 대기 중이면 낮은음이 납니다.</dd>
+    </dl>
+    <h2>개인정보 보호</h2>
+    <p>
+      일반 입력 문자는 저장하지 않습니다. 문자 입력 직후 NVDA가 출력한 문자 에코도
+      숨김 처리합니다. 모든 데이터는 127.0.0.1의 로컬 수집 서버로만 전송됩니다.
+    </p>
+    <p>
+      발화 이벤트에는 accessible name, role, state, IA2UniqueID가 포함될 수 있으며,
+      실제 오디오는 녹음하지 않습니다.
+    </p>
+  </body>
+</html>

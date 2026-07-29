@@ -1,0 +1,76 @@
+:root {
+  font-family: "Malgun Gothic", system-ui, sans-serif;
+  color: #15211d;
+  background: #fffefa;
+}
+
+body {
+  width: 310px;
+  margin: 0;
+}
+
+main {
+  padding: 20px;
+}
+
+.eyebrow {
+  margin: 0;
+  color: #0f6046;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 4px 0 16px;
+  font-size: 1.35rem;
+}
+
+#status {
+  min-height: 66px;
+  padding: 11px;
+  border-radius: 7px;
+  background: #eef1ec;
+}
+
+#status p {
+  margin: 0;
+}
+
+#status strong {
+  display: block;
+}
+
+button {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 14px;
+  border: 0;
+  border-radius: 6px;
+  color: white;
+  background: #a34d00;
+  font: inherit;
+  font-weight: 750;
+}
+
+button:disabled {
+  color: #6c756f;
+  background: #dfe3df;
+}
+
+.hint {
+  color: #5c6b65;
+  font-size: 0.75rem;
+}
+
+a {
+  color: #0f6046;
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+
+:focus-visible {
+  outline: 3px solid #ffb000;
+  outline-offset: 2px;
+}

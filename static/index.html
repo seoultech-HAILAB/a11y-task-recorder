@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>A11y Task Recorder</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+    <header class="app-header">
+      <div class="header-inner">
+        <a class="brand" href="/" data-action="home" aria-label="A11y Task Recorder 홈">
+          <span class="brand-mark" aria-hidden="true">A11Y</span>
+          <span>
+            <strong>A11y Task Recorder</strong>
+            <small>NVDA 웹 과업 관찰 도구</small>
+          </span>
+        </a>
+        <p id="connection-status" class="status-pill" role="status">서버 확인 중</p>
+      </div>
+    </header>
+
+    <main id="main" tabindex="-1">
+      <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+
+      <section id="home-view" class="page">
+        <div class="hero">
+          <div>
+            <p class="eyebrow">로컬 우선 · 개인정보 보호</p>
+            <h1>스크린리더 사용 흐름을<br>맥락과 함께 기록하세요</h1>
+            <p class="hero-copy">
+              키 입력, NVDA 음성 출력, 페이지 이동과 사용자의 불편 지점을 하나의
+              타임라인에서 검토합니다.
+            </p>
+          </div>
+          <div class="hero-steps" aria-label="사용 순서">
+            <span><b>1</b> 세션 만들기</span>
+            <span><b>2</b> 기록 시작</span>
+            <span><b>3</b> 문제 라벨링</span>
+          </div>
+        </div>
+
+        <div class="home-grid">
+          <section class="panel create-panel" aria-labelledby="create-heading">
+            <div class="section-heading">
+              <p class="eyebrow">새 평가</p>
+              <h2 id="create-heading">과업 세션 만들기</h2>
+            </div>
+            <form id="session-form">
+              <div class="field">
+                <label for="title">시나리오 제목 <span aria-hidden="true">*</span></label>
+                <input id="title" name="title" required autocomplete="off"
+                  placeholder="예: 상품을 검색하고 장바구니에 담기">
+              </div>
+              <div class="two-columns">
+                <div class="field">
+                  <label for="participant">참여자 코드</label>
+                  <input id="participant" name="participant" autocomplete="off"
+                    placeholder="예: P01">
+                </div>
+                <div class="field">
+                  <label for="target-url">시작 URL</label>
+                  <input id="target-url" name="target_url" type="url"
+                    placeholder="https://example.com">
+                </div>
+              </div>
+              <div class="field">
+                <label for="scenario">과업 설명</label>
+                <textarea id="scenario" name="scenario" rows="4"
+                  placeholder="사용자에게 안내할 목표와 완료 조건을 적어 주세요."></textarea>
+              </div>
+              <div class="field">
+                <label for="expected-announcement">주요 기대 안내</label>
+                <textarea id="expected-announcement" name="expected_announcement" rows="3"
+                  placeholder="예: 검색 완료 후 ‘검색 결과 12건’이라고 안내"></textarea>
+                <p class="hint">정답을 유도하지 않도록 평가 시작 전에는 참여자에게 노출하지 않습니다.</p>
+              </div>
+              <details class="environment-details">
+                <summary>평가 환경 기록</summary>
+                <div class="two-columns details-content">
+                  <div class="field">
+                    <label for="nvda-version">NVDA 버전</label>
+                    <input id="nvda-version" name="nvda_version" placeholder="예: 2026.1">
+                  </div>
+                  <div class="field">
+                    <label for="browser-version">브라우저</label>
+                    <input id="browser-version" name="browser" placeholder="예: Chrome 140">
+                  </div>
+                  <div class="field">
+                    <label for="speech-rate">음성 속도</label>
+                    <input id="speech-rate" name="speech_rate" placeholder="예: 70%">
+                  </div>
+                  <div class="field">
+                    <label for="keyboard-layout">키보드 배열</label>
+                    <select id="keyboard-layout" name="keyboard_layout">
+                      <option value="">선택 안 함</option>
+                      <option value="desktop">데스크톱</option>
+                      <option value="laptop">노트북</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="prior-site-experience">해당 사이트 사용 경험</label>
+                    <select id="prior-site-experience" name="prior_site_experience">
+                      <option value="">선택 안 함</option>
+                      <option value="none">처음 사용</option>
+                      <option value="rare">가끔 사용</option>
+                      <option value="frequent">자주 사용</option>
+                    </select>
+                  </div>
+                </div>
+              </details>
+              <button class="button primary wide" type="submit">세션 만들기</button>
+            </form>
+          </section>
+
+          <section class="panel sessions-panel" aria-labelledby="sessions-heading">
+            <div class="section-heading row-heading">
+              <div>
+                <p class="eyebrow">기록 보관함</p>
+                <h2 id="sessions-heading">평가 세션</h2>
+              </div>
+              <button class="button quiet compact" type="button" data-action="refresh-sessions">
+                새로고침
+              </button>
+            </div>
+            <div id="session-list" class="session-list">
+              <p class="empty-state">세션을 불러오는 중입니다.</p>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section id="session-view" class="page" hidden>
+        <button class="back-button" type="button" data-action="home">← 세션 목록</button>
+
+        <header class="session-header">
+          <div>
+            <div class="title-line">
+              <span id="session-status" class="session-status">초안</span>
+              <span id="session-participant" class="muted"></span>
+            </div>
+            <h1 id="session-title">세션</h1>
+            <p id="session-target" class="target-url"></p>
+          </div>
+          <div class="session-actions">
+            <button id="start-button" class="button primary" type="button" data-action="start">
+              기록 시작
+            </button>
+            <button id="marker-button" class="button marker" type="button" data-action="marker" hidden>
+              불편 지점 표시
+            </button>
+            <button id="stop-button" class="button danger" type="button" data-action="stop" hidden>
+              완료하고 종료
+            </button>
+            <button id="abandon-button" class="button quiet" type="button" data-action="abandon" hidden>
+              중단
+            </button>
+          </div>
+        </header>
+
+        <section class="panel step-panel" aria-labelledby="steps-heading">
+          <div class="section-heading row-heading">
+            <div>
+              <p class="eyebrow">과업 구간</p>
+              <h2 id="steps-heading">시나리오 step과 힌트</h2>
+            </div>
+            <p class="muted">기록 중 활성 step이 모든 이벤트에 자동 연결됩니다.</p>
+          </div>
+          <form id="step-form" class="inline-form">
+            <div class="field grow">
+              <label for="step-title">새 step 제목</label>
+              <input id="step-title" name="title" placeholder="예: 검색어 입력" required>
+            </div>
+            <div class="field grow">
+              <label for="step-expected">이 step의 기대 발화</label>
+              <input id="step-expected" name="expected_announcement"
+                placeholder="예: 검색어 편집창">
+            </div>
+            <button class="button quiet" type="submit">step 추가</button>
+          </form>
+          <div id="step-list" class="step-list">
+            <p class="empty-state">등록한 step이 없습니다.</p>
+          </div>
+          <form id="hint-form" class="inline-form hint-form" hidden>
+            <div class="field grow">
+              <label for="hint-text">지금 제공한 힌트</label>
+              <input id="hint-text" name="text"
+                placeholder="힌트 내용을 입력하면 제공 시각과 현재 step이 기록됩니다.">
+            </div>
+            <button class="button marker" type="submit">힌트 시점 기록</button>
+          </form>
+        </section>
+
+        <section aria-labelledby="summary-heading">
+          <div class="section-heading summary-title">
+            <div>
+              <p class="eyebrow">실시간 요약</p>
+              <h2 id="summary-heading">과업 지표</h2>
+            </div>
+            <p id="last-updated" class="muted"></p>
+          </div>
+          <div id="metrics" class="metrics"></div>
+          <details class="shortcut-details panel inset">
+            <summary>사용한 단축키 종류와 횟수</summary>
+            <div id="shortcut-counts" class="shortcut-counts"></div>
+          </details>
+        </section>
+
+        <section id="review-panel" class="panel review-panel" aria-labelledby="review-heading" hidden>
+          <div class="section-heading row-heading">
+            <div>
+              <p class="eyebrow">종료 후 회고</p>
+              <h2 id="review-heading">타임라인 재생 · “여기였나요?”</h2>
+            </div>
+            <p id="review-position" class="muted"></p>
+          </div>
+          <p class="hint">실제 NVDA 음성을 다시 합성하는 기능이 아니라, 기록한 입력·포커스·원문 발화를 시간순으로 재구성합니다.</p>
+          <article id="review-card" class="review-card" tabindex="-1"></article>
+          <div class="form-actions review-actions">
+            <button class="button quiet" type="button" data-action="review-prev">이전</button>
+            <button class="button quiet" type="button" data-action="review-next">다음</button>
+            <button class="button marker" type="button" data-action="review-point">
+              여기였어요
+            </button>
+            <button class="button quiet" type="button" data-action="review-range-start">
+              불편 시작
+            </button>
+            <button class="button quiet" type="button" data-action="review-range-end">
+              불편 끝
+            </button>
+          </div>
+        </section>
+
+        <div class="workspace-grid">
+          <div class="workspace-main">
+            <section class="panel" aria-labelledby="timeline-heading">
+              <div class="section-heading row-heading">
+                <div>
+                  <p class="eyebrow">결합 로그</p>
+                  <h2 id="timeline-heading">이벤트 타임라인</h2>
+                </div>
+                <button class="button quiet compact" type="button" data-action="refresh-session">
+                  새로고침
+                </button>
+              </div>
+              <div class="timeline-tools">
+                <div class="field filter-field">
+                  <label for="event-filter">이벤트 필터</label>
+                  <select id="event-filter">
+                    <option value="all">전체</option>
+                    <option value="speech">NVDA 발화</option>
+                    <option value="input">키 입력</option>
+                    <option value="navigation">페이지 이동</option>
+                    <option value="focus">포커스</option>
+                    <option value="marker">불편 지점 표시</option>
+                    <option value="hint">힌트</option>
+                    <option value="dom_mutation">DOM 변화</option>
+                  </select>
+                </div>
+                <p id="selection-help" class="selection-help">
+                  문제 구간을 만들려면 이벤트를 하나 이상 선택하세요.
+                </p>
+              </div>
+              <div class="table-scroll" tabindex="0" aria-label="이벤트 타임라인 표 가로 스크롤 영역">
+                <table class="event-table">
+                  <thead>
+                    <tr>
+                      <th scope="col"><span class="sr-only">구간 선택</span></th>
+                      <th scope="col">시간</th>
+                      <th scope="col">출처</th>
+                      <th scope="col">이벤트</th>
+                      <th scope="col">내용과 맥락</th>
+                      <th scope="col">작업</th>
+                    </tr>
+                  </thead>
+                  <tbody id="event-list">
+                    <tr><td colspan="6" class="empty-state">기록된 이벤트가 없습니다.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
+          <aside class="workspace-side">
+            <section class="panel sticky-panel" aria-labelledby="issue-form-heading">
+              <div class="section-heading">
+                <p class="eyebrow">관찰 메모</p>
+                <h2 id="issue-form-heading">문제 라벨링</h2>
+              </div>
+              <form id="issue-form">
+                <input id="start-event-id" name="start_event_id" type="hidden">
+                <input id="end-event-id" name="end_event_id" type="hidden">
+                <input id="start-step-id" name="start_step_id" type="hidden">
+                <input id="end-step-id" name="end_step_id" type="hidden">
+                <p id="issue-range" class="range-display">연결된 이벤트 없음</p>
+                <div class="field">
+                  <label for="issue-summary">문제 요약 <span aria-hidden="true">*</span></label>
+                  <input id="issue-summary" name="summary" required
+                    placeholder="예: 검색 결과 변경 안내가 없음">
+                </div>
+                <div class="field">
+                  <label for="issue-description">사용자가 느낀 불편</label>
+                  <textarea id="issue-description" name="description" rows="4"></textarea>
+                </div>
+                <div class="field">
+                  <label for="issue-expected">기대 안내 또는 동작</label>
+                  <textarea id="issue-expected" name="expected_announcement" rows="3"></textarea>
+                </div>
+                <div class="two-columns issue-columns">
+                  <div class="field">
+                    <label for="issue-severity">심각도</label>
+                    <select id="issue-severity" name="severity">
+                      <option value="minor">경미</option>
+                      <option value="moderate" selected>보통</option>
+                      <option value="major">중대</option>
+                      <option value="critical">치명적</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="issue-tags">태그</label>
+                    <input id="issue-tags" name="tags" placeholder="포커스, 안내 부족">
+                  </div>
+                </div>
+                <button class="button primary wide" type="submit">문제 등록</button>
+                <button class="button quiet wide" type="button" data-action="clear-range">
+                  선택 구간 지우기
+                </button>
+              </form>
+            </section>
+          </aside>
+        </div>
+
+        <section class="panel issues-section" aria-labelledby="issues-heading">
+          <div class="section-heading">
+            <p class="eyebrow">발견 사항</p>
+            <h2 id="issues-heading">등록한 문제</h2>
+          </div>
+          <div id="issue-list" class="issue-list">
+            <p class="empty-state">등록한 문제가 없습니다.</p>
+          </div>
+        </section>
+
+        <section class="panel wrap-up" aria-labelledby="wrap-up-heading">
+          <div class="section-heading">
+            <p class="eyebrow">세션 회고</p>
+            <h2 id="wrap-up-heading">종합 의견과 내보내기</h2>
+          </div>
+          <form id="notes-form">
+            <div class="field">
+              <label for="session-notes">사용자가 시나리오를 수행하며 느낀 불편과 의견</label>
+              <textarea id="session-notes" rows="5"
+                placeholder="세션 종료 후 참여자의 표현을 가능한 그대로 기록하세요."></textarea>
+            </div>
+            <div class="form-actions">
+              <button class="button primary" type="submit">의견 저장</button>
+              <a id="export-json" class="button quiet" href="#">JSON 내보내기</a>
+              <a id="export-csv" class="button quiet" href="#">CSV 내보내기</a>
+            </div>
+          </form>
+        </section>
+
+        <details class="panel scenario-details">
+          <summary>시나리오와 평가 환경 보기</summary>
+          <dl id="session-details" class="details-list"></dl>
+        </details>
+      </section>
+    </main>
+
+    <footer>
+      <p>모든 데이터는 이 컴퓨터의 로컬 SQLite 파일에 저장됩니다.</p>
+    </footer>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

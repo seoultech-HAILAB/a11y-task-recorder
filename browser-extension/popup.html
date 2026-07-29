@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>A11y Task Recorder 상태</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">A11y Task Recorder</p>
+      <h1>수집 상태</h1>
+      <div id="status" role="status" aria-live="polite">
+        <p>로컬 서버를 확인하는 중입니다.</p>
+      </div>
+      <button id="marker" type="button" disabled>현재 지점을 불편으로 표시</button>
+      <p class="hint">단축키: <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd></p>
+      <a href="http://127.0.0.1:8765/" target="_blank">대시보드 열기</a>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>
