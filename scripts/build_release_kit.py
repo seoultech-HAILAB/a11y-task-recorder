@@ -147,9 +147,19 @@ kbd { background: #eee; border: 1px solid #bbb; border-radius: 4px; padding: 0 0
 <li><strong>일부 동영상이 재생되지 않아요</strong> — 평가용 브라우저에는 일부 상용 동영상 코덱이 없습니다. 과업에 문제가 되면 연구 담당자에게 알려 주세요.</li>
 </ul>
 
+<h2>어떤 데이터가 기록되나요?</h2>
+<p>기록은 세션이 <strong>기록 중</strong>인 동안에만 이루어집니다. 참여자 동의 안내에 그대로 사용할 수 있습니다.</p>
+<ul>
+<li><strong>NVDA</strong>: 누른 키(예: Tab), 그 순간 포커스된 요소의 이름·역할, NVDA가 읽어 준 안내 문구 전문과 읽기 시작·중단 시각, 불편 표시 시점</li>
+<li><strong>평가용 브라우저</strong>: 방문한 페이지 주소(검색어 등 매개변수 제외), 페이지 제목, 화면 변화 횟수(내용은 저장하지 않음)</li>
+<li><strong>연구자 입력</strong>: 시나리오·참여자 코드·step, 힌트, 문제 라벨, 종합 의견</li>
+<li><strong>환경 정보</strong>: NVDA 버전·합성기, 브라우저·확장 버전</li>
+</ul>
 <div class="note">
-<p><strong>개인정보</strong>: 입력한 글자와 비밀번호, 주소창의 검색어(쿼리)는 수집하지 않습니다.
-기록은 이 컴퓨터의 <strong>data</strong> 폴더에만 저장되며 자동으로 외부에 전송되지 않습니다.</p>
+<p><strong>수집하지 않는 것</strong>: 키보드로 입력한 실제 글자·비밀번호·폼 내용(문자 에코는
+<strong>[입력 문자 음성 출력 숨김]</strong>으로 대체), 음성·오디오 녹음과 화면 녹화, 주소창의
+검색어(쿼리)와 해시. 모든 기록은 이 컴퓨터의 <strong>data</strong> 폴더에만 저장되며,
+<strong>결과 패키지 만들기</strong>로 ZIP을 만들어 직접 보낼 때만 컴퓨터 밖으로 나갑니다.</p>
 </div>
 
 <h2>문의</h2>
