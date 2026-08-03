@@ -8,7 +8,13 @@ NVDA 데이터는 **NVDA 발화** 또는 **스크린 리더 발화(speech output
 
 ## 처음부터 설치하기
 
-개발 경험이 없는 평가자도 아래 순서대로 설치할 수 있습니다.
+> **평가만 진행하는 기관이라면** 아래 수동 설치 대신
+> [Releases](https://github.com/seoultech-HAILAB/a11y-task-recorder/releases)에서
+> 올인원 평가 키트 ZIP을 받는 것이 가장 간단합니다 — 압축 해제, NVDA 애드온
+> 더블클릭, `평가시작.bat` 실행이 전부입니다. 자세한 내용은 아래
+> [평가 기관 배포용 올인원 키트](#평가-기관-배포용-올인원-키트) 절을 참고하세요.
+
+아래 수동 설치는 개발 환경을 직접 구성할 때의 순서입니다.
 
 ### 준비물
 
@@ -65,6 +71,10 @@ Chrome은 주소창에 `chrome://extensions`, Edge는 `edge://extensions`를
 
 세션을 시작하면 확장 아이콘에 `REC` 배지가 표시됩니다.
 
+Chrome 134부터 압축해제 확장은 개발자 모드가 꺼지면 함께 비활성화되고,
+브라우저 업데이트 후 꺼져 있을 수 있습니다. 평가 전에 확장이 켜져 있는지
+확인하고, 장기·다기관 평가에는 이 문제가 없는 올인원 키트 방식을 권장합니다.
+
 ### 4. NVDA 애드온 설치
 
 `dist\a11yTaskRecorder-0.2.0.nvda-addon` 파일을 실행합니다. NVDA가 설치 여부를
@@ -114,6 +124,8 @@ NVDA 재시작 후 `NVDA+Control+Shift+R`을 누릅니다.
 - 이벤트 구간과 step 구간에 문제 설명, 심각도, 기대 발화와 태그 연결
 - 사용자 종합 의견 저장
 - 전체 세션 JSON 및 이벤트 CSV 내보내기
+- 완료 세션 전체를 **결과 패키지**(세션별 JSON·CSV + DB 사본이 담긴 ZIP 하나)로
+  일괄 내보내기
 - SQLite 로컬 저장과 입력 문자·URL 쿼리 기본 비수집
 
 ## 수집 구조와 연구 근거
@@ -140,7 +152,7 @@ NVDA speech ───── 원문 조각 → 요소별 발화 에피소드 → 
 ├── static/                  접근 가능한 세션 대시보드
 ├── browser-extension/       Chrome/Edge Manifest V3 확장
 ├── nvda-addon/              NVDA Global Plugin 소스
-├── scripts/                 NVDA 애드온 패키징 도구
+├── scripts/                 NVDA 애드온 패키징·평가 키트 생성 도구
 ├── tests/                   저장소와 HTTP API 자동 테스트
 ├── run.py                   로컬 서버 진입점
 └── start-recorder.bat       Windows 실행 파일
@@ -186,8 +198,9 @@ py -3 scripts\build_nvda_addon.py
 
 지원 기준은 NVDA 2024.1 이상이며 manifest의 마지막 시험 대상으로 NVDA 2026.1을
 표시했습니다. 실제 평가 환경에는 NV Access가 배포하는 최신 공식 안정 버전을
-권장합니다. 이 저장소는 macOS에서 개발되었으므로 첫 Windows 시험에서는 아래
-체크리스트로 실제 NVDA 호환성을 확인해야 합니다.
+권장합니다. Windows 11 + NVDA 2026.1.1 + Chrome 조합에서 실제 평가로 전체
+파이프라인 동작을 검증했습니다(2026-08). 애드온이나 NVDA 버전을 바꾼 뒤에는
+아래 수동 시험 체크리스트로 다시 확인하세요.
 
 NVDA 2025.1 이상에서는 음성 합성 직전의 처리된 대기열을 기록합니다. NVDA 2024.x는
 동일한 확장 지점이 없어, NVDA가 음성 출력을 시도하는 한 단계 앞의 이벤트를
@@ -219,6 +232,11 @@ py -3 scripts\build_release_kit.py
 됩니다. 보안 패치 반영을 위해 평가 라운드마다 키트를 새로 생성해 배포하세요.
 Chrome for Testing에는 일부 상용 코덱(H.264 등)이 없으므로 동영상 재생이
 핵심인 과업에는 사전 확인이 필요합니다.
+
+생성한 ZIP은 이 저장소의
+[Releases](https://github.com/seoultech-HAILAB/a11y-task-recorder/releases)에
+올려 배포하면 평가 기관이 링크 하나로 받을 수 있습니다. 평가 결과는 대시보드의
+**결과 패키지 만들기** 버튼으로 만든 ZIP 하나를 회수하면 됩니다.
 
 ## 사용 방법
 
@@ -275,6 +293,9 @@ Chrome for Testing에는 일부 상용 코덱(H.264 등)이 없으므로 동영�
 
 세션 데이터는 압축을 푼 폴더의 `data\recorder.sqlite3`에 저장됩니다.
 
+- 전달: 대시보드 기록 보관함의 **결과 패키지 만들기**를 누르면 완료 세션
+  전체의 JSON·CSV와 DB 사본이 `결과` 폴더에 ZIP 하나로 만들어집니다. 이
+  파일을 연구 담당자에게 보내면 됩니다.
 - 백업: 서버를 종료한 뒤 `recorder.sqlite3` 파일을 안전한 위치에 복사합니다.
 - 다른 PC로 이동: 프로그램 폴더와 `data` 폴더를 함께 복사합니다.
 - 데이터 초기화: 서버를 종료하고 `data\recorder.sqlite3`을 별도 보관하거나
