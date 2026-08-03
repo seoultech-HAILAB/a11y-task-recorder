@@ -16,7 +16,7 @@
           <span class="brand-mark" aria-hidden="true">A11Y</span>
           <span>
             <strong>A11y Task Recorder</strong>
-            <small>NVDA 웹 과업 관찰 도구</small>
+            <small>A11y Agents · NVDA 과업 기록 도구</small>
           </span>
         </a>
         <p id="connection-status" class="status-pill" role="status">서버 확인 중</p>
@@ -122,9 +122,14 @@
                 <p class="eyebrow">기록 보관함</p>
                 <h2 id="sessions-heading">평가 세션</h2>
               </div>
-              <button class="button quiet compact" type="button" data-action="refresh-sessions">
-                새로고침
-              </button>
+              <div class="row-actions">
+                <button class="button quiet compact" type="button" data-action="export-package">
+                  결과 패키지 만들기
+                </button>
+                <button class="button quiet compact" type="button" data-action="refresh-sessions">
+                  새로고침
+                </button>
+              </div>
             </div>
             <div id="session-list" class="session-list">
               <p class="empty-state">세션을 불러오는 중입니다.</p>
@@ -209,31 +214,6 @@
           </details>
         </section>
 
-        <section id="review-panel" class="panel review-panel" aria-labelledby="review-heading" hidden>
-          <div class="section-heading row-heading">
-            <div>
-              <p class="eyebrow">종료 후 회고</p>
-              <h2 id="review-heading">타임라인 재생 · “여기였나요?”</h2>
-            </div>
-            <p id="review-position" class="muted"></p>
-          </div>
-          <p class="hint">실제 NVDA 음성을 다시 합성하는 기능이 아니라, 기록한 입력·포커스·원문 발화를 시간순으로 재구성합니다.</p>
-          <article id="review-card" class="review-card" tabindex="-1"></article>
-          <div class="form-actions review-actions">
-            <button class="button quiet" type="button" data-action="review-prev">이전</button>
-            <button class="button quiet" type="button" data-action="review-next">다음</button>
-            <button class="button marker" type="button" data-action="review-point">
-              여기였어요
-            </button>
-            <button class="button quiet" type="button" data-action="review-range-start">
-              불편 시작
-            </button>
-            <button class="button quiet" type="button" data-action="review-range-end">
-              불편 끝
-            </button>
-          </div>
-        </section>
-
         <div class="workspace-grid">
           <div class="workspace-main">
             <section class="panel" aria-labelledby="timeline-heading">
@@ -246,6 +226,11 @@
                   새로고침
                 </button>
               </div>
+              <p id="review-guide" class="hint" hidden>
+                참여자와 함께 타임라인을 검토하세요. 불편 지점 칩으로 바로 이동한 뒤,
+                구간의 시작과 끝 이벤트를 선택하면 오른쪽 양식으로 문제를 등록할 수 있습니다.
+              </p>
+              <nav id="anchor-chips" class="anchor-chips" aria-label="타임라인 빠른 이동" hidden></nav>
               <div class="timeline-tools">
                 <div class="field filter-field">
                   <label for="event-filter">이벤트 필터</label>

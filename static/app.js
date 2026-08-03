@@ -6,8 +6,6 @@ const state = {
   issues: [],
   steps: [],
   selectedEventIds: new Set(),
-  reviewIndex: 0,
-  reviewRangeStart: null,
   notesDirty: false,
   pollTimer: null,
   noticeTimer: null,
@@ -247,10 +245,6 @@ async function refreshSession(sessionId = state.currentSession?.id, updateTimest
     state.events = eventData.events;
     state.issues = issueData.issues;
     state.steps = sessionData.session.steps || [];
-    state.reviewIndex = Math.min(
-      state.reviewIndex,
-      Math.max(0, state.events.length - 1)
-    );
     renderSession();
     if (updateTimestamp) {
       byId("last-updated").textContent = `갱신 ${formatTime(new Date().toISOString())}`;
@@ -292,7 +286,7 @@ function renderSession() {
   renderEvents();
   renderIssues();
   renderSteps();
-  renderReview();
+  renderAnchors();
   renderDetails();
 }
 
@@ -376,7 +370,7 @@ function eventDetail(event) {
     stepLabel(event.step_id),
     event.speech_end_ts
       ? `발화 종료 ${formatTime(event.speech_end_ts)}${
-          event.interrupted ? " · 중단됨" : ""
+          event.interrupted ? " · 청취 중단" : ""
         }`
       : "",
     event.page_title || "",
@@ -399,8 +393,10 @@ function renderEvents() {
     .map((event) => {
       const detail = eventDetail(event);
       const checked = state.selectedEventIds.has(event.id) ? "checked" : "";
+      const rowClass =
+        event.type === "marker" ? "marker-row" : event.type === "hint" ? "hint-row" : "";
       return `
-        <tr data-event-id="${event.id}">
+        <tr data-event-id="${event.id}" class="${rowClass}">
           <td>
             <input type="checkbox" ${checked}
               aria-label="이벤트 ${event.id}, ${escapeHtml(typeLabels[event.type] || event.type)} 구간 선택"
@@ -439,6 +435,13 @@ function updateSelection() {
   const ids = [...state.selectedEventIds].sort((a, b) => a - b);
   const start = ids[0] || "";
   const end = ids[ids.length - 1] || "";
+  document.querySelectorAll("tr[data-event-id]").forEach((row) => {
+    const rowId = Number(row.dataset.eventId);
+    row.classList.toggle(
+      "in-range",
+      ids.length > 0 && rowId >= Number(start) && rowId <= Number(end)
+    );
+  });
   byId("start-event-id").value = start;
   byId("end-event-id").value = end;
   const startEvent = state.events.find((event) => event.id === start);
@@ -583,68 +586,47 @@ function renderSteps() {
     .join("");
 }
 
-function reviewEvents() {
-  return state.events.filter((event) =>
-    [
-      "input",
-      "speech",
-      "speech_episode",
-      "navigation",
-      "history",
-      "page_ready",
-      "marker",
-      "hint",
-      "step_start",
-      "step_end",
-    ].includes(event.type)
+function renderAnchors() {
+  const container = byId("anchor-chips");
+  const guide = byId("review-guide");
+  const completed = ["completed", "abandoned"].includes(state.currentSession?.status);
+  guide.hidden = !completed;
+  const anchors = state.events.filter(
+    (event) => event.type === "marker" || event.type === "hint"
   );
+  container.hidden = !anchors.length;
+  if (!anchors.length) {
+    container.innerHTML = "";
+    return;
+  }
+  let markerCount = 0;
+  let hintCount = 0;
+  container.innerHTML =
+    '<span class="anchor-label">빠른 이동</span>' +
+    anchors
+      .map((event) => {
+        const isMarker = event.type === "marker";
+        const order = isMarker ? ++markerCount : ++hintCount;
+        const label = `${isMarker ? "불편" : "힌트"} ${order} · ${formatTime(event.timestamp)}`;
+        return `<button type="button" class="anchor-chip ${isMarker ? "marker" : "hint"}"
+          data-action="jump-event" data-event-id="${event.id}">${escapeHtml(label)}</button>`;
+      })
+      .join("");
 }
 
-function renderReview() {
-  const panel = byId("review-panel");
-  const completed = ["completed", "abandoned"].includes(state.currentSession.status);
-  const events = reviewEvents();
-  panel.hidden = !completed || !events.length;
-  if (panel.hidden) return;
-  state.reviewIndex = Math.min(Math.max(0, state.reviewIndex), events.length - 1);
-  const event = events[state.reviewIndex];
-  const detail = eventDetail(event);
-  const payload = event.payload || {};
-  const element = event.element || {};
-  const rawSpeech =
-    event.type === "speech_episode" &&
-    payload.raw_text &&
-    payload.raw_text !== payload.normalized_text
-      ? `<p><strong>NVDA 원문 발화:</strong> ${escapeHtml(payload.raw_text)}</p>`
-      : "";
-  byId("review-position").textContent = `${state.reviewIndex + 1} / ${events.length}`;
-  byId("review-card").innerHTML = `
-    <p class="review-meta">${escapeHtml(formatTime(event.timestamp))}
-      · ${escapeHtml(typeLabels[event.type] || event.type)}
-      ${stepLabel(event.step_id) ? ` · ${escapeHtml(stepLabel(event.step_id))}` : ""}
-    </p>
-    <h3>${escapeHtml(detail.primary)}</h3>
-    ${rawSpeech}
-    ${
-      event.speech_end_ts
-        ? `<p><strong>발화 구간:</strong> ${escapeHtml(formatTime(event.timestamp))}
-           – ${escapeHtml(formatTime(event.speech_end_ts))}
-           ${event.interrupted ? " · 다음 입력으로 중단" : " · 완료"}</p>`
-        : ""
-    }
-    ${
-      element.name || element.role
-        ? `<p><strong>요소:</strong> ${escapeHtml(element.name || "")}
-           ${element.role ? `(${escapeHtml(element.role)})` : ""}</p>`
-        : ""
-    }
-    ${
-      element.unique_id
-        ? `<p class="muted">식별자 ${escapeHtml(element.unique_id)}</p>`
-        : ""
-    }
-    ${detail.context ? `<p class="muted">${escapeHtml(detail.context)}</p>` : ""}
-  `;
+function jumpToEvent(eventId) {
+  const filter = byId("event-filter");
+  let row = document.querySelector(`tr[data-event-id="${eventId}"]`);
+  if (!row && filter.value !== "all") {
+    filter.value = "all";
+    renderEvents();
+    row = document.querySelector(`tr[data-event-id="${eventId}"]`);
+  }
+  if (!row) return;
+  row.scrollIntoView({ block: "center", behavior: "smooth" });
+  row.classList.add("jump-flash");
+  setTimeout(() => row.classList.remove("jump-flash"), 1600);
+  row.querySelector("[data-event-select]")?.focus({ preventScroll: true });
 }
 
 async function createStep(form) {
@@ -714,10 +696,19 @@ async function stopSession(status) {
   state.notesDirty = false;
   stopPolling();
   await refreshSession(state.currentSession.id);
-  state.reviewIndex = 0;
-  renderReview();
-  if (!byId("review-panel").hidden) byId("review-card").focus();
-  showNotice(status === "completed" ? "세션을 완료했습니다." : "세션을 중단 상태로 저장했습니다.");
+  const firstAnchor = document.querySelector("#anchor-chips .anchor-chip");
+  if (firstAnchor) {
+    firstAnchor.focus();
+  } else {
+    const heading = byId("timeline-heading");
+    heading.setAttribute("tabindex", "-1");
+    heading.focus();
+  }
+  showNotice(
+    status === "completed"
+      ? "세션을 완료했습니다. 타임라인에서 불편 구간을 검토하고 라벨링하세요."
+      : "세션을 중단 상태로 저장했습니다."
+  );
 }
 
 async function addMarker() {
@@ -785,6 +776,20 @@ document.addEventListener("click", async (event) => {
     } else if (action === "refresh-sessions") {
       await loadSessions();
       showNotice("세션 목록을 새로고침했습니다.");
+    } else if (action === "export-package") {
+      control.disabled = true;
+      try {
+        const data = await request("/api/export-package", { method: "POST", body: {} });
+        const pkg = data.package || {};
+        const skipped = pkg.active_session_count
+          ? ` (진행 중인 세션 ${pkg.active_session_count}개는 제외됨)`
+          : "";
+        showNotice(
+          `결과 패키지를 만들었습니다: ${pkg.file_name} — 완료 세션 ${pkg.session_count}개${skipped}. 결과 폴더가 열립니다.`
+        );
+      } finally {
+        control.disabled = false;
+      }
     } else if (action === "open-session") {
       await openSession(control.dataset.sessionId);
     } else if (action === "refresh-session") {
@@ -802,31 +807,8 @@ document.addEventListener("click", async (event) => {
       await transitionStep(control.dataset.stepId, "start");
     } else if (action === "step-finish") {
       await transitionStep(control.dataset.stepId, "finish");
-    } else if (action === "review-prev" || action === "review-next") {
-      const events = reviewEvents();
-      const delta = action === "review-prev" ? -1 : 1;
-      state.reviewIndex = Math.min(
-        events.length - 1,
-        Math.max(0, state.reviewIndex + delta)
-      );
-      renderReview();
-      byId("review-card").focus();
-    } else if (action === "review-point") {
-      const eventAtCursor = reviewEvents()[state.reviewIndex];
-      setIssueRange([eventAtCursor.id]);
-      byId("issue-description").focus();
-      showNotice("‘여기였어요’ 지점을 문제 양식에 연결했습니다.");
-    } else if (action === "review-range-start") {
-      state.reviewRangeStart = reviewEvents()[state.reviewIndex].id;
-      showNotice("현재 이벤트를 불편 구간 시작으로 지정했습니다.");
-    } else if (action === "review-range-end") {
-      const eventAtCursor = reviewEvents()[state.reviewIndex];
-      setIssueRange([
-        state.reviewRangeStart || eventAtCursor.id,
-        eventAtCursor.id,
-      ]);
-      byId("issue-description").focus();
-      showNotice("회고에서 확인한 불편 구간을 문제 양식에 연결했습니다.");
+    } else if (action === "jump-event") {
+      jumpToEvent(Number(control.dataset.eventId));
     } else if (action === "clear-range") {
       setIssueRange([]);
     } else if (action === "label-event") {
