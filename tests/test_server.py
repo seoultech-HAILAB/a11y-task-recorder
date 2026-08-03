@@ -5,6 +5,7 @@ import sqlite3
 import tempfile
 import threading
 import unittest
+import zipfile
 from contextlib import closing
 from pathlib import Path
 from urllib.error import HTTPError
@@ -216,6 +217,29 @@ class StoreTests(unittest.TestCase):
             namespace["normalizeSpeechText"]("Checkout button clickable"),
         )
 
+    def test_result_package_bundles_finished_sessions(self):
+        self.store.start_session(self.session["id"])
+        self.store.stop_session(self.session["id"], {"status": "completed"})
+        result = self.store.build_result_package()
+        package_path = Path(result["path"])
+        self.assertTrue(package_path.exists())
+        self.assertEqual(1, result["session_count"])
+        self.assertEqual(0, result["active_session_count"])
+        with zipfile.ZipFile(package_path) as bundle:
+            names = bundle.namelist()
+            session_files = [
+                name
+                for name in names
+                if name.startswith("sessions/") and name.endswith(".json")
+            ]
+            self.assertEqual(1, len(session_files))
+            self.assertIn("P01", session_files[0])
+            payload = json.loads(bundle.read(session_files[0]).decode("utf-8"))
+            self.assertEqual("검색 과업", payload["title"])
+            self.assertIn("events", payload)
+            self.assertIn("recorder.sqlite3", names)
+            self.assertIn("패키지정보.txt", names)
+
     def test_existing_0_1_database_is_migrated(self):
         legacy_path = Path(self.temporary.name) / "legacy.sqlite3"
         with closing(sqlite3.connect(str(legacy_path))) as connection, connection:
@@ -339,6 +363,22 @@ class HttpTests(unittest.TestCase):
         )
         _, events_body = self.request("/api/sessions/{}/events".format(session["id"]))
         self.assertEqual("marker", json.loads(events_body)["events"][0]["type"])
+
+    def test_export_package_endpoint(self):
+        _, body = self.request(
+            "/api/sessions", "POST", {"title": "패키지 확인", "participant": "P09"}
+        )
+        session = json.loads(body)["session"]
+        self.request("/api/sessions/{}/start".format(session["id"]), "POST", {})
+        self.request(
+            "/api/sessions/{}/stop".format(session["id"]), "POST", {"status": "completed"}
+        )
+        _, package_body = self.request(
+            "/api/export-package", "POST", {"open_folder": False}
+        )
+        package = json.loads(package_body)["package"]
+        self.assertEqual(1, package["session_count"])
+        self.assertTrue(Path(package["path"]).exists())
 
     def test_rejects_non_json_write(self):
         request = Request(

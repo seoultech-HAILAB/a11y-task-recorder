@@ -6,10 +6,13 @@ import mimetypes
 import os
 import re
 import sqlite3
+import sys
+import tempfile
 import threading
 import uuid
 import webbrowser
-from contextlib import contextmanager
+import zipfile
+from contextlib import closing, contextmanager
 from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -1004,6 +1007,61 @@ class RecorderStore:
             )
         return ("\ufeff" + output.getvalue()).encode("utf-8")
 
+    def build_result_package(self) -> Dict[str, Any]:
+        """\uc644\ub8cc\ub41c \uc138\uc158 \uc804\uccb4\ub97c \uc804\ub2ec\uc6a9 ZIP \ud558\ub098\ub85c \ubb36\uc5b4 `\uacb0\uacfc` \ud3f4\ub354\uc5d0 \ub9cc\ub4e0\ub2e4."""
+        base = self.db_path.parent
+        root = base.parent if base.name == "data" else base
+        package_dir = root / "\uacb0\uacfc"
+        package_dir.mkdir(parents=True, exist_ok=True)
+
+        with self.connect() as connection:
+            rows = connection.execute(
+                "SELECT id, participant, status, created_at FROM sessions ORDER BY created_at ASC"
+            ).fetchall()
+        finished = [row for row in rows if row["status"] in {"completed", "abandoned"}]
+        active_count = sum(1 for row in rows if row["status"] == "active")
+
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        zip_path = package_dir / "\uacb0\uacfc\ud328\ud0a4\uc9c0_{}.zip".format(stamp)
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as bundle:
+            for session in finished:
+                label = re.sub(r'[\\/:*?"<>|\s]+', "_", session["participant"] or "\ubb34\uae30\uba85")
+                name = "sessions/{}_{}_{}".format(
+                    label, (session["created_at"] or "")[:10], session["id"][:8]
+                )
+                bundle.writestr(name + ".json", self.export_json(session["id"]))
+                bundle.writestr(name + ".csv", self.export_csv(session["id"]))
+            with tempfile.TemporaryDirectory() as temporary:
+                backup_path = Path(temporary) / "recorder.sqlite3"
+                with closing(sqlite3.connect(str(self.db_path))) as source, closing(
+                    sqlite3.connect(str(backup_path))
+                ) as target:
+                    source.backup(target)
+                bundle.write(backup_path, "recorder.sqlite3")
+            kit_info = root / "KIT-INFO.txt"
+            if kit_info.exists():
+                bundle.writestr("KIT-INFO.txt", kit_info.read_bytes())
+            bundle.writestr(
+                "\ud328\ud0a4\uc9c0\uc815\ubcf4.txt",
+                "\n".join(
+                    [
+                        "A11y Task Recorder \uacb0\uacfc \ud328\ud0a4\uc9c0",
+                        "\uc0dd\uc131 \uc2dc\uac01: {}".format(utc_now()),
+                        "\uc644\ub8cc \uc138\uc158 \uc218: {}".format(len(finished)),
+                        "\uc9c4\ud589 \uc911\uc774\ub77c \uc81c\uc678\ub41c \uc138\uc158 \uc218: {}".format(active_count),
+                        "sessions/ \ud3f4\ub354: \uc138\uc158\ubcc4 JSON\u00b7CSV \ub0b4\ubcf4\ub0b4\uae30",
+                        "recorder.sqlite3: \uc804\uccb4 \ub370\uc774\ud130\ubca0\uc774\uc2a4 \uc0ac\ubcf8",
+                        "",
+                    ]
+                ),
+            )
+        return {
+            "path": str(zip_path),
+            "file_name": zip_path.name,
+            "session_count": len(finished),
+            "active_session_count": active_count,
+        }
+
 
 class RecorderHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
@@ -1011,6 +1069,14 @@ class RecorderHTTPServer(ThreadingHTTPServer):
     def __init__(self, address: Tuple[str, int], store: RecorderStore):
         super().__init__(address, RecorderHandler)
         self.store = store
+
+    def handle_error(self, request, client_address):
+        # 브라우저가 keep-alive 연결을 끊는 것은 정상 동작이므로 평가자가 보는
+        # 서버 창에 traceback을 남기지 않는다.
+        exc = sys.exc_info()[1]
+        if isinstance(exc, (ConnectionResetError, ConnectionAbortedError, BrokenPipeError)):
+            return
+        super().handle_error(request, client_address)
 
 
 class RecorderHandler(BaseHTTPRequestHandler):
@@ -1156,6 +1222,16 @@ class RecorderHandler(BaseHTTPRequestHandler):
         if match:
             hint = self.server.store.add_hint(match.group(1), data)
             self._json({"event": hint}, HTTPStatus.CREATED)
+            return
+        if path == "/api/export-package":
+            result = self.server.store.build_result_package()
+            opener = getattr(os, "startfile", None)
+            if opener and data.get("open_folder", True):
+                try:
+                    opener(str(Path(result["path"]).parent))
+                except OSError:
+                    pass
+            self._json({"package": result})
             return
         raise ApiError(HTTPStatus.NOT_FOUND, "API 경로를 찾을 수 없습니다.")
 
