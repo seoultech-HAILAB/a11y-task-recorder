@@ -98,10 +98,19 @@ kbd { background: #eee; border: 1px solid #bbb; border-radius: 4px; padding: 0 0
 <h2>준비물</h2>
 <ul>
 <li>64비트 Windows 10 또는 11</li>
-<li>NVDA 2024.1 이상 — 없다면 <a href="https://www.nvaccess.org/download/">NVDA 공식 다운로드 페이지</a>에서 설치</li>
+<li>인터넷 연결, 소리를 들을 수 있는 스피커나 이어폰</li>
 </ul>
 
-<h2>처음 한 번만: NVDA 애드온 설치</h2>
+<h2>처음 한 번만 ①: NVDA 설치</h2>
+<p>이미 NVDA(스크린 리더)가 설치되어 있다면 이 단계는 건너뜁니다.</p>
+<ol>
+<li><a href="https://www.nvaccess.org/download/">NVDA 다운로드 페이지</a>에서 <strong>Download NVDA</strong>를 눌러 설치 파일을 받습니다.</li>
+<li>받은 <strong>nvda_….exe</strong>를 실행합니다. 보안 확인 창이 나오면 <strong>예</strong>를 누릅니다.</li>
+<li>사용권 계약에 동의하고 <strong>이 컴퓨터에 NVDA 설치</strong>를 선택해 설치를 마칩니다.</li>
+<li>설치 후 NVDA 음성이 나오면 정상입니다.</li>
+</ol>
+
+<h2>처음 한 번만 ②: NVDA 애드온 설치</h2>
 <ol>
 <li>이 폴더에 있는 <strong>a11yTaskRecorder-@@ADDON_VERSION@@.nvda-addon</strong> 파일을 더블클릭합니다.</li>
 <li>NVDA가 설치 여부를 물으면 승인하고, 안내에 따라 NVDA를 재시작합니다.</li>
