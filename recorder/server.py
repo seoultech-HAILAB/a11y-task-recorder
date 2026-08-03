@@ -9,11 +9,12 @@ import sqlite3
 import threading
 import uuid
 import webbrowser
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Iterator, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
 
@@ -69,12 +70,19 @@ class RecorderStore:
         self._schema_lock = threading.Lock()
         self.initialize()
 
-    def connect(self) -> sqlite3.Connection:
+    @contextmanager
+    def connect(self) -> Iterator[sqlite3.Connection]:
+        # 명시적으로 close하지 않은 연결은 내부 statement cache와의 참조 순환
+        # 때문에 GC 전까지 살아남아 Windows에서 DB 파일 잠금을 유지한다.
         connection = sqlite3.connect(str(self.db_path), timeout=10)
-        connection.row_factory = sqlite3.Row
-        connection.execute("PRAGMA foreign_keys = ON")
-        connection.execute("PRAGMA journal_mode = WAL")
-        return connection
+        try:
+            connection.row_factory = sqlite3.Row
+            connection.execute("PRAGMA foreign_keys = ON")
+            connection.execute("PRAGMA journal_mode = WAL")
+            with connection:
+                yield connection
+        finally:
+            connection.close()
 
     def initialize(self) -> None:
         with self._schema_lock, self.connect() as connection:

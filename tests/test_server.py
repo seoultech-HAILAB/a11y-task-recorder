@@ -5,6 +5,7 @@ import sqlite3
 import tempfile
 import threading
 import unittest
+from contextlib import closing
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -217,7 +218,7 @@ class StoreTests(unittest.TestCase):
 
     def test_existing_0_1_database_is_migrated(self):
         legacy_path = Path(self.temporary.name) / "legacy.sqlite3"
-        with sqlite3.connect(str(legacy_path)) as connection:
+        with closing(sqlite3.connect(str(legacy_path))) as connection, connection:
             connection.executescript(
                 """
                 CREATE TABLE sessions (
@@ -261,7 +262,7 @@ class StoreTests(unittest.TestCase):
                 """
             )
         RecorderStore(legacy_path)
-        with sqlite3.connect(str(legacy_path)) as connection:
+        with closing(sqlite3.connect(str(legacy_path))) as connection:
             session_columns = {
                 row[1] for row in connection.execute("PRAGMA table_info(sessions)")
             }
