@@ -820,7 +820,7 @@ document.addEventListener("click", async (event) => {
     } else if (action === "export-package") {
       control.disabled = true;
       try {
-        const data = await request("/api/export-package", { method: "POST", body: {} });
+        const data = await request("/export-package", { method: "POST", body: {} });
         const pkg = data.package || {};
         const skipped = pkg.active_session_count
           ? ` (진행 중인 세션 ${pkg.active_session_count}개는 제외됨)`
