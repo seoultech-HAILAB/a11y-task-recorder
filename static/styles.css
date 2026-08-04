@@ -961,6 +961,37 @@ footer {
   border-top: 1px solid var(--line);
 }
 
+.intensity-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.intensity-group .button {
+  min-width: 40px;
+  padding-inline: 10px;
+}
+
+.step-outcome-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.step-outcome-row .step-outcome {
+  width: auto;
+  min-height: 38px;
+  padding: 6px 10px;
+}
+
+.step-outcome-row .step-outcome-note {
+  flex: 1 1 220px;
+  min-height: 38px;
+  padding: 6px 10px;
+}
+
 .view-toggle {
   display: inline-flex;
   gap: 4px;

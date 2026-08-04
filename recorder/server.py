@@ -184,6 +184,51 @@ class RecorderStore:
                 connection, "sessions", "round", "INTEGER NOT NULL DEFAULT 1"
             )
             connection.execute("UPDATE sessions SET group_id = id WHERE group_id IS NULL")
+            # step별 수행 결과(G_User): complete / assisted / blocked + 사유
+            self._ensure_column(connection, "steps", "outcome", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(
+                connection, "steps", "outcome_note", "TEXT NOT NULL DEFAULT ''"
+            )
+
+    @staticmethod
+    def _apply_default_outcomes(connection: sqlite3.Connection, session_id: str) -> None:
+        # 완료됐지만 결과 미지정인 step: 힌트가 연결됐으면 assisted, 아니면 complete.
+        connection.execute(
+            """
+            UPDATE steps SET outcome = CASE
+                WHEN EXISTS (
+                    SELECT 1 FROM events
+                    WHERE events.step_id = steps.id AND events.type = 'hint'
+                ) THEN 'assisted'
+                ELSE 'complete'
+            END
+            WHERE session_id = ? AND status = 'completed' AND outcome = ''
+            """,
+            (session_id,),
+        )
+
+    def update_step_outcome(
+        self, session_id: str, step_id: str, data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        outcome = str(data.get("outcome", "")).strip()
+        if outcome not in {"", "complete", "assisted", "blocked"}:
+            raise ApiError(HTTPStatus.BAD_REQUEST, "step 결과 코드가 올바르지 않습니다.")
+        note = str(data.get("outcome_note", "")).strip()
+        with self.connect() as connection:
+            step = connection.execute(
+                "SELECT id FROM steps WHERE id = ? AND session_id = ?",
+                (step_id, session_id),
+            ).fetchone()
+            if not step:
+                raise ApiError(HTTPStatus.NOT_FOUND, "step을 찾을 수 없습니다.")
+            connection.execute(
+                "UPDATE steps SET outcome = ?, outcome_note = ? WHERE id = ?",
+                (outcome, note, step_id),
+            )
+            row = connection.execute(
+                "SELECT * FROM steps WHERE id = ?", (step_id,)
+            ).fetchone()
+        return self.step_from_row(row)
 
     @staticmethod
     def _ensure_column(
@@ -468,6 +513,7 @@ class RecorderStore:
                 """,
                 (ended_at, session_id),
             )
+            self._apply_default_outcomes(connection, session_id)
             if active_step:
                 connection.execute(
                     """
@@ -589,6 +635,7 @@ class RecorderStore:
                     (now, step_id),
                 )
                 event_type = "step_end"
+            self._apply_default_outcomes(connection, session_id)
         if previous_active:
             self.add_event(
                 {
@@ -1323,6 +1370,13 @@ class RecorderHandler(BaseHTTPRequestHandler):
         match = re.fullmatch(r"/api/sessions/([^/]+)", path)
         if match:
             self._json({"session": self.server.store.update_session(match.group(1), data)})
+            return
+        match = re.fullmatch(r"/api/sessions/([^/]+)/steps/([^/]+)", path)
+        if match:
+            session_id, step_id = match.groups()
+            self._json(
+                {"step": self.server.store.update_step_outcome(session_id, step_id, data)}
+            )
             return
         raise ApiError(HTTPStatus.NOT_FOUND, "API 경로를 찾을 수 없습니다.")
 

@@ -14,6 +14,7 @@
     characterData: 0,
     attributeNames: new Set(),
     xpaths: new Set(),
+    firstChangeTs: null,
   };
   let flushTimer = null;
   let documentVersion = 0;
@@ -68,6 +69,7 @@
     documentVersion += 1;
     send("dom_mutation", {
       document_version: documentVersion,
+      first_change_ts: mutationBuffer.firstChangeTs,
       added_nodes: mutationBuffer.added,
       removed_nodes: mutationBuffer.removed,
       attribute_changes: mutationBuffer.attributes,
@@ -81,9 +83,13 @@
     mutationBuffer.characterData = 0;
     mutationBuffer.attributeNames.clear();
     mutationBuffer.xpaths.clear();
+    mutationBuffer.firstChangeTs = null;
   }
 
   const observer = new MutationObserver((mutations) => {
+    if (!mutationBuffer.firstChangeTs) {
+      mutationBuffer.firstChangeTs = new Date().toISOString();
+    }
     for (const mutation of mutations) {
       mutationBuffer.added += mutation.addedNodes?.length || 0;
       mutationBuffer.removed += mutation.removedNodes?.length || 0;

@@ -279,7 +279,8 @@ function renderSession() {
     : 0;
   byId("nvda-warning").hidden = !(active && !nvdaConnected && startedAgoMs > 10000);
   byId("start-button").hidden = session.status !== "draft";
-  byId("marker-button").hidden = !active;
+  if (!active) byId("marker-intensity").hidden = true;
+  byId("marker-button").hidden = !active || !byId("marker-intensity").hidden;
   byId("stop-button").hidden = !active;
   byId("abandon-button").hidden = !active;
   byId("hint-form").hidden = !active;
@@ -358,6 +359,7 @@ function eventDetail(event) {
     primary = payload.chord || payload.gesture || payload.display_name || payload.key || "키 입력";
   } else if (event.type === "marker") {
     primary = payload.label || "사용자가 불편 지점을 표시했습니다.";
+    if (payload.intensity) primary += ` · 강도 ${payload.intensity}`;
   } else if (["navigation", "history"].includes(event.type)) {
     primary = payload.direction
       ? `${payload.direction} · ${payload.transition_type || payload.kind || ""}`
@@ -751,6 +753,11 @@ function renderSteps() {
     return;
   }
   const activeSession = state.currentSession.status === "active";
+  const outcomeLabels = {
+    complete: "성공",
+    assisted: "힌트 후 성공",
+    blocked: "막힘",
+  };
   target.innerHTML = state.steps
     .map((step) => {
       const status = {
@@ -758,16 +765,36 @@ function renderSteps() {
         active: "진행 중",
         completed: "완료",
       }[step.status] || step.status;
+      const outcomeText = outcomeLabels[step.outcome]
+        ? ` · 결과: ${outcomeLabels[step.outcome]}`
+        : "";
+      const outcomeControls =
+        step.status === "completed"
+          ? `<div class="step-outcome-row">
+              <label class="sr-only" for="outcome-${escapeHtml(step.id)}">step 수행 결과</label>
+              <select id="outcome-${escapeHtml(step.id)}" class="step-outcome"
+                data-step-outcome="${escapeHtml(step.id)}">
+                ${step.outcome ? "" : '<option value="" selected>결과 선택</option>'}
+                <option value="complete" ${step.outcome === "complete" ? "selected" : ""}>성공</option>
+                <option value="assisted" ${step.outcome === "assisted" ? "selected" : ""}>힌트 후 성공</option>
+                <option value="blocked" ${step.outcome === "blocked" ? "selected" : ""}>막힘</option>
+              </select>
+              <input class="step-outcome-note" data-step-note="${escapeHtml(step.id)}"
+                value="${escapeHtml(step.outcome_note || "")}"
+                placeholder="사유 (예: 버튼을 찾지 못함)" aria-label="step 결과 사유">
+            </div>`
+          : "";
       return `
         <article class="step-item ${escapeHtml(step.status)}">
           <div>
-            <p class="muted">Step ${Number(step.position)} · ${escapeHtml(status)}</p>
+            <p class="muted">Step ${Number(step.position)} · ${escapeHtml(status)}${escapeHtml(outcomeText)}</p>
             <h3>${escapeHtml(step.title)}</h3>
             ${
               step.expected_announcement
                 ? `<p>기대 발화: ${escapeHtml(step.expected_announcement)}</p>`
                 : ""
             }
+            ${outcomeControls}
           </div>
           <div class="step-actions">
             ${
@@ -946,7 +973,9 @@ async function stopSession(status) {
   );
 }
 
-async function addMarker() {
+async function addMarker(intensity) {
+  const payload = { label: "대시보드에서 불편 지점 표시" };
+  if (intensity) payload.intensity = Number(intensity);
   await request("/events", {
     method: "POST",
     body: {
@@ -954,16 +983,29 @@ async function addMarker() {
       source: "dashboard",
       type: "marker",
       timestamp: new Date().toISOString(),
-      payload: { label: "대시보드에서 불편 지점 표시" },
+      payload,
     },
   });
   await refreshSession(state.currentSession.id);
   const marker = [...state.events].reverse().find((event) => event.type === "marker");
   if (marker) {
     setIssueRange([marker.id]);
-    byId("issue-summary").focus();
   }
-  showNotice("불편 지점을 표시했습니다. 과업을 계속한 뒤 종료 후 설명을 작성할 수 있습니다.");
+  showNotice(
+    `불편 지점을 표시했습니다${intensity ? ` (강도 ${intensity})` : ""}. 과업을 계속한 뒤 종료 후 설명을 작성할 수 있습니다.`
+  );
+}
+
+async function saveStepOutcome(stepId) {
+  const outcome =
+    document.querySelector(`[data-step-outcome="${stepId}"]`)?.value ?? "";
+  const note = document.querySelector(`[data-step-note="${stepId}"]`)?.value ?? "";
+  await request(`/sessions/${state.currentSession.id}/steps/${stepId}`, {
+    method: "PATCH",
+    body: { outcome, outcome_note: note },
+  });
+  await refreshSession(state.currentSession.id);
+  showNotice("step 결과를 저장했습니다.");
 }
 
 async function createIssue(form) {
@@ -1037,7 +1079,18 @@ document.addEventListener("click", async (event) => {
     } else if (action === "abandon") {
       await stopSession("abandoned");
     } else if (action === "marker") {
-      await addMarker();
+      const group = byId("marker-intensity");
+      group.hidden = false;
+      control.hidden = true;
+      group.querySelector("[data-intensity]")?.focus();
+    } else if (action === "marker-intensity") {
+      byId("marker-intensity").hidden = true;
+      byId("marker-button").hidden = false;
+      await addMarker(control.dataset.intensity);
+    } else if (action === "marker-cancel") {
+      byId("marker-intensity").hidden = true;
+      byId("marker-button").hidden = false;
+      byId("marker-button").focus();
     } else if (action === "step-start") {
       await transitionStep(control.dataset.stepId, "start");
     } else if (action === "step-finish") {
@@ -1105,6 +1158,14 @@ document.addEventListener("change", (event) => {
     updateSelection();
   } else if (event.target.id === "event-filter") {
     renderEvents();
+  } else if (event.target.matches("[data-step-outcome]")) {
+    saveStepOutcome(event.target.dataset.stepOutcome).catch((error) =>
+      showNotice(error.message, true)
+    );
+  } else if (event.target.matches("[data-step-note]")) {
+    saveStepOutcome(event.target.dataset.stepNote).catch((error) =>
+      showNotice(error.message, true)
+    );
   }
 });
 

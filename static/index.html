@@ -164,6 +164,15 @@
             <button id="marker-button" class="button marker" type="button" data-action="marker" hidden>
               불편 지점 표시
             </button>
+            <div id="marker-intensity" class="intensity-group" role="group"
+              aria-label="불편 강도 선택 (1 약함 – 5 심함)" hidden>
+              <button class="button marker compact" type="button" data-action="marker-intensity" data-intensity="1">1</button>
+              <button class="button marker compact" type="button" data-action="marker-intensity" data-intensity="2">2</button>
+              <button class="button marker compact" type="button" data-action="marker-intensity" data-intensity="3">3</button>
+              <button class="button marker compact" type="button" data-action="marker-intensity" data-intensity="4">4</button>
+              <button class="button marker compact" type="button" data-action="marker-intensity" data-intensity="5">5</button>
+              <button class="button quiet compact" type="button" data-action="marker-cancel">취소</button>
+            </div>
             <button id="stop-button" class="button danger" type="button" data-action="stop" hidden>
               완료하고 종료
             </button>

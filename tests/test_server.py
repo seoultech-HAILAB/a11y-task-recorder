@@ -217,6 +217,37 @@ class StoreTests(unittest.TestCase):
             namespace["normalizeSpeechText"]("Checkout button clickable"),
         )
 
+    def test_step_outcome_defaults_and_manual_update(self):
+        first = self.store.create_step(self.session["id"], {"title": "검색"})
+        second = self.store.create_step(self.session["id"], {"title": "결제"})
+        self.store.start_session(self.session["id"])
+        self.store.transition_step(self.session["id"], first["id"], "start")
+        self.store.add_hint(
+            self.session["id"], {"text": "검색 메뉴를 알려줌", "step_id": first["id"]}
+        )
+        self.store.transition_step(self.session["id"], first["id"], "finish")
+        self.store.transition_step(self.session["id"], second["id"], "start")
+        self.store.stop_session(self.session["id"], {"status": "completed"})
+
+        steps = {
+            step["title"]: step
+            for step in self.store.get_session(self.session["id"])["steps"]
+        }
+        self.assertEqual("assisted", steps["검색"]["outcome"])
+        self.assertEqual("complete", steps["결제"]["outcome"])
+
+        updated = self.store.update_step_outcome(
+            self.session["id"],
+            second["id"],
+            {"outcome": "blocked", "outcome_note": "결제 버튼을 찾지 못함"},
+        )
+        self.assertEqual("blocked", updated["outcome"])
+        self.assertEqual("결제 버튼을 찾지 못함", updated["outcome_note"])
+        with self.assertRaises(ApiError):
+            self.store.update_step_outcome(
+                self.session["id"], second["id"], {"outcome": "nope"}
+            )
+
     def test_rerun_creates_next_round_with_copied_steps(self):
         self.store.create_step(self.session["id"], {"title": "검색어 입력"})
         self.store.start_session(self.session["id"])
