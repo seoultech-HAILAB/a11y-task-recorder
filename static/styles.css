@@ -961,6 +961,44 @@ footer {
   border-top: 1px solid var(--line);
 }
 
+.view-toggle {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--green-pale);
+}
+
+.view-mode {
+  min-height: 32px;
+  padding: 4px 14px;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  color: var(--muted);
+  background: transparent;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.view-mode.active {
+  color: white;
+  background: var(--ink);
+}
+
+.speech-line {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.role-tag {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
 .round-tabs {
   display: flex;
   align-items: center;

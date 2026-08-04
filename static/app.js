@@ -6,6 +6,7 @@ const state = {
   issues: [],
   steps: [],
   selectedEventIds: new Set(),
+  timelineView: "grouped",
   notesDirty: false,
   pollTimer: null,
   noticeTimer: null,
@@ -391,13 +392,206 @@ function eventDetail(event) {
   return { primary, context: context.join(" · ") };
 }
 
+const GROUP_LABELS = {
+  input: "입력",
+  focus: "포커스",
+  speech: "발화",
+  navigation: "페이지 이동",
+  page_ready: "페이지 준비",
+  marker: "불편 표시",
+  hint: "힌트",
+  step_start: "step 시작",
+  step_end: "step 완료",
+  mode: "NVDA 모드",
+};
+
+const DIRECTION_LABELS = {
+  new: "새 페이지",
+  back: "뒤로",
+  forward: "앞으로",
+  reload: "새로고침",
+  back_or_forward: "뒤로/앞으로",
+  state_change: "화면 전환",
+};
+
+// 키 입력 하나에 도착 요소(focus)와 NVDA 안내(speech)를 묶어 상호작용 단위를 만든다.
+function buildInteractionGroups(events) {
+  const groups = [];
+  let current = null;
+  const push = (kind, event) => {
+    current = {
+      kind,
+      event,
+      firstId: event.id,
+      lastId: event.id,
+      key: "",
+      elementName: "",
+      elementRole: "",
+      speeches: [],
+      pageTitle: "",
+    };
+    groups.push(current);
+    return current;
+  };
+  for (const event of events) {
+    const type = event.type;
+    const payload = event.payload || {};
+    const element = event.element || {};
+    if (type === "input" || type === "keyboard") {
+      const group = push("input", event);
+      group.key =
+        payload.display_name || payload.chord || payload.gesture || payload.key || "입력";
+    } else if (type === "focus") {
+      const name = element.accessible_name || element.name || "";
+      if (current && current.kind === "input" && !current.elementName) {
+        current.elementName = name;
+        current.elementRole = element.role || "";
+        current.lastId = event.id;
+      } else {
+        const group = push("focus", event);
+        group.elementName = name;
+        group.elementRole = element.role || "";
+      }
+    } else if (type === "speech" || type === "speech_episode") {
+      const speech = {
+        text: payload.normalized_text || payload.raw_text || payload.text || "",
+        interrupted: Boolean(event.interrupted),
+        listenSeconds: null,
+      };
+      if (event.speech_end_ts) {
+        const ms = new Date(event.speech_end_ts) - new Date(event.timestamp);
+        if (Number.isFinite(ms) && ms >= 0) speech.listenSeconds = ms / 1000;
+      }
+      if (current && current.kind === "input") {
+        current.speeches.push(speech);
+        current.lastId = event.id;
+      } else {
+        push("speech", event).speeches.push(speech);
+      }
+    } else if (type === "speech_cancel" || type === "speech_canceled") {
+      if (current) current.lastId = event.id;
+    } else if (type === "dom_mutation") {
+      // 저수준 기록은 원시 이벤트 보기에서만 표시한다.
+    } else if (type === "navigation" || type === "history") {
+      push("navigation", event);
+    } else if (type === "page_ready") {
+      if (current && current.kind === "navigation") {
+        current.lastId = event.id;
+        current.pageTitle = event.page_title || "";
+      } else {
+        push("page_ready", event);
+      }
+    } else {
+      push(type, event);
+      if (type === "marker" || type === "hint") current = null;
+    }
+  }
+  return groups;
+}
+
+function groupMatchesFilter(group, filter) {
+  if (filter === "all") return true;
+  if (filter === "input") return group.kind === "input";
+  if (filter === "speech") return group.kind === "speech";
+  if (filter === "navigation") {
+    return group.kind === "navigation" || group.kind === "page_ready";
+  }
+  return group.kind === filter;
+}
+
+function renderGroupDetail(group) {
+  const event = group.event;
+  const payload = event.payload || {};
+  const speeches = group.speeches
+    .map((speech) => {
+      const listened =
+        speech.listenSeconds === null
+          ? ""
+          : speech.interrupted
+            ? ` · ${speech.listenSeconds.toFixed(1)}초 청취`
+            : " · 끝까지 들음";
+      return `<small class="speech-line">“${escapeHtml(speech.text || "(내용 없음)")}”${listened}</small>`;
+    })
+    .join("");
+  const role = group.elementRole
+    ? ` <small class="role-tag">${escapeHtml(group.elementRole)}</small>`
+    : "";
+  if (group.kind === "input") {
+    const destination = group.elementName ? ` → ${group.elementName}` : "";
+    return `<strong>${escapeHtml(group.key + destination)}</strong>${role}${speeches}`;
+  }
+  if (group.kind === "focus") {
+    return `<strong>${escapeHtml(group.elementName || "(요소 정보 없음)")}</strong>${role}`;
+  }
+  if (group.kind === "speech") {
+    return speeches || "<strong>(내용 없음)</strong>";
+  }
+  if (group.kind === "navigation") {
+    const direction = DIRECTION_LABELS[payload.direction] || "";
+    const title = group.pageTitle ? ` <small>${escapeHtml(group.pageTitle)}</small>` : "";
+    return `<strong>${escapeHtml(event.url || "(URL 없음)")}</strong>
+      ${direction ? `<small>${escapeHtml(direction)}</small>` : ""}${title}`;
+  }
+  if (group.kind === "page_ready") {
+    return `<strong>${escapeHtml(event.page_title || event.url || "페이지 준비")}</strong>`;
+  }
+  const detail = eventDetail(event);
+  return `<strong>${escapeHtml(detail.primary)}</strong>
+    ${detail.context ? `<small>${escapeHtml(detail.context)}</small>` : ""}`;
+}
+
 function renderEvents() {
   const filter = byId("event-filter").value;
-  const events = state.events.filter((event) => eventMatchesFilter(event, filter));
+  const grouped = state.timelineView === "grouped";
+  const domOption = byId("event-filter").querySelector('option[value="dom_mutation"]');
+  if (domOption) domOption.hidden = grouped;
   const target = byId("event-list");
+  const emptyRow =
+    '<tr><td colspan="6" class="empty-state">조건에 맞는 이벤트가 없습니다.</td></tr>';
+
+  if (grouped) {
+    const groups = buildInteractionGroups(state.events).filter((group) =>
+      groupMatchesFilter(group, filter)
+    );
+    if (!groups.length) {
+      target.innerHTML = emptyRow;
+      updateSelection();
+      return;
+    }
+    target.innerHTML = groups
+      .map((group) => {
+        const event = group.event;
+        const label = GROUP_LABELS[group.kind] || typeLabels[event.type] || event.type;
+        const checked = state.selectedEventIds.has(group.firstId) ? "checked" : "";
+        const rowClass =
+          group.kind === "marker" ? "marker-row" : group.kind === "hint" ? "hint-row" : "";
+        return `
+        <tr data-event-id="${group.firstId}" class="${rowClass}">
+          <td>
+            <input type="checkbox" ${checked}
+              aria-label="이벤트 ${group.firstId}, ${escapeHtml(label)} 구간 선택"
+              data-event-select="${group.firstId}" data-event-select-end="${group.lastId}">
+          </td>
+          <td class="event-time">${escapeHtml(formatTime(event.timestamp))}</td>
+          <td class="event-source">${escapeHtml(sourceLabels[event.source] || event.source)}</td>
+          <td><span class="event-type ${escapeHtml(group.kind)}">${escapeHtml(label)}</span></td>
+          <td class="event-detail">${renderGroupDetail(group)}</td>
+          <td>
+            <button class="button quiet compact" type="button"
+              data-action="label-event" data-event-id="${group.firstId}">
+              이 지점 라벨링
+            </button>
+          </td>
+        </tr>`;
+      })
+      .join("");
+    updateSelection();
+    return;
+  }
+
+  const events = state.events.filter((event) => eventMatchesFilter(event, filter));
   if (!events.length) {
-    target.innerHTML =
-      '<tr><td colspan="6" class="empty-state">조건에 맞는 이벤트가 없습니다.</td></tr>';
+    target.innerHTML = emptyRow;
     updateSelection();
     return;
   }
@@ -848,6 +1042,20 @@ document.addEventListener("click", async (event) => {
       await transitionStep(control.dataset.stepId, "start");
     } else if (action === "step-finish") {
       await transitionStep(control.dataset.stepId, "finish");
+    } else if (action === "view-grouped" || action === "view-raw") {
+      state.timelineView = action === "view-raw" ? "raw" : "grouped";
+      const filterSelect = byId("event-filter");
+      if (state.timelineView === "grouped" && filterSelect.value === "dom_mutation") {
+        filterSelect.value = "all";
+      }
+      byId("view-grouped").classList.toggle("active", state.timelineView === "grouped");
+      byId("view-grouped").setAttribute(
+        "aria-pressed",
+        String(state.timelineView === "grouped")
+      );
+      byId("view-raw").classList.toggle("active", state.timelineView === "raw");
+      byId("view-raw").setAttribute("aria-pressed", String(state.timelineView === "raw"));
+      renderEvents();
     } else if (action === "jump-event") {
       jumpToEvent(Number(control.dataset.eventId));
     } else if (action === "open-round") {
@@ -886,8 +1094,14 @@ document.addEventListener("click", async (event) => {
 document.addEventListener("change", (event) => {
   if (event.target.matches("[data-event-select]")) {
     const id = Number(event.target.dataset.eventSelect);
-    if (event.target.checked) state.selectedEventIds.add(id);
-    else state.selectedEventIds.delete(id);
+    const endId = Number(event.target.dataset.eventSelectEnd || id);
+    if (event.target.checked) {
+      state.selectedEventIds.add(id);
+      state.selectedEventIds.add(endId);
+    } else {
+      state.selectedEventIds.delete(id);
+      state.selectedEventIds.delete(endId);
+    }
     updateSelection();
   } else if (event.target.id === "event-filter") {
     renderEvents();
