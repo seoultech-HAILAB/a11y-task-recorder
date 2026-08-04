@@ -11,7 +11,7 @@ from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-from recorder.server import RecorderStore, create_server
+from recorder.server import ApiError, RecorderStore, create_server
 
 
 class StoreTests(unittest.TestCase):
@@ -216,6 +216,20 @@ class StoreTests(unittest.TestCase):
             "Checkout",
             namespace["normalizeSpeechText"]("Checkout button clickable"),
         )
+
+    def test_rerun_creates_next_round_with_copied_steps(self):
+        self.store.create_step(self.session["id"], {"title": "검색어 입력"})
+        self.store.start_session(self.session["id"])
+        self.store.stop_session(self.session["id"], {"status": "completed"})
+        second = self.store.rerun_session(self.session["id"])
+        self.assertEqual(2, second["round"])
+        self.assertEqual(self.session["id"], second["group_id"])
+        self.assertEqual("draft", second["status"])
+        self.assertEqual(1, len(second["steps"]))
+        self.assertEqual("검색어 입력", second["steps"][0]["title"])
+        self.assertEqual([1, 2], [item["round"] for item in second["rounds"]])
+        with self.assertRaises(ApiError):
+            self.store.rerun_session(second["id"])
 
     def test_result_package_bundles_finished_sessions(self):
         self.store.start_session(self.session["id"])

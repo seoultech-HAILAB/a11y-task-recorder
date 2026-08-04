@@ -178,6 +178,12 @@ class RecorderStore:
             )
             self._ensure_column(connection, "issues", "start_step_id", "TEXT")
             self._ensure_column(connection, "issues", "end_step_id", "TEXT")
+            # 같은 과업의 반복 수행(회차)을 묶는 그룹 식별자와 회차 번호
+            self._ensure_column(connection, "sessions", "group_id", "TEXT")
+            self._ensure_column(
+                connection, "sessions", "round", "INTEGER NOT NULL DEFAULT 1"
+            )
+            connection.execute("UPDATE sessions SET group_id = id WHERE group_id IS NULL")
 
     @staticmethod
     def _ensure_column(
@@ -229,8 +235,8 @@ class RecorderStore:
                 INSERT INTO sessions (
                     id, title, participant, target_url, scenario,
                     expected_announcement, prior_site_experience,
-                    environment, notes, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    environment, notes, created_at, group_id, round
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
                 """,
                 (
                     session_id,
@@ -243,9 +249,68 @@ class RecorderStore:
                     json.dumps(environment, ensure_ascii=False),
                     str(data.get("notes", "")).strip(),
                     created_at,
+                    session_id,
                 ),
             )
         return self.get_session(session_id)
+
+    def rerun_session(self, session_id: str) -> Dict[str, Any]:
+        """완료·중단된 세션의 과업 설정을 복사해 다음 회차 세션을 만든다."""
+        source = self.get_session(session_id)
+        if source["status"] not in {"completed", "abandoned"}:
+            raise ApiError(
+                HTTPStatus.BAD_REQUEST, "완료되거나 중단된 세션만 다음 회차를 만들 수 있습니다."
+            )
+        group_id = source.get("group_id") or source["id"]
+        new_id = str(uuid.uuid4())
+        created_at = utc_now()
+        with self.connect() as connection:
+            max_round = connection.execute(
+                "SELECT MAX(round) AS max_round FROM sessions WHERE group_id = ?",
+                (group_id,),
+            ).fetchone()["max_round"] or 1
+            connection.execute(
+                """
+                INSERT INTO sessions (
+                    id, title, participant, target_url, scenario,
+                    expected_announcement, prior_site_experience,
+                    environment, notes, created_at, group_id, round
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    new_id,
+                    source["title"],
+                    source.get("participant", ""),
+                    source.get("target_url", ""),
+                    source.get("scenario", ""),
+                    source.get("expected_announcement", ""),
+                    source.get("prior_site_experience", ""),
+                    json.dumps(source.get("environment", {}), ensure_ascii=False),
+                    "",
+                    created_at,
+                    group_id,
+                    max_round + 1,
+                ),
+            )
+            for step in source.get("steps", []):
+                connection.execute(
+                    """
+                    INSERT INTO steps (
+                        id, session_id, position, title, instructions,
+                        expected_announcement, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        str(uuid.uuid4()),
+                        new_id,
+                        step.get("position", 0),
+                        step.get("title", ""),
+                        step.get("instructions", ""),
+                        step.get("expected_announcement", ""),
+                        created_at,
+                    ),
+                )
+        return self.get_session(new_id)
 
     def list_sessions(self) -> List[Dict[str, Any]]:
         with self.connect() as connection:
@@ -267,6 +332,14 @@ class RecorderStore:
             result["steps"] = self.list_steps(session_id)
         else:
             result["steps"] = self.list_steps(session_id)
+        group_id = result.get("group_id") or session_id
+        with self.connect() as connection:
+            round_rows = connection.execute(
+                "SELECT id, round, status FROM sessions WHERE group_id = ?"
+                " ORDER BY round ASC, created_at ASC",
+                (group_id,),
+            ).fetchall()
+        result["rounds"] = [dict(item) for item in round_rows]
         return result
 
     def active_session(self) -> Optional[Dict[str, Any]]:
@@ -1016,7 +1089,8 @@ class RecorderStore:
 
         with self.connect() as connection:
             rows = connection.execute(
-                "SELECT id, participant, status, created_at FROM sessions ORDER BY created_at ASC"
+                "SELECT id, participant, status, created_at, round FROM sessions"
+                " ORDER BY created_at ASC"
             ).fetchall()
         finished = [row for row in rows if row["status"] in {"completed", "abandoned"}]
         active_count = sum(1 for row in rows if row["status"] == "active")
@@ -1026,8 +1100,11 @@ class RecorderStore:
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as bundle:
             for session in finished:
                 label = re.sub(r'[\\/:*?"<>|\s]+', "_", session["participant"] or "\ubb34\uae30\uba85")
-                name = "sessions/{}_{}_{}".format(
-                    label, (session["created_at"] or "")[:10], session["id"][:8]
+                name = "sessions/{}_r{}_{}_{}".format(
+                    label,
+                    session["round"] or 1,
+                    (session["created_at"] or "")[:10],
+                    session["id"][:8],
                 )
                 bundle.writestr(name + ".json", self.export_json(session["id"]))
                 bundle.writestr(name + ".csv", self.export_csv(session["id"]))
@@ -1199,6 +1276,11 @@ class RecorderHandler(BaseHTTPRequestHandler):
             else:
                 session = self.server.store.stop_session(session_id, data)
             self._json({"session": session})
+            return
+        match = re.fullmatch(r"/api/sessions/([^/]+)/rerun", path)
+        if match:
+            session = self.server.store.rerun_session(match.group(1))
+            self._json({"session": session}, HTTPStatus.CREATED)
             return
         match = re.fullmatch(r"/api/sessions/([^/]+)/issues", path)
         if match:

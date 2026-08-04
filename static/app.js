@@ -182,7 +182,11 @@ function renderSessions(sessions) {
               </span>
               ${escapeHtml(session.participant || "참여자 미지정")}
             </p>
-            <h3>${escapeHtml(session.title)}</h3>
+            <h3>${escapeHtml(session.title)}${
+              Number(session.round) > 1
+                ? ` <span class="round-badge">${Number(session.round)}회차</span>`
+                : ""
+            }</h3>
             <p class="session-card-meta">
               ${escapeHtml(formatDate(session.started_at || session.created_at))}
               · ${escapeHtml(formatDuration(summary.duration_seconds))}
@@ -290,6 +294,7 @@ function renderSession() {
   byId("export-csv").href = `${API}/sessions/${session.id}/export.csv`;
 
   renderMetrics(session.summary || {});
+  renderRounds();
   renderEvents();
   renderIssues();
   renderSteps();
@@ -593,6 +598,35 @@ function renderSteps() {
     .join("");
 }
 
+function renderRounds() {
+  const nav = byId("round-tabs");
+  const session = state.currentSession;
+  const rounds = session.rounds || [];
+  const finished = ["completed", "abandoned"].includes(session.status);
+  nav.hidden = rounds.length <= 1 && !finished;
+  if (nav.hidden) {
+    nav.innerHTML = "";
+    return;
+  }
+  const tabs = rounds
+    .map((item) => {
+      const current = item.id === session.id;
+      const suffix =
+        item.status === "active" ? " · 기록 중" : item.status === "draft" ? " · 준비" : "";
+      return `<button type="button" class="round-tab${current ? " active" : ""}"
+        data-action="open-round" data-session-id="${escapeHtml(item.id)}"
+        aria-current="${current ? "true" : "false"}">${item.round}회차${suffix}</button>`;
+    })
+    .join("");
+  const last = rounds[rounds.length - 1];
+  const lastFinished =
+    last && ["completed", "abandoned"].includes(last.status);
+  const addButton = finished && lastFinished
+    ? `<button type="button" class="round-tab add" data-action="rerun">+ 다음 회차</button>`
+    : "";
+  nav.innerHTML = tabs + addButton;
+}
+
 function renderAnchors() {
   const container = byId("anchor-chips");
   const guide = byId("review-guide");
@@ -816,6 +850,22 @@ document.addEventListener("click", async (event) => {
       await transitionStep(control.dataset.stepId, "finish");
     } else if (action === "jump-event") {
       jumpToEvent(Number(control.dataset.eventId));
+    } else if (action === "open-round") {
+      await openSession(control.dataset.sessionId);
+    } else if (action === "rerun") {
+      control.disabled = true;
+      try {
+        const result = await request(
+          `/sessions/${state.currentSession.id}/rerun`,
+          { method: "POST", body: {} }
+        );
+        await openSession(result.session.id);
+        showNotice(
+          `${result.session.round}회차 세션이 준비되었습니다. 기록 시작을 누르면 같은 과업을 다시 진행합니다.`
+        );
+      } finally {
+        control.disabled = false;
+      }
     } else if (action === "clear-range") {
       setIssueRange([]);
     } else if (action === "label-event") {
