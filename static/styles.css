@@ -307,6 +307,7 @@ h2 {
 .issues-section,
 .wrap-up,
 .scenario-details,
+.step-panel,
 .workspace-grid .panel {
   padding: 28px;
 }
@@ -909,6 +910,14 @@ footer {
   gap: 0.8rem;
   align-items: end;
   flex-wrap: wrap;
+}
+
+.inline-form .field {
+  margin-bottom: 0;
+}
+
+.inline-form .button {
+  min-height: 46px;
 }
 
 .inline-form .grow {
