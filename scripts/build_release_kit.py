@@ -35,6 +35,20 @@ LAUNCHER_BAT = """@echo off
 chcp 65001 >nul
 setlocal
 set KIT=%~dp0
+rem NVDA가 꺼져 있으면 자동 실행한다. 꺼진 채 평가하면 키 입력·발화가 기록되지 않는다.
+rem %ProgramFiles(x86)%의 괄호가 if 블록을 깨뜨리므로 블록 밖에서 변수로 만든다.
+set "NVDA64=%ProgramFiles%\\NVDA\\nvda.exe"
+set "NVDA86=%ProgramFiles(x86)%\\NVDA\\nvda.exe"
+tasklist /FI "IMAGENAME eq nvda.exe" 2>nul | find /I "nvda.exe" >nul
+if errorlevel 1 (
+  if exist "%NVDA64%" (
+    start "" "%NVDA64%"
+  ) else if exist "%NVDA86%" (
+    start "" "%NVDA86%"
+  ) else (
+    echo NVDA가 설치되어 있지 않습니다. 설치안내.html의 'NVDA 설치'를 먼저 진행해 주세요.
+  )
+)
 start "A11y Task Recorder 서버" "%KIT%app\\python\\python.exe" "%KIT%app\\kit_server.py" --db "%KIT%data\\recorder.sqlite3"
 powershell -NoProfile -Command "for($i=0;$i -lt 40;$i++){ try { Invoke-RestMethod 'http://127.0.0.1:8765/api/health' -TimeoutSec 1 | Out-Null; exit 0 } catch { Start-Sleep -Milliseconds 250 } }; exit 1"
 if errorlevel 1 (

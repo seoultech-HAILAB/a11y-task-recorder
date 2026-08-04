@@ -266,6 +266,13 @@ function renderSession() {
   byId("session-status").className = `session-status ${session.status}`;
 
   const active = session.status === "active";
+  const nvdaConnected =
+    Boolean((session.environment || {}).nvda_version) ||
+    state.events.some((event) => event.source === "nvda");
+  const startedAgoMs = session.started_at
+    ? Date.now() - new Date(session.started_at).getTime()
+    : 0;
+  byId("nvda-warning").hidden = !(active && !nvdaConnected && startedAgoMs > 10000);
   byId("start-button").hidden = session.status !== "draft";
   byId("marker-button").hidden = !active;
   byId("stop-button").hidden = !active;

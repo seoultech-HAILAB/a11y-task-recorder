@@ -945,6 +945,16 @@ footer {
   border-top: 1px solid var(--line);
 }
 
+.inline-warning {
+  margin: 0 0 18px;
+  padding: 12px 16px;
+  border: 1px solid #f59e0b;
+  border-radius: 10px;
+  color: #92400e;
+  background: var(--amber-pale);
+  font-weight: 600;
+}
+
 .anchor-chips {
   display: flex;
   align-items: center;
