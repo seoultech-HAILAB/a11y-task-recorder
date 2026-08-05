@@ -171,8 +171,8 @@ kbd { background: #eee; border: 1px solid #bbb; border-radius: 4px; padding: 0 0
 
 <h2>평가 중 단축키</h2>
 <ul>
-<li><kbd>NVDA</kbd>+<kbd>Control</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> — 기록 상태 확인음 (상승음 두 번: 기록 중, 낮은음: 대기 중)</li>
-<li><kbd>NVDA</kbd>+<kbd>Control</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> — 불편한 순간 표시 (높은 확인음)</li>
+<li><kbd>NVDA</kbd>+<kbd>Control</kbd>+<kbd>L</kbd> — 기록 상태 확인음 (상승음 두 번: 기록 중, 낮은음: 대기 중)</li>
+<li><kbd>NVDA</kbd>+<kbd>Control</kbd>+<kbd>I</kbd> — 불편한 순간 표시 (높은 확인음)</li>
 </ul>
 
 <h2>평가를 마치면</h2>
