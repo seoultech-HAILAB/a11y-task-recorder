@@ -3,7 +3,7 @@
 
 키트에는 Chrome for Testing(확장 자동 로드), 임베디드 Python(별도 설치 불필요),
 기록 서버, NVDA 애드온, 설치 안내문이 포함된다. 산출물 ZIP 하나를 전달받은
-평가 기관은 압축 해제 → NVDA 애드온 더블클릭 → `평가시작.bat` 실행만 하면 된다.
+평가 기관은 압축 해제 → `평가시작.bat` 실행만 하면 된다.
 
 브랜드 Chrome은 137부터 --load-extension을 지원하지 않지만 Chrome for
 Testing에서는 계속 지원되므로 개발자 모드나 스토어 등록 없이 확장을 로드한다.
@@ -17,6 +17,7 @@ import json
 import shutil
 import subprocess
 import sys
+import time
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -30,37 +31,67 @@ CFT_ENDPOINT = (
     "last-known-good-versions-with-downloads.json"
 )
 DEFAULT_PYTHON_VERSION = "3.12.9"
+DEFAULT_CHROME_VERSION = "151.0.7922.71"
+
+
+def remove_tree(path: Path, attempts: int = 8) -> None:
+    """Retry removal while Windows releases antivirus or executable file handles."""
+    for attempt in range(attempts):
+        try:
+            shutil.rmtree(path)
+            return
+        except PermissionError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(1.5)
 
 LAUNCHER_BAT = """@echo off
 chcp 65001 >nul
 setlocal
 set KIT=%~dp0
-rem NVDA가 꺼져 있으면 자동 실행한다. 꺼진 채 평가하면 키 입력·발화가 기록되지 않는다.
+rem 매 평가 시작 때 애드온, NVDA, 전용 Chrome 순서를 새로 맞춘다.
 rem %ProgramFiles(x86)%의 괄호가 if 블록을 깨뜨리므로 블록 밖에서 변수로 만든다.
 set "NVDA64=%ProgramFiles%\\NVDA\\nvda.exe"
 set "NVDA86=%ProgramFiles(x86)%\\NVDA\\nvda.exe"
-tasklist /FI "IMAGENAME eq nvda.exe" 2>nul | find /I "nvda.exe" >nul
+set "NVDALNK=%ProgramData%\\Microsoft\\Windows\\Start Menu\\Programs\\NVDA\\NVDA.lnk"
+set "ADDON_DIR=%APPDATA%\\nvda\\addons\\a11yTaskRecorder"
+rem 이전 실행의 전용 Chrome이 남아 있으면, 그 사이 재시작된 NVDA가 접근성
+rem 후킹에 실패할 수 있다. 개인 Chrome은 건드리지 않고 키트 Chrome만 닫는다.
+powershell -NoProfile -Command "$root=[IO.Path]::GetFullPath($env:KIT+'app\\chrome'); Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'chrome.exe' -and $_.ExecutablePath -and $_.ExecutablePath.StartsWith($root,[StringComparison]::OrdinalIgnoreCase) } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }; Start-Sleep -Milliseconds 800"
+rem 동봉된 최신 애드온을 매번 동기화한다. 기존 설치가 오래되었거나 NVDA
+rem 업데이트로 사라진 경우에도 평가자가 별도 설치 절차를 밟을 필요가 없다.
+echo A11y Task Recorder NVDA 애드온을 확인하는 중입니다...
+"%KIT%app\\python\\python.exe" -c "import glob,os,shutil,zipfile; p=sorted(glob.glob(os.path.join(os.environ['KIT'],'a11yTaskRecorder-*.nvda-addon')))[-1]; d=os.path.join(os.environ['APPDATA'],'nvda','addons','a11yTaskRecorder'); shutil.rmtree(d,ignore_errors=True); os.makedirs(d,exist_ok=True); zipfile.ZipFile(p).extractall(d)"
 if errorlevel 1 (
-  if exist "%NVDA64%" (
-    start "" "%NVDA64%"
-  ) else if exist "%NVDA86%" (
-    start "" "%NVDA86%"
-  ) else (
-    echo NVDA가 설치되어 있지 않습니다. 설치안내.html의 'NVDA 설치'를 먼저 진행해 주세요.
-  )
+  echo 경고: NVDA 애드온 자동 설치에 실패했습니다. 설치안내.html을 확인해 주세요.
+) else (
+  echo NVDA 애드온 준비 완료.
 )
-start "A11y Task Recorder 서버" "%KIT%app\\python\\python.exe" "%KIT%app\\kit_server.py" --db "%KIT%data\\recorder.sqlite3"
+rem NVDA 바로가기를 다시 실행하면 실행 중인 NVDA도 공식 동작으로 재시작된다.
+if exist "%NVDALNK%" (
+  start "" "%NVDALNK%"
+) else if exist "%NVDA64%" (
+  start "" "%NVDA64%"
+) else if exist "%NVDA86%" (
+  start "" "%NVDA86%"
+) else (
+  echo NVDA가 설치되어 있지 않습니다. 설치안내.html의 'NVDA 설치'를 먼저 진행해 주세요.
+)
+echo NVDA와 Recorder 애드온이 시작될 때까지 기다리는 중입니다...
+powershell -NoProfile -Command "Start-Sleep -Seconds 10"
+powershell -NoProfile -Command "try { if((Invoke-RestMethod 'http://127.0.0.1:8765/api/health' -TimeoutSec 1).ok){ exit 0 } } catch {}; exit 1"
+if errorlevel 1 (
+  start "A11y Task Recorder 서버" "%KIT%app\\python\\python.exe" "%KIT%app\\kit_server.py" --db "%KIT%data\\recorder.sqlite3"
+)
 powershell -NoProfile -Command "for($i=0;$i -lt 40;$i++){ try { Invoke-RestMethod 'http://127.0.0.1:8765/api/health' -TimeoutSec 1 | Out-Null; exit 0 } catch { Start-Sleep -Milliseconds 250 } }; exit 1"
 if errorlevel 1 (
   echo 서버가 시작되지 않았습니다. "A11y Task Recorder 서버" 창의 메시지를 확인해 주세요.
   pause
   exit /b 1
 )
-rem NVDA가 켜져 있어도 애드온이 로드되지 않는 경우가 있어(로그온 화면에서 올라온
-rem NVDA 등) 연결을 확인하고, 안 되면 NVDA를 한 번 재시작해 자동 복구한다.
 echo NVDA 애드온 연결을 확인하는 중입니다...
-powershell -NoProfile -Command "$ok=$false; for($i=0;$i -lt 12;$i++){ try { if((Invoke-RestMethod 'http://127.0.0.1:8765/api/health' -TimeoutSec 1).nvda_connected){$ok=$true;break} } catch {}; Start-Sleep -Milliseconds 700 }; if(-not $ok){ Write-Host 'NVDA 애드온이 응답하지 않아 NVDA를 재시작합니다.'; Stop-Process -Name nvda -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2; $exe=@(\"$env:ProgramFiles\\NVDA\\nvda.exe\",\"${env:ProgramFiles(x86)}\\NVDA\\nvda.exe\") | Where-Object { Test-Path $_ } | Select-Object -First 1; if($exe){ Start-Process $exe }; for($i=0;$i -lt 20;$i++){ try { if((Invoke-RestMethod 'http://127.0.0.1:8765/api/health' -TimeoutSec 1).nvda_connected){$ok=$true;break} } catch {}; Start-Sleep -Seconds 1 } }; if($ok){ Write-Host 'NVDA 애드온 연결 확인됨.' } else { Write-Host '경고: NVDA 애드온이 연결되지 않았습니다. 이대로 기록하면 키 입력과 발화가 저장되지 않습니다.' }"
-start "" "%KIT%app\\chrome\\chrome.exe" --load-extension="%KIT%app\\browser-extension" --user-data-dir="%KIT%app\\chrome-profile" --no-first-run --no-default-browser-check "http://127.0.0.1:8765"
+powershell -NoProfile -Command "$ok=$false; for($i=0;$i -lt 20;$i++){ try { if((Invoke-RestMethod 'http://127.0.0.1:8765/api/health' -TimeoutSec 1).nvda_connected){$ok=$true;break} } catch {}; Start-Sleep -Milliseconds 700 }; if($ok){ Write-Host 'NVDA 애드온 연결 확인됨.' } else { Write-Host '경고: NVDA 애드온이 연결되지 않았습니다. 기록 시작은 차단됩니다.' }"
+start "" "%KIT%app\\chrome\\chrome.exe" --load-extension="%KIT%app\\browser-extension" --user-data-dir="%KIT%app\\chrome-profile-@@EXTENSION_VERSION@@" --no-first-run --no-default-browser-check "http://127.0.0.1:8765"
 endlocal
 """
 
@@ -128,17 +159,12 @@ kbd { background: #eee; border: 1px solid #bbb; border-radius: 4px; padding: 0 0
 <li>설치 후 NVDA 음성이 나오면 정상입니다.</li>
 </ol>
 
-<h2>처음 한 번만 ②: NVDA 애드온 설치</h2>
-<ol>
-<li>이 폴더에 있는 <strong>a11yTaskRecorder-@@ADDON_VERSION@@.nvda-addon</strong> 파일을 더블클릭합니다.</li>
-<li>NVDA가 설치 여부를 물으면 승인하고, 안내에 따라 NVDA를 재시작합니다.</li>
-</ol>
-
 <h2>평가 시작하기</h2>
 <ol>
 <li><strong>평가시작.bat</strong>을 더블클릭합니다.</li>
 <li>처음 실행할 때 Windows 보안 확인 창이 나오면 <strong>추가 정보 → 실행</strong>을 선택합니다. (이 키트는 연구실에서 전달받은 파일일 때만 실행하세요.)</li>
-<li>검은색 <strong>서버 창</strong>과 <strong>평가용 브라우저</strong>(Chrome for Testing)가 자동으로 열립니다. 브라우저에 기록 대시보드가 표시됩니다.</li>
+<li>Recorder 애드온 설치, NVDA 재시작과 평가용 Chrome 실행은 자동으로 진행됩니다.</li>
+<li>검은색 <strong>서버 창</strong>과 <strong>평가용 브라우저</strong>(Chrome for Testing)가 열리고, 대시보드 상단에 <strong>NVDA 연결됨</strong>이 표시되는지 확인합니다.</li>
 <li>서버 창은 닫지 말고 그대로 두세요. 이 창을 닫으면 기록이 중단됩니다.</li>
 <li>대시보드에서 세션을 만들고 <strong>기록 시작</strong>을 누른 뒤, 같은 브라우저에서 평가 과업을 진행합니다.</li>
 </ol>
@@ -229,21 +255,31 @@ def extract_flat(archive: Path, destination: Path) -> None:
     source = entries[0] if len(entries) == 1 and entries[0].is_dir() else staging
     shutil.move(str(source), str(destination))
     if staging.exists():
-        shutil.rmtree(staging)
+        remove_tree(staging)
 
 
-def build_kit(python_version: str) -> Path:
+def build_kit(python_version: str, chrome_version: str) -> Path:
     addon_version = read_manifest_version(ROOT / "nvda-addon" / "manifest.ini")
     extension_version = json.loads(
         (ROOT / "browser-extension" / "manifest.json").read_text(encoding="utf-8")
     )["version"]
     addon_file = ROOT / "dist" / "a11yTaskRecorder-{}.nvda-addon".format(addon_version)
-    if not addon_file.exists():
-        print("NVDA 애드온 설치 파일 생성 중...")
-        subprocess.check_call([sys.executable, str(ROOT / "scripts" / "build_nvda_addon.py")])
+    print("NVDA 애드온 설치 파일 생성 중...")
+    subprocess.check_call([sys.executable, str(ROOT / "scripts" / "build_nvda_addon.py")])
 
-    cft = fetch_cft_stable()
-    print("Chrome for Testing 안정판: {}".format(cft["version"]))
+    cft = (
+        fetch_cft_stable()
+        if chrome_version == "latest"
+        else {
+            "version": chrome_version,
+            "url": (
+                "https://storage.googleapis.com/chrome-for-testing-public/"
+                + chrome_version
+                + "/win64/chrome-win64.zip"
+            ),
+        }
+    )
+    print("Chrome for Testing 선택 버전: {}".format(cft["version"]))
     cft_zip = download(cft["url"], CACHE_DIR / "chrome-win64-{}.zip".format(cft["version"]))
     python_zip = download(
         "https://www.python.org/ftp/python/{0}/python-{0}-embed-amd64.zip".format(python_version),
@@ -253,7 +289,7 @@ def build_kit(python_version: str) -> Path:
     kit_name = "A11yTaskRecorder-{}-chrome{}".format(addon_version, cft["version"])
     staging = BUILD_DIR / kit_name
     if staging.exists():
-        shutil.rmtree(staging)
+        remove_tree(staging)
     app = staging / "app"
     app.mkdir(parents=True)
 
@@ -275,7 +311,9 @@ def build_kit(python_version: str) -> Path:
 
     (app / "kit_server.py").write_text(KIT_SERVER_PY, encoding="utf-8")
     (staging / "평가시작.bat").write_text(
-        LAUNCHER_BAT, encoding="utf-8", newline="\r\n"
+        LAUNCHER_BAT.replace("@@EXTENSION_VERSION@@", extension_version),
+        encoding="utf-8",
+        newline="\r\n",
     )
     (staging / "설치안내.html").write_text(
         GUIDE_HTML.replace("@@ADDON_VERSION@@", addon_version), encoding="utf-8"
@@ -313,8 +351,13 @@ def build_kit(python_version: str) -> Path:
 def main() -> None:
     parser = argparse.ArgumentParser(description="평가 기관 배포용 키트 생성")
     parser.add_argument("--python-version", default=DEFAULT_PYTHON_VERSION)
+    parser.add_argument(
+        "--chrome-version",
+        default=DEFAULT_CHROME_VERSION,
+        help="고정 Chrome for Testing 버전. 최신판은 'latest'를 사용합니다.",
+    )
     args = parser.parse_args()
-    build_kit(args.python_version)
+    build_kit(args.python_version, args.chrome_version)
 
 
 if __name__ == "__main__":
