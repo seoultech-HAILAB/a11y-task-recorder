@@ -303,6 +303,8 @@ function renderSession() {
 
   byId("export-json").href = `${API}/sessions/${session.id}/export.json`;
   byId("export-csv").href = `${API}/sessions/${session.id}/export.csv`;
+  byId("export-interactions").href =
+    `${API}/sessions/${session.id}/export-interactions.csv`;
 
   renderMetrics(session.summary || {});
   renderRounds();

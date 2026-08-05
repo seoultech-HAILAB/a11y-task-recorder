@@ -1087,12 +1087,201 @@ class RecorderStore:
             result.append(event)
         return result
 
+    def build_interactions(self, session_id: str) -> List[Dict[str, Any]]:
+        """원본 이벤트를 사람이 읽는 '행동' 단위로 접는다.
+
+        키 입력 하나에 도착 요소(focus)와 그때의 NVDA 안내(speech)를 묶고,
+        페이지 URL은 직전 브라우저 이벤트에서 이월해 모든 행동에 붙인다.
+        원본은 그대로 보존되며 각 행동의 `event_ids`로 되짚을 수 있다.
+        """
+        session = self.get_session(session_id)
+        events = self.list_events(session_id, limit=10000)
+        steps = {step["id"]: step for step in session.get("steps", [])}
+        started_at = parse_timestamp(session["started_at"]) if session.get("started_at") else None
+
+        interactions: List[Dict[str, Any]] = []
+        current: Optional[Dict[str, Any]] = None
+        current_url = ""
+        current_title = ""
+
+        def element_of(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+            element = event.get("element") or {}
+            name = element.get("name") or element.get("accessible_name") or ""
+            role = element.get("role") or ""
+            # 키를 누르는 순간의 포커스는 전환 중이라 이름 없이 "알 수 없음"으로
+            # 잡히는 경우가 대부분이다. 이런 껍데기는 없는 것으로 보고, 도착
+            # 요소는 뒤따르는 focus 이벤트에서 채운다.
+            if not name and role in {"", "알 수 없음", "unknown"}:
+                return None
+            return {
+                "name": name,
+                "role": role,
+                "ia2_unique_id": element.get("ia2_unique_id"),
+                "unique_id": element.get("unique_id", ""),
+            }
+
+        def new_row(event: Dict[str, Any], kind: str) -> Dict[str, Any]:
+            offset = None
+            if started_at:
+                offset = round(
+                    (parse_timestamp(event["timestamp"]) - started_at).total_seconds(), 2
+                )
+            step = steps.get(event.get("step_id") or "")
+            row = {
+                "seq": len(interactions) + 1,
+                "timestamp": event["timestamp"],
+                "offset_s": offset,
+                "kind": kind,
+                "key": "",
+                "step_id": event.get("step_id"),
+                "step_title": step["title"] if step else "",
+                "url": current_url,
+                "page_title": current_title,
+                "element": element_of(event),
+                "speech": [],
+                "detail": {},
+                "event_ids": [event["id"]],
+            }
+            interactions.append(row)
+            return row
+
+        for event in events:
+            event_type = event["type"]
+            payload = event.get("payload") or {}
+            if event.get("url"):
+                current_url = event["url"]
+            # 문서 제목은 브라우저 확장 값만 쓴다. NVDA는 창 제목(브라우저 이름
+            # 포함)을 보내므로 페이지 단위 집계에 적합하지 않다.
+            if event["source"] == "browser" and event.get("page_title"):
+                current_title = event["page_title"]
+
+            if event_type in {"input", "keyboard"}:
+                current = new_row(event, "input")
+                current["key"] = (
+                    payload.get("display_name")
+                    or payload.get("chord")
+                    or payload.get("gesture")
+                    or payload.get("key")
+                    or ""
+                )
+            elif event_type == "focus":
+                if current and current["kind"] == "input" and not current["element"]:
+                    current["element"] = element_of(event)
+                    current["event_ids"].append(event["id"])
+                else:
+                    current = new_row(event, "focus")
+            elif event_type in {"speech", "speech_episode"}:
+                listened = None
+                if event.get("speech_end_ts"):
+                    delta = (
+                        parse_timestamp(event["speech_end_ts"])
+                        - parse_timestamp(event["timestamp"])
+                    ).total_seconds()
+                    if delta >= 0:
+                        listened = round(delta, 2)
+                spoken = {
+                    "text": payload.get("normalized_text")
+                    or payload.get("raw_text")
+                    or payload.get("text", ""),
+                    "listened_s": listened,
+                    "interrupted": bool(event.get("interrupted")),
+                }
+                if current and current["kind"] in {"input", "focus", "navigation", "page_ready"}:
+                    current["speech"].append(spoken)
+                    current["event_ids"].append(event["id"])
+                else:
+                    current = new_row(event, "speech")
+                    current["speech"].append(spoken)
+            elif event_type in {"speech_cancel", "speech_canceled"}:
+                if current:
+                    current["event_ids"].append(event["id"])
+            elif event_type == "dom_mutation":
+                continue  # 저수준 기록은 원본 events에만 남긴다.
+            elif event_type in {"navigation", "history", "page_ready"}:
+                current = new_row(event, "navigation" if event_type != "page_ready" else "page_ready")
+                current["detail"] = {
+                    "direction": payload.get("direction", ""),
+                    "transition_type": payload.get("transition_type", ""),
+                }
+            elif event_type == "marker":
+                row = new_row(event, "marker")
+                row["detail"] = {
+                    "intensity": payload.get("intensity"),
+                    "label": payload.get("label", ""),
+                }
+                current = None
+            elif event_type == "hint":
+                row = new_row(event, "hint")
+                row["detail"] = {"text": payload.get("text", "")}
+                current = None
+            elif event_type in {"step_start", "step_end"}:
+                row = new_row(event, event_type)
+                row["detail"] = {
+                    "title": payload.get("title", ""),
+                    "position": payload.get("position"),
+                    "reason": payload.get("reason", ""),
+                }
+                current = None
+            else:
+                current = new_row(event, event_type)
+                current["detail"] = dict(payload)
+        return interactions
+
+    def export_interactions_csv(self, session_id: str) -> bytes:
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(
+            [
+                "seq",
+                "timestamp",
+                "offset_s",
+                "kind",
+                "key",
+                "element_name",
+                "element_role",
+                "ia2_unique_id",
+                "speech_text",
+                "listened_s",
+                "interrupted",
+                "speech_count",
+                "url",
+                "page_title",
+                "step_title",
+                "detail",
+                "event_ids",
+            ]
+        )
+        for row in self.build_interactions(session_id):
+            element = row["element"] or {}
+            speech = row["speech"][0] if row["speech"] else {}
+            writer.writerow(
+                [
+                    row["seq"],
+                    row["timestamp"],
+                    row["offset_s"],
+                    row["kind"],
+                    row["key"],
+                    element.get("name", ""),
+                    element.get("role", ""),
+                    element.get("ia2_unique_id", ""),
+                    speech.get("text", ""),
+                    speech.get("listened_s", ""),
+                    speech.get("interrupted", ""),
+                    len(row["speech"]),
+                    row["url"],
+                    row["page_title"],
+                    row["step_title"],
+                    json.dumps(row["detail"], ensure_ascii=False) if row["detail"] else "",
+                    " ".join(str(item) for item in row["event_ids"]),
+                ]
+            )
+        return ("﻿" + output.getvalue()).encode("utf-8")
+
     def export_json(self, session_id: str) -> bytes:
-        return json.dumps(
-            self.get_session(session_id, include_related=True),
-            ensure_ascii=False,
-            indent=2,
-        ).encode("utf-8")
+        payload = self.get_session(session_id, include_related=True)
+        # 원본 events는 그대로 두고, 읽기·분석용 파생 뷰를 함께 담는다.
+        payload["interactions"] = self.build_interactions(session_id)
+        return json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
 
     def export_csv(self, session_id: str) -> bytes:
         output = io.StringIO()
@@ -1158,6 +1347,10 @@ class RecorderStore:
                 )
                 bundle.writestr(name + ".json", self.export_json(session["id"]))
                 bundle.writestr(name + ".csv", self.export_csv(session["id"]))
+                bundle.writestr(
+                    name + "_interactions.csv",
+                    self.export_interactions_csv(session["id"]),
+                )
             with tempfile.TemporaryDirectory() as temporary:
                 backup_path = Path(temporary) / "recorder.sqlite3"
                 with closing(sqlite3.connect(str(self.db_path))) as source, closing(
@@ -1310,6 +1503,15 @@ class RecorderHandler(BaseHTTPRequestHandler):
         match = re.fullmatch(r"/api/sessions/([^/]+)/steps", path)
         if match:
             self._json({"steps": self.server.store.list_steps(match.group(1))})
+            return
+        match = re.fullmatch(r"/api/sessions/([^/]+)/export-interactions\.csv", path)
+        if match:
+            session_id = match.group(1)
+            self._bytes(
+                self.server.store.export_interactions_csv(session_id),
+                "text/csv; charset=utf-8",
+                "interactions-{}.csv".format(session_id),
+            )
             return
         match = re.fullmatch(r"/api/sessions/([^/]+)/export\.(json|csv)", path)
         if match:

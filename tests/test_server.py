@@ -217,6 +217,83 @@ class StoreTests(unittest.TestCase):
             namespace["normalizeSpeechText"]("Checkout button clickable"),
         )
 
+    def test_interactions_fold_events_and_carry_url(self):
+        self.store.start_session(self.session["id"])
+        self.store.add_event(
+            {
+                "session_id": self.session["id"],
+                "source": "browser",
+                "type": "navigation",
+                "url": "https://example.com/search",
+                "page_title": "검색",
+                "payload": {"direction": "new"},
+            }
+        )
+        self.store.add_event(
+            {
+                "session_id": self.session["id"],
+                "source": "nvda",
+                "type": "input",
+                "payload": {"display_name": "탭"},
+            }
+        )
+        self.store.add_event(
+            {
+                "session_id": self.session["id"],
+                "source": "nvda",
+                "type": "focus",
+                "element": {"name": "로그인", "role": "링크", "ia2_unique_id": -42},
+            }
+        )
+        speech = self.store.add_event(
+            {
+                "session_id": self.session["id"],
+                "source": "nvda",
+                "type": "speech_episode",
+                "payload": {"normalized_text": "로그인", "raw_text": "로그인 링크"},
+            }
+        )
+        self.store.add_event(
+            {
+                "session_id": self.session["id"],
+                "source": "browser",
+                "type": "dom_mutation",
+                "url": "https://example.com/search",
+                "payload": {"added_nodes": 3},
+            }
+        )
+        self.store.add_event(
+            {
+                "session_id": self.session["id"],
+                "source": "dashboard",
+                "type": "marker",
+                "payload": {"label": "불편", "intensity": 4},
+            }
+        )
+
+        interactions = self.store.build_interactions(self.session["id"])
+        kinds = [item["kind"] for item in interactions]
+        self.assertEqual(["navigation", "input", "marker"], kinds)
+
+        tab = interactions[1]
+        self.assertEqual("탭", tab["key"])
+        self.assertEqual("로그인", tab["element"]["name"])
+        self.assertEqual("링크", tab["element"]["role"])
+        self.assertEqual("로그인", tab["speech"][0]["text"])
+        # 페이지 URL이 브라우저 이벤트에서 이월된다.
+        self.assertEqual("https://example.com/search", tab["url"])
+        # 원본으로 되짚을 수 있어야 한다.
+        self.assertIn(speech["id"], tab["event_ids"])
+        self.assertEqual(4, interactions[2]["detail"]["intensity"])
+
+        payload = json.loads(self.store.export_json(self.session["id"]).decode("utf-8"))
+        self.assertEqual(len(interactions), len(payload["interactions"]))
+        self.assertIn("events", payload)
+
+        csv_text = self.store.export_interactions_csv(self.session["id"]).decode("utf-8")
+        self.assertIn("element_name", csv_text)
+        self.assertIn("로그인", csv_text)
+
     def test_step_outcome_defaults_and_manual_update(self):
         first = self.store.create_step(self.session["id"], {"title": "검색"})
         second = self.store.create_step(self.session["id"], {"title": "결제"})
