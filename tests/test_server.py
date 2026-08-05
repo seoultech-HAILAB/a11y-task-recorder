@@ -11,7 +11,13 @@ from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-from recorder.server import ApiError, RecorderStore, create_server
+from recorder.server import (
+    BROWSER_CLIENT_HEADER,
+    BROWSER_CLIENT_ID,
+    ApiError,
+    RecorderStore,
+    create_server,
+)
 
 
 class StoreTests(unittest.TestCase):
@@ -87,6 +93,13 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(1, summary["back_count"])
         self.assertEqual(1, summary["speech_count"])
         self.assertEqual(1, summary["issue_count"])
+
+        listed_session = next(
+            session
+            for session in self.store.list_sessions()
+            if session["id"] == self.session["id"]
+        )
+        self.assertEqual(summary, listed_session["summary"])
 
         stopped = self.store.stop_session(
             self.session["id"], {"status": "completed", "notes": "검색이 어려웠음"}
@@ -217,6 +230,15 @@ class StoreTests(unittest.TestCase):
             namespace["normalizeSpeechText"]("Checkout button clickable"),
         )
 
+    def test_dom_mutation_export_does_not_include_raw_paths(self):
+        content_script = (
+            Path(__file__).resolve().parent.parent
+            / "browser-extension"
+            / "content.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn("changed_target_count", content_script)
+        self.assertNotIn("changed_xpaths:", content_script)
+
     def test_interactions_fold_events_and_carry_url(self):
         self.store.start_session(self.session["id"])
         self.store.add_event(
@@ -242,7 +264,12 @@ class StoreTests(unittest.TestCase):
                 "session_id": self.session["id"],
                 "source": "nvda",
                 "type": "focus",
-                "element": {"name": "로그인", "role": "링크", "ia2_unique_id": -42},
+                "element": {
+                    "name": "로그인",
+                    "role": "링크",
+                    "scope": "web_content",
+                    "ia2_unique_id": -42,
+                },
             }
         )
         speech = self.store.add_event(
@@ -279,6 +306,7 @@ class StoreTests(unittest.TestCase):
         self.assertEqual("탭", tab["key"])
         self.assertEqual("로그인", tab["element"]["name"])
         self.assertEqual("링크", tab["element"]["role"])
+        self.assertEqual("web_content", tab["element"]["scope"])
         self.assertEqual("로그인", tab["speech"][0]["text"])
         # 페이지 URL이 브라우저 이벤트에서 이월된다.
         self.assertEqual("https://example.com/search", tab["url"])
@@ -288,10 +316,21 @@ class StoreTests(unittest.TestCase):
 
         payload = json.loads(self.store.export_json(self.session["id"]).decode("utf-8"))
         self.assertEqual(len(interactions), len(payload["interactions"]))
+        self.assertEqual(len(interactions), payload["summary"]["interaction_count"])
+        self.assertEqual(
+            {"nvda": 3, "browser": 2, "dashboard": 1},
+            payload["summary"]["source_event_counts"],
+        )
+        self.assertTrue(payload["data_quality"]["checks"]["nvda_data_present"])
+        self.assertTrue(payload["data_quality"]["checks"]["browser_data_present"])
+        self.assertFalse(payload["data_quality"]["checks"]["environment_complete"])
+        self.assertFalse(payload["data_quality"]["collection_check_passed"])
         self.assertIn("events", payload)
 
         csv_text = self.store.export_interactions_csv(self.session["id"]).decode("utf-8")
         self.assertIn("element_name", csv_text)
+        self.assertIn("element_scope", csv_text)
+        self.assertIn("web_content", csv_text)
         self.assertIn("로그인", csv_text)
 
     def test_step_outcome_defaults_and_manual_update(self):
@@ -443,8 +482,8 @@ class HttpTests(unittest.TestCase):
         self.thread.join(timeout=2)
         self.temporary.cleanup()
 
-    def request(self, path, method="GET", body=None, origin=None):
-        headers = {}
+    def request(self, path, method="GET", body=None, origin=None, extra_headers=None):
+        headers = dict(extra_headers or {})
         data = None
         if body is not None:
             data = json.dumps(body).encode("utf-8")
@@ -482,9 +521,25 @@ class HttpTests(unittest.TestCase):
                 "type": "marker",
                 "payload": {"label": "어려움"},
             },
+            extra_headers={BROWSER_CLIENT_HEADER: BROWSER_CLIENT_ID},
         )
         _, events_body = self.request("/api/sessions/{}/events".format(session["id"]))
         self.assertEqual("marker", json.loads(events_body)["events"][0]["type"])
+
+    def test_rejects_browser_events_from_other_chrome_profiles(self):
+        _, body = self.request(
+            "/api/sessions", "POST", {"title": "전용 브라우저 확인"}
+        )
+        session = json.loads(body)["session"]
+        self.request("/api/sessions/{}/start".format(session["id"]), "POST", {})
+
+        with self.assertRaises(HTTPError) as caught:
+            self.request(
+                "/api/events",
+                "POST",
+                {"source": "browser", "type": "page_ready"},
+            )
+        self.assertEqual(403, caught.exception.code)
 
     def test_health_reports_nvda_liveness(self):
         _, body = self.request("/api/health")

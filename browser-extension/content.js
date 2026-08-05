@@ -75,7 +75,7 @@
       attribute_changes: mutationBuffer.attributes,
       character_data_changes: mutationBuffer.characterData,
       attribute_names: [...mutationBuffer.attributeNames].slice(0, 20),
-      changed_xpaths: [...mutationBuffer.xpaths].slice(0, 20),
+      changed_target_count: mutationBuffer.xpaths.size,
     });
     mutationBuffer.added = 0;
     mutationBuffer.removed = 0;

@@ -255,6 +255,7 @@ async function refreshSession(sessionId = state.currentSession?.id, updateTimest
       request(`/sessions/${sessionId}`),
       request(`/sessions/${sessionId}/events?limit=10000`),
       request(`/sessions/${sessionId}/issues`),
+      checkConnection(),
     ]);
     state.currentSession = sessionData.session;
     state.events = eventData.events;
@@ -281,12 +282,15 @@ function renderSession() {
   byId("session-status").className = `session-status ${session.status}`;
 
   const active = session.status === "active";
-  // 서버가 감지한 애드온 생존 신호를 우선하고, 과거 세션은 기록된 이벤트로 판단한다.
-  const nvdaConnected =
-    state.nvdaConnected ||
-    Boolean((session.environment || {}).nvda_version) ||
-    state.events.some((event) => event.source === "nvda");
-  byId("nvda-warning").hidden = !(active && !nvdaConnected);
+  const elapsedSeconds = session.started_at
+    ? (Date.now() - new Date(session.started_at).getTime()) / 1000
+    : 0;
+  const hasNvdaEvents = state.events.some((event) => event.source === "nvda");
+  const hasBrowserEvents = state.events.some((event) => event.source === "browser");
+  const nvdaCaptureMissing =
+    active && elapsedSeconds >= 8 && hasBrowserEvents && !hasNvdaEvents;
+  byId("nvda-warning").hidden =
+    !active || (state.nvdaConnected && !nvdaCaptureMissing);
   byId("start-button").hidden = session.status !== "draft";
   if (!active) byId("marker-intensity").hidden = true;
   byId("marker-button").hidden = !active || !byId("marker-intensity").hidden;
@@ -944,13 +948,11 @@ async function addHint(form) {
 async function startSession() {
   await checkConnection();
   if (!state.nvdaConnected) {
-    const proceed = window.confirm(
-      "NVDA가 연결되어 있지 않습니다.\n\n" +
-        "이 상태로 기록하면 키 입력과 NVDA 발화가 저장되지 않고 페이지 이동만 남습니다.\n\n" +
-        "NVDA를 실행한 뒤(이미 실행 중이면 NVDA를 재시작한 뒤) 다시 시도하세요.\n" +
-        "그래도 지금 시작하려면 확인을 누르세요."
+    showNotice(
+      "NVDA가 연결되지 않아 기록을 시작하지 않았습니다. 평가시작 파일을 다시 실행한 뒤 NVDA 연결됨을 확인하세요.",
+      true
     );
-    if (!proceed) return;
+    return;
   }
   const result = await request(`/sessions/${state.currentSession.id}/start`, {
     method: "POST",

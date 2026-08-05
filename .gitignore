@@ -3,4 +3,4 @@ __pycache__/
 .DS_Store
 data/
 dist/*
-!dist/a11yTaskRecorder-0.2.0.nvda-addon
+!dist/a11yTaskRecorder-0.2.1.nvda-addon
