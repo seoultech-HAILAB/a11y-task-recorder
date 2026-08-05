@@ -1436,7 +1436,7 @@ class RecorderStore:
                         "\uc644\ub8cc \uc138\uc158 \uc218: {}".format(len(finished)),
                         "\uc9c4\ud589 \uc911\uc774\ub77c \uc81c\uc678\ub41c \uc138\uc158 \uc218: {}".format(active_count),
                         "sessions/ \ud3f4\ub354: \uc138\uc158\ubcc4 JSON\u00b7CSV \ub0b4\ubcf4\ub0b4\uae30",
-                        "recorder.sqlite3: \uc804\uccb4 \ub370\uc774\ud130\ubca0\uc774\uc2a4 \uc0ac\ubcf8",
+                        "recorder.sqlite3: \ubcf5\uad6c\uc6a9 \uc804\uccb4 \uae30\ub85d \ubc31\uc5c5(SQLite)",
                         "",
                     ]
                 ),

@@ -340,7 +340,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
     @script(
         description="현재 지점을 접근성 불편 지점으로 표시합니다.",
-        gesture="kb:NVDA+control+shift+m",
+        gestures=(
+            "kb:NVDA+control+i",
+            "kb:NVDA+control+shift+m",
+        ),
         category=scriptCategory,
     )
     def script_markIssue(self, gesture):
@@ -363,7 +366,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
     @script(
         description="A11y Task Recorder의 기록 상태를 소리로 확인합니다.",
-        gesture="kb:NVDA+control+shift+r",
+        gestures=(
+            "kb:NVDA+control+l",
+            "kb:NVDA+control+shift+r",
+        ),
         category=scriptCategory,
     )
     def script_reportStatus(self, gesture):
