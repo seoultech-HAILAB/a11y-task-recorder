@@ -10,6 +10,7 @@ import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 
+import addonHandler
 import api
 import buildVersion
 import controlTypes
@@ -27,6 +28,7 @@ POLL_SECONDS = 1.25
 REQUEST_TIMEOUT_SECONDS = 0.8
 SUPPORTED_BROWSER_APPS = {"chrome", "msedge", "firefox", "brave", "opera"}
 SPEECH_MERGE_SECONDS = 1.2
+ADDON_VERSION = addonHandler.getCodeAddon().manifest["version"]
 SAFE_UNBOUND_KEYS = {
     "kb:tab",
     "kb:shift+tab",
@@ -412,6 +414,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         if obj is None:
             return {}
         context = {}
+        context["scope"] = self._objectScope(obj)
         try:
             name = safeString(obj.name, 600)
             context["name"] = name
@@ -456,6 +459,24 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
                 ia2UniqueId,
             )
         return context
+
+    def _objectScope(self, obj):
+        """Distinguish web document objects from the browser's own controls."""
+        documentRole = getattr(controlTypes.Role, "DOCUMENT", None)
+        current = obj
+        for _ in range(20):
+            if current is None:
+                break
+            try:
+                if documentRole is not None and current.role == documentRole:
+                    return "web_content"
+            except Exception:
+                pass
+            try:
+                current = current.parent
+            except Exception:
+                break
+        return "browser_ui"
 
     def _elementKey(self, element):
         return safeString(
@@ -518,7 +539,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
     def _postEnvironment(self, sessionId):
         environment = {
             "nvda_version": safeString(getattr(buildVersion, "version", ""), 80),
-            "nvda_addon_version": "0.2.0",
+            "nvda_addon_version": safeString(ADDON_VERSION, 80),
         }
         try:
             synth = synthDriverHandler.getSynth()

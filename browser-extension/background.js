@@ -1,5 +1,6 @@
 const COLLECTOR = "http://127.0.0.1:8765";
 const ACTIVE_CACHE_MS = 1200;
+const RECORDER_CLIENT = "a11y-recorder-cft-v1";
 
 let activeCache = { checkedAt: 0, session: null };
 let environmentReportedSession = null;
@@ -28,13 +29,6 @@ async function getActiveSession(force = false) {
     if (!response.ok) throw new Error(`collector ${response.status}`);
     const data = await response.json();
     activeCache = { checkedAt: now, session: data.session || null };
-    if (
-      activeCache.session &&
-      activeCache.session.id !== environmentReportedSession
-    ) {
-      await reportBrowserEnvironment(activeCache.session.id);
-      environmentReportedSession = activeCache.session.id;
-    }
   } catch {
     activeCache = { checkedAt: now, session: null };
   }
@@ -50,7 +44,10 @@ async function reportBrowserEnvironment(sessionId) {
   try {
     await fetch(`${COLLECTOR}/api/sessions/${sessionId}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-A11y-Recorder-Client": RECORDER_CLIENT,
+      },
       body: JSON.stringify({
         environment_merge: {
           browser,
@@ -80,6 +77,10 @@ async function updateBadge(session) {
 async function sendEvent(event) {
   const session = await getActiveSession();
   if (!session) return { recorded: false, reason: "no_active_session" };
+  if (session.id !== environmentReportedSession) {
+    await reportBrowserEnvironment(session.id);
+    environmentReportedSession = session.id;
+  }
   const payload = {
     session_id: session.id,
     timestamp: new Date().toISOString(),
@@ -90,7 +91,10 @@ async function sendEvent(event) {
   try {
     const response = await fetch(`${COLLECTOR}/api/events`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-A11y-Recorder-Client": RECORDER_CLIENT,
+      },
       body: JSON.stringify(payload),
     });
     if (response.status === 409) {

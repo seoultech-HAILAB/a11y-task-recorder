@@ -23,6 +23,8 @@ from urllib.parse import parse_qs, urlparse
 
 # 애드온 폴링 주기(1.25초)의 여유 배수. 이 시간 안에 호출이 없으면 미연결로 본다.
 NVDA_LIVENESS_SECONDS = 10
+BROWSER_CLIENT_HEADER = "X-A11y-Recorder-Client"
+BROWSER_CLIENT_ID = "a11y-recorder-cft-v1"
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = ROOT_DIR / "static"
@@ -365,7 +367,10 @@ class RecorderStore:
             rows = connection.execute(
                 "SELECT * FROM sessions ORDER BY created_at DESC"
             ).fetchall()
-        return [self.session_from_row(row) for row in rows]
+        sessions = [self.session_from_row(row) for row in rows]
+        for session in sessions:
+            session["summary"] = self.session_summary(session["id"])
+        return sessions
 
     def get_session(self, session_id: str, include_related: bool = False) -> Dict[str, Any]:
         with self.connect() as connection:
@@ -1116,6 +1121,7 @@ class RecorderStore:
             return {
                 "name": name,
                 "role": role,
+                "scope": element.get("scope", "unknown"),
                 "ia2_unique_id": element.get("ia2_unique_id"),
                 "unique_id": element.get("unique_id", ""),
             }
@@ -1239,6 +1245,7 @@ class RecorderStore:
                 "key",
                 "element_name",
                 "element_role",
+                "element_scope",
                 "ia2_unique_id",
                 "speech_text",
                 "listened_s",
@@ -1263,6 +1270,7 @@ class RecorderStore:
                     row["key"],
                     element.get("name", ""),
                     element.get("role", ""),
+                    element.get("scope", "unknown"),
                     element.get("ia2_unique_id", ""),
                     speech.get("text", ""),
                     speech.get("listened_s", ""),
@@ -1281,6 +1289,64 @@ class RecorderStore:
         payload = self.get_session(session_id, include_related=True)
         # 원본 events는 그대로 두고, 읽기·분석용 파생 뷰를 함께 담는다.
         payload["interactions"] = self.build_interactions(session_id)
+        payload["summary"]["interaction_count"] = len(payload["interactions"])
+        source_counts = {
+            source: sum(1 for event in payload["events"] if event["source"] == source)
+            for source in ("nvda", "browser", "dashboard")
+        }
+        payload["summary"]["source_event_counts"] = source_counts
+
+        environment_fields = (
+            "nvda_version",
+            "nvda_addon_version",
+            "synthesizer",
+            "speech_rate",
+            "browser",
+            "browser_extension_version",
+        )
+        checks = {
+            "session_finished": payload["status"] in {"completed", "abandoned"},
+            "nvda_data_present": source_counts["nvda"] > 0,
+            "browser_data_present": source_counts["browser"] > 0,
+            "environment_complete": all(
+                payload["environment"].get(field) not in (None, "")
+                for field in environment_fields
+            ),
+            "steps_defined": bool(payload["steps"]),
+            "step_outcomes_recorded": bool(payload["steps"])
+            and all(
+                step.get("outcome") in {"complete", "assisted", "blocked"}
+                for step in payload["steps"]
+            ),
+            "element_scope_recorded": any(
+                (event.get("element") or {}).get("scope")
+                in {"web_content", "browser_ui"}
+                for event in payload["events"]
+                if event["source"] == "nvda"
+            ),
+        }
+        warning_labels = {
+            "session_finished": "세션이 아직 종료되지 않았습니다.",
+            "nvda_data_present": "NVDA 키·포커스·발화 이벤트가 없습니다.",
+            "browser_data_present": "브라우저 URL·페이지 변화 이벤트가 없습니다.",
+            "environment_complete": "NVDA·브라우저 환경 정보가 일부 비어 있습니다.",
+            "steps_defined": "step이 없어 step별 분석을 할 수 없습니다.",
+            "step_outcomes_recorded": "일부 step의 결과 코드가 비어 있습니다.",
+            "element_scope_recorded": "웹 콘텐츠와 브라우저 UI 범위 구분이 없는 구버전 기록입니다.",
+        }
+        critical_checks = (
+            "session_finished",
+            "nvda_data_present",
+            "browser_data_present",
+            "environment_complete",
+        )
+        payload["data_quality"] = {
+            "collection_check_passed": all(checks[name] for name in critical_checks),
+            "checks": checks,
+            "warnings": [
+                warning_labels[name] for name, passed in checks.items() if not passed
+            ],
+        }
         return json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
 
     def export_csv(self, session_id: str) -> bytes:
@@ -1413,7 +1479,10 @@ class RecorderHandler(BaseHTTPRequestHandler):
         self.send_response(HTTPStatus.NO_CONTENT)
         self._cors_headers()
         self.send_header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header(
+            "Access-Control-Allow-Headers",
+            "Content-Type, {}".format(BROWSER_CLIENT_HEADER),
+        )
         self.send_header("Access-Control-Max-Age", "86400")
         self.send_header("Content-Length", "0")
         self.end_headers()
@@ -1538,6 +1607,8 @@ class RecorderHandler(BaseHTTPRequestHandler):
             self._json({"session": self.server.store.create_session(data)}, HTTPStatus.CREATED)
             return
         if path == "/api/events":
+            if data.get("source") == "browser":
+                self._require_browser_client()
             self._json({"event": self.server.store.add_event(data)}, HTTPStatus.CREATED)
             return
         match = re.fullmatch(r"/api/sessions/([^/]+)/(start|stop)", path)
@@ -1594,6 +1665,12 @@ class RecorderHandler(BaseHTTPRequestHandler):
         data = self._read_json()
         match = re.fullmatch(r"/api/sessions/([^/]+)", path)
         if match:
+            environment_merge = data.get("environment_merge")
+            if isinstance(environment_merge, dict) and {
+                "browser",
+                "browser_extension_version",
+            }.intersection(environment_merge):
+                self._require_browser_client()
             self._json({"session": self.server.store.update_session(match.group(1), data)})
             return
         match = re.fullmatch(r"/api/sessions/([^/]+)/steps/([^/]+)", path)
@@ -1622,6 +1699,13 @@ class RecorderHandler(BaseHTTPRequestHandler):
         if not isinstance(data, dict):
             raise ApiError(HTTPStatus.BAD_REQUEST, "JSON 객체가 필요합니다.")
         return data
+
+    def _require_browser_client(self) -> None:
+        if self.headers.get(BROWSER_CLIENT_HEADER) != BROWSER_CLIENT_ID:
+            raise ApiError(
+                HTTPStatus.FORBIDDEN,
+                "전용 평가 브라우저에서 보낸 기록만 허용합니다.",
+            )
 
     def _serve_static(self, path: str) -> None:
         if path in {"", "/"}:
