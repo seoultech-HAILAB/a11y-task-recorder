@@ -56,6 +56,10 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+rem NVDA가 켜져 있어도 애드온이 로드되지 않는 경우가 있어(로그온 화면에서 올라온
+rem NVDA 등) 연결을 확인하고, 안 되면 NVDA를 한 번 재시작해 자동 복구한다.
+echo NVDA 애드온 연결을 확인하는 중입니다...
+powershell -NoProfile -Command "$ok=$false; for($i=0;$i -lt 12;$i++){ try { if((Invoke-RestMethod 'http://127.0.0.1:8765/api/health' -TimeoutSec 1).nvda_connected){$ok=$true;break} } catch {}; Start-Sleep -Milliseconds 700 }; if(-not $ok){ Write-Host 'NVDA 애드온이 응답하지 않아 NVDA를 재시작합니다.'; Stop-Process -Name nvda -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2; $exe=@(\"$env:ProgramFiles\\NVDA\\nvda.exe\",\"${env:ProgramFiles(x86)}\\NVDA\\nvda.exe\") | Where-Object { Test-Path $_ } | Select-Object -First 1; if($exe){ Start-Process $exe }; for($i=0;$i -lt 20;$i++){ try { if((Invoke-RestMethod 'http://127.0.0.1:8765/api/health' -TimeoutSec 1).nvda_connected){$ok=$true;break} } catch {}; Start-Sleep -Seconds 1 } }; if($ok){ Write-Host 'NVDA 애드온 연결 확인됨.' } else { Write-Host '경고: NVDA 애드온이 연결되지 않았습니다. 이대로 기록하면 키 입력과 발화가 저장되지 않습니다.' }"
 start "" "%KIT%app\\chrome\\chrome.exe" --load-extension="%KIT%app\\browser-extension" --user-data-dir="%KIT%app\\chrome-profile" --no-first-run --no-default-browser-check "http://127.0.0.1:8765"
 endlocal
 """

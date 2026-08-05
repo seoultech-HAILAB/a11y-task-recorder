@@ -409,6 +409,23 @@ class HttpTests(unittest.TestCase):
         _, events_body = self.request("/api/sessions/{}/events".format(session["id"]))
         self.assertEqual("marker", json.loads(events_body)["events"][0]["type"])
 
+    def test_health_reports_nvda_liveness(self):
+        _, body = self.request("/api/health")
+        self.assertFalse(json.loads(body)["nvda_connected"])
+
+        # 애드온은 urllib 기본 User-Agent로 active-session을 폴링한다.
+        request = Request(
+            self.base + "/api/active-session",
+            headers={"User-Agent": "Python-urllib/3.13"},
+        )
+        with urlopen(request, timeout=3) as response:
+            response.read()
+
+        _, body = self.request("/api/health")
+        payload = json.loads(body)
+        self.assertTrue(payload["nvda_connected"])
+        self.assertIsNotNone(payload["nvda_last_seen"])
+
     def test_export_package_endpoint(self):
         _, body = self.request(
             "/api/sessions", "POST", {"title": "패키지 확인", "participant": "P09"}

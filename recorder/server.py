@@ -21,6 +21,9 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
 
+# 애드온 폴링 주기(1.25초)의 여유 배수. 이 시간 안에 호출이 없으면 미연결로 본다.
+NVDA_LIVENESS_SECONDS = 10
+
 ROOT_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = ROOT_DIR / "static"
 DEFAULT_DB = ROOT_DIR / "data" / "recorder.sqlite3"
@@ -1193,6 +1196,9 @@ class RecorderHTTPServer(ThreadingHTTPServer):
     def __init__(self, address: Tuple[str, int], store: RecorderStore):
         super().__init__(address, RecorderHandler)
         self.store = store
+        # NVDA 애드온이 마지막으로 서버를 호출한 시각. 애드온이 로드되지 않은
+        # 채 평가가 진행되어 키 입력·발화가 통째로 유실되는 사고를 감지한다.
+        self.nvda_last_seen: Optional[str] = None
 
     def handle_error(self, request, client_address):
         # 브라우저가 keep-alive 연결을 끊는 것은 정상 동작이므로 평가자가 보는
@@ -1260,9 +1266,26 @@ class RecorderHandler(BaseHTTPRequestHandler):
         path = parsed.path
         query = parse_qs(parsed.query)
         if path == "/api/health":
-            self._json({"ok": True, "time": utc_now()})
+            last_seen = self.server.nvda_last_seen
+            connected = False
+            if last_seen:
+                age = (datetime.now(timezone.utc) - parse_timestamp(last_seen)).total_seconds()
+                connected = age <= NVDA_LIVENESS_SECONDS
+            self._json(
+                {
+                    "ok": True,
+                    "time": utc_now(),
+                    "nvda_connected": connected,
+                    "nvda_last_seen": last_seen,
+                }
+            )
             return
         if path == "/api/active-session":
+            # 애드온은 urllib으로 이 엔드포인트를 주기적으로 호출한다.
+            # 브라우저 확장(fetch)과 구분해 애드온 생존 신호로 사용한다.
+            agent = self.headers.get("User-Agent", "")
+            if "Python-urllib" in agent or self.headers.get("X-A11y-Client") == "nvda-addon":
+                self.server.nvda_last_seen = utc_now()
             self._json({"session": self.server.store.active_session()})
             return
         if path == "/api/sessions":

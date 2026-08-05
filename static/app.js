@@ -7,6 +7,7 @@ const state = {
   steps: [],
   selectedEventIds: new Set(),
   timelineView: "grouped",
+  nvdaConnected: false,
   notesDirty: false,
   pollTimer: null,
   noticeTimer: null,
@@ -91,13 +92,22 @@ function showNotice(message, isError = false) {
 
 async function checkConnection() {
   const status = byId("connection-status");
+  const nvda = byId("nvda-status");
   try {
-    await request("/health");
+    const health = await request("/health");
     status.textContent = "로컬 서버 연결됨";
     status.classList.add("connected");
+    state.nvdaConnected = Boolean(health.nvda_connected);
+    nvda.textContent = state.nvdaConnected ? "NVDA 연결됨" : "NVDA 미연결";
+    nvda.classList.toggle("connected", state.nvdaConnected);
+    nvda.classList.toggle("warning", !state.nvdaConnected);
   } catch {
     status.textContent = "서버 연결 끊김";
     status.classList.remove("connected");
+    state.nvdaConnected = false;
+    nvda.textContent = "NVDA 확인 불가";
+    nvda.classList.remove("connected");
+    nvda.classList.add("warning");
   }
 }
 
@@ -271,13 +281,12 @@ function renderSession() {
   byId("session-status").className = `session-status ${session.status}`;
 
   const active = session.status === "active";
+  // 서버가 감지한 애드온 생존 신호를 우선하고, 과거 세션은 기록된 이벤트로 판단한다.
   const nvdaConnected =
+    state.nvdaConnected ||
     Boolean((session.environment || {}).nvda_version) ||
     state.events.some((event) => event.source === "nvda");
-  const startedAgoMs = session.started_at
-    ? Date.now() - new Date(session.started_at).getTime()
-    : 0;
-  byId("nvda-warning").hidden = !(active && !nvdaConnected && startedAgoMs > 10000);
+  byId("nvda-warning").hidden = !(active && !nvdaConnected);
   byId("start-button").hidden = session.status !== "draft";
   if (!active) byId("marker-intensity").hidden = true;
   byId("marker-button").hidden = !active || !byId("marker-intensity").hidden;
@@ -931,6 +940,16 @@ async function addHint(form) {
 }
 
 async function startSession() {
+  await checkConnection();
+  if (!state.nvdaConnected) {
+    const proceed = window.confirm(
+      "NVDA가 연결되어 있지 않습니다.\n\n" +
+        "이 상태로 기록하면 키 입력과 NVDA 발화가 저장되지 않고 페이지 이동만 남습니다.\n\n" +
+        "NVDA를 실행한 뒤(이미 실행 중이면 NVDA를 재시작한 뒤) 다시 시도하세요.\n" +
+        "그래도 지금 시작하려면 확인을 누르세요."
+    );
+    if (!proceed) return;
+  }
   const result = await request(`/sessions/${state.currentSession.id}/start`, {
     method: "POST",
     body: {},

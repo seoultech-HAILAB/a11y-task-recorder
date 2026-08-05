@@ -179,9 +179,25 @@ footer {
   content: "";
 }
 
+.status-pills {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .status-pill.connected {
   color: #166534;
   background: #f0fdf4;
+}
+
+.status-pill.warning {
+  color: #92400e;
+  background: var(--amber-pale);
+}
+
+.status-pill.warning::before {
+  background: #f59e0b;
 }
 
 .status-pill.connected::before {
