@@ -33,6 +33,17 @@ CFT_ENDPOINT = (
 DEFAULT_PYTHON_VERSION = "3.12.9"
 DEFAULT_CHROME_VERSION = "151.0.7922.71"
 
+DIAGNOSTIC_BAT = '''@echo off
+setlocal DisableDelayedExpansion
+set "RECORDER_DIAGNOSTIC_KIT=%~dp0."
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0verify_live_pipeline.ps1" -KitPath "%RECORDER_DIAGNOSTIC_KIT%"
+set "DIAGNOSTIC_EXIT=%ERRORLEVEL%"
+echo.
+echo Results: diagnostic-results folder in this kit, or the displayed TEMP path.
+pause
+exit /b %DIAGNOSTIC_EXIT%
+'''
+
 
 def remove_tree(path: Path, attempts: int = 8) -> None:
     """Retry removal while Windows releases antivirus or executable file handles."""
@@ -49,6 +60,12 @@ LAUNCHER_BAT = """@echo off
 chcp 65001 >nul
 setlocal
 set KIT=%~dp0
+powershell -NoProfile -Command "try { $h=Invoke-RestMethod 'http://127.0.0.1:8765/api/health' -TimeoutSec 1 } catch { exit 0 }; if($h.ok){ if($h.recorder_version -ne '@@EXTENSION_VERSION@@'){ Write-Host '이전 Recorder 서버 창을 종료한 뒤 새 키트에서 다시 실행해 주세요.'; exit 2 }; try { $a=Invoke-RestMethod 'http://127.0.0.1:8765/api/active-session' -TimeoutSec 1; if($a.session){ Write-Host '진행 중인 기록을 유지하고 대시보드를 다시 엽니다.'; exit 3 } } catch { exit 2 } }; exit 0"
+if errorlevel 3 goto resume_dashboard
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 rem 매 평가 시작 때 애드온, NVDA, 전용 Chrome 순서를 새로 맞춘다.
 rem %ProgramFiles(x86)%의 괄호가 if 블록을 깨뜨리므로 블록 밖에서 변수로 만든다.
 set "NVDA64=%ProgramFiles%\\NVDA\\nvda.exe"
@@ -91,6 +108,7 @@ if errorlevel 1 (
 )
 echo NVDA 애드온 연결을 확인하는 중입니다...
 powershell -NoProfile -Command "$ok=$false; for($i=0;$i -lt 20;$i++){ try { if((Invoke-RestMethod 'http://127.0.0.1:8765/api/health' -TimeoutSec 1).nvda_connected){$ok=$true;break} } catch {}; Start-Sleep -Milliseconds 700 }; if($ok){ Write-Host 'NVDA 애드온 연결 확인됨.' } else { Write-Host '경고: NVDA 애드온이 연결되지 않았습니다. 기록 시작은 차단됩니다.' }"
+:resume_dashboard
 start "" "%KIT%app\\chrome\\chrome.exe" --load-extension="%KIT%app\\browser-extension" --user-data-dir="%KIT%app\\chrome-profile-@@EXTENSION_VERSION@@" --no-first-run --no-default-browser-check "http://127.0.0.1:8765"
 endlocal
 """
@@ -166,7 +184,10 @@ kbd { background: #eee; border: 1px solid #bbb; border-radius: 4px; padding: 0 0
 <li>Recorder 애드온 설치, NVDA 재시작과 평가용 Chrome 실행은 자동으로 진행됩니다.</li>
 <li>검은색 <strong>서버 창</strong>과 <strong>평가용 브라우저</strong>(Chrome for Testing)가 열리고, 대시보드 상단에 <strong>NVDA 연결됨</strong>이 표시되는지 확인합니다.</li>
 <li>서버 창은 닫지 말고 그대로 두세요. 이 창을 닫으면 기록이 중단됩니다.</li>
-<li>대시보드에서 세션을 만들고 <strong>기록 시작</strong>을 누른 뒤, 같은 브라우저에서 평가 과업을 진행합니다.</li>
+<li>대시보드에서 배정받은 <strong>테스터 번호(T01~T20)</strong>를 선택하고 <strong>배정 확인</strong>을 누릅니다.</li>
+<li><strong>사이트 준비</strong>를 누르면 배정된 사이트가 열립니다. 접속 코드가 필요한 경우 기록 시작 전에 입력합니다.</li>
+<li>과업 설명을 확인한 뒤 <strong>기록 시작</strong>을 누릅니다. 시작 URL과 과업을 직접 입력할 필요가 없습니다.</li>
+<li>과업 답변과 수행 결과를 선택해 저장한 뒤 <strong>다음 과업</strong>으로 진행합니다. 4개 과업마다 5분 휴식합니다.</li>
 </ol>
 
 <h2>평가 중 단축키</h2>
@@ -177,7 +198,7 @@ kbd { background: #eee; border: 1px solid #bbb; border-radius: 4px; padding: 0 0
 
 <h2>평가를 마치면</h2>
 <ol>
-<li>대시보드에서 <strong>완료하고 종료</strong>를 누르고, 회고 확인과 의견을 저장합니다.</li>
+<li>대시보드에서 수행 결과를 선택하고 <strong>답변 저장하고 기록 종료</strong>를 누릅니다. 수행 불가와 기술 문제도 원본 기록을 보존합니다.</li>
 <li>기록 보관함 옆의 <strong>결과 패키지 만들기</strong> 버튼을 누릅니다. <strong>결과</strong> 폴더가 자동으로 열리고 그 안에 ZIP 파일 하나가 생깁니다.</li>
 <li>그 ZIP 파일 하나를 연구 담당자에게 전달합니다(이메일 또는 안내받은 업로드 링크).</li>
 <li>평가용 브라우저와 서버 창을 닫습니다.</li>
@@ -185,6 +206,7 @@ kbd { background: #eee; border: 1px solid #bbb; border-radius: 4px; padding: 0 0
 
 <h2>문제 해결</h2>
 <ul>
+<li><strong>이전 버전에서 업데이트</strong> — 진행 중인 과업을 먼저 종료하고 이전 서버 창과 평가용 Chrome을 닫은 뒤 새 ZIP을 별도 폴더에 풉니다. 기존 기록을 이어가려면 서버가 종료된 상태에서 이전 키트의 <code>data</code> 폴더 전체를 새 키트로 복사하세요. 기존 폴더는 백업으로 보존합니다.</li>
 <li><strong>대시보드가 안 열려요</strong> — 서버 창이 열려 있는지 확인하고, 브라우저에서 <code>http://127.0.0.1:8765</code>를 다시 엽니다.</li>
 <li><strong>확인음이 낮은음만 나요</strong> — 서버 창이 닫혀 있지 않은지, 대시보드에서 세션이 <strong>기록 중</strong>인지 확인합니다.</li>
 <li><strong>NVDA가 애드온을 인식하지 못해요</strong> — NVDA 메뉴 → 도구 → 애드온 스토어 → 설치된 애드온에서 A11y Task Recorder가 활성 상태인지 확인하고 NVDA를 재시작합니다.</li>
@@ -221,13 +243,20 @@ def read_manifest_version(path: Path, key: str = "version") -> str:
 
 
 def download(url: str, target: Path) -> Path:
-    if target.exists() and target.stat().st_size > 0:
+    if target.exists() and zipfile.is_zipfile(target):
         print("캐시 사용: {}".format(target.name))
         return target
     print("다운로드: {}".format(url))
     target.parent.mkdir(parents=True, exist_ok=True)
-    with urlopen(url) as response, open(target, "wb") as handle:
-        shutil.copyfileobj(response, handle)
+    partial = target.with_suffix(target.suffix + ".part")
+    try:
+        with urlopen(url, timeout=60) as response, open(partial, "wb") as handle:
+            shutil.copyfileobj(response, handle)
+        if not zipfile.is_zipfile(partial):
+            raise ValueError("Downloaded file is not a ZIP archive: {}".format(url))
+        partial.replace(target)
+    finally:
+        partial.unlink(missing_ok=True)
     print("  완료 ({:.1f} MB)".format(target.stat().st_size / 1024 / 1024))
     return target
 
@@ -294,11 +323,15 @@ def build_kit(python_version: str, chrome_version: str) -> Path:
     app.mkdir(parents=True)
 
     print("구성 요소 복사 중...")
-    shutil.copytree(ROOT / "recorder", app / "recorder")
+    shutil.copytree(ROOT / "recorder", app / "recorder",
+                    ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     shutil.copytree(ROOT / "static", app / "static")
     shutil.copytree(ROOT / "browser-extension", app / "browser-extension")
     shutil.copy2(ROOT / "run.py", app / "run.py")
     shutil.copy2(addon_file, staging / addon_file.name)
+    shutil.copy2(ROOT / "scripts" / "verify_live_pipeline.ps1", staging / "verify_live_pipeline.ps1")
+    shutil.copy2(ROOT / "docs" / "windows-release-validation.md", staging / "windows-release-validation.md")
+    shutil.copy2(ROOT / "docs" / "assigned-study-0.3.0.md", staging / "배정과업안내.md")
 
     print("Chrome for Testing 압축 해제 중...")
     extract_flat(cft_zip, app / "chrome")
@@ -315,6 +348,7 @@ def build_kit(python_version: str, chrome_version: str) -> Path:
         encoding="utf-8",
         newline="\r\n",
     )
+    (staging / "검수실행.bat").write_text(DIAGNOSTIC_BAT, encoding="ascii", newline="\r\n")
     (staging / "설치안내.html").write_text(
         GUIDE_HTML.replace("@@ADDON_VERSION@@", addon_version), encoding="utf-8"
     )

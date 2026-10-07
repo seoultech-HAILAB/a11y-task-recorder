@@ -211,19 +211,20 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             text = " ".join(part.strip() for part in textParts if part.strip())
             if not text:
                 return
+            try:
+                navigator = api.getNavigatorObject() or focus
+            except Exception:
+                navigator = focus
             redacted = False
             if (
                 time.monotonic() - self._lastTypedCharacterAt < 1.2
                 or self._isProtected(focus)
                 or self._isEditable(focus)
+                or self._isProtected(navigator)
+                or self._isEditable(navigator)
             ):
                 text = "[입력 문자 음성 출력 숨김]"
                 redacted = True
-            navigator = None
-            try:
-                navigator = api.getNavigatorObject()
-            except Exception:
-                navigator = focus
             element = self._objectContext(navigator or focus)
             nowMonotonic = time.monotonic()
             nowTimestamp = utcNow()
@@ -234,9 +235,14 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             }
             elementKey = self._elementKey(element)
             with self._speechLock:
+                with self._sessionLock:
+                    sessionId = self._activeSession
+                if not sessionId:
+                    return
                 active = self._activeSpeech
                 canMerge = (
                     active
+                    and active["session_id"] == sessionId
                     and active["element_key"] == elementKey
                     and nowMonotonic - active["last_monotonic"] <= SPEECH_MERGE_SECONDS
                 )
@@ -248,6 +254,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
                     )
                 if not canMerge:
                     self._activeSpeech = {
+                        "session_id": sessionId,
                         "timestamp": nowTimestamp,
                         "last_monotonic": nowMonotonic,
                         "element_key": elementKey,
@@ -319,6 +326,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             self._enqueue(
                 {
                     "type": "speech_episode",
+                    "session_id": active["session_id"],
                     "timestamp": active["timestamp"],
                     "speech_end_ts": speechEndTs,
                     "interrupted": bool(interrupted),
@@ -497,6 +505,11 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         )
 
     def _enqueue(self, event):
+        if not event.get("session_id"):
+            with self._sessionLock:
+                event["session_id"] = self._activeSession
+        if not event["session_id"]:
+            return
         if not event.get("timestamp"):
             event["timestamp"] = utcNow()
         event["source"] = "nvda"
@@ -531,6 +544,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
                 data = json.loads(response.read().decode("utf-8"))
             session = data.get("session")
             sessionId = session.get("id") if session else None
+            with self._sessionLock:
+                previousSession = self._activeSession
+            if previousSession != sessionId:
+                self._finalizeSpeech(utcNow(), True, "session_boundary_observed")
             with self._sessionLock:
                 self._activeSession = sessionId
                 self._activeTitle = session.get("title", "") if session else ""
@@ -570,8 +587,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             pass
 
     def _postEvent(self, event):
-        with self._sessionLock:
-            sessionId = self._activeSession
+        sessionId = event.get("session_id")
         if not sessionId:
             return
         payload = dict(event)
@@ -592,7 +608,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         except urllib.error.HTTPError as error:
             if error.code == 409:
                 with self._sessionLock:
-                    self._activeSession = None
+                    if self._activeSession == sessionId:
+                        self._activeSession = None
             else:
                 log.debugWarning(
                     "A11y Task Recorder server returned HTTP %s" % error.code

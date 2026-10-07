@@ -112,6 +112,7 @@ async function checkConnection() {
 }
 
 function showView(name) {
+  byId("study-view").hidden = name !== "study";
   byId("home-view").hidden = name !== "home";
   byId("session-view").hidden = name !== "session";
   byId("main").focus();
@@ -131,8 +132,7 @@ function goHome() {
   state.selectedEventIds.clear();
   state.notesDirty = false;
   window.history.replaceState({}, "", "/");
-  showView("home");
-  loadSessions();
+  Study.home();
 }
 
 async function loadSessions() {
@@ -248,12 +248,25 @@ async function openSession(sessionId, announce = true) {
   }
 }
 
+async function loadSessionEvents(sessionId) {
+  const events = [];
+  let afterId = 0;
+  while (true) {
+    const page = await request(`/sessions/${sessionId}/events?limit=10000&after_id=${afterId}`);
+    events.push(...page.events);
+    if (page.events.length < 10000) break;
+    afterId = page.events[page.events.length - 1].id;
+  }
+  events.sort((a, b) => a.timestamp.localeCompare(b.timestamp) || a.id - b.id);
+  return { events };
+}
+
 async function refreshSession(sessionId = state.currentSession?.id, updateTimestamp = true) {
   if (!sessionId) return;
   try {
     const [sessionData, eventData, issueData] = await Promise.all([
       request(`/sessions/${sessionId}`),
-      request(`/sessions/${sessionId}/events?limit=10000`),
+      loadSessionEvents(sessionId),
       request(`/sessions/${sessionId}/issues`),
       checkConnection(),
     ]);
@@ -291,11 +304,11 @@ function renderSession() {
     active && elapsedSeconds >= 8 && hasBrowserEvents && !hasNvdaEvents;
   byId("nvda-warning").hidden =
     !active || (state.nvdaConnected && !nvdaCaptureMissing);
-  byId("start-button").hidden = session.status !== "draft";
+  byId("start-button").hidden = session.status !== "draft" || Boolean(session.study?.assignment_id);
   if (!active) byId("marker-intensity").hidden = true;
   byId("marker-button").hidden = !active || !byId("marker-intensity").hidden;
-  byId("stop-button").hidden = !active;
-  byId("abandon-button").hidden = !active;
+  byId("stop-button").hidden = !active || Boolean(session.study?.assignment_id);
+  byId("abandon-button").hidden = !active || Boolean(session.study?.assignment_id);
   byId("hint-form").hidden = !active;
   byId("step-form").querySelectorAll("input, button").forEach((control) => {
     control.disabled = session.status === "completed" || session.status === "abandoned";
@@ -857,7 +870,7 @@ function renderRounds() {
   const last = rounds[rounds.length - 1];
   const lastFinished =
     last && ["completed", "abandoned"].includes(last.status);
-  const addButton = finished && lastFinished
+  const addButton = finished && lastFinished && !session.study?.assignment_id
     ? `<button type="button" class="round-tab add" data-action="rerun">+ 다음 회차</button>`
     : "";
   nav.innerHTML = tabs + addButton;
@@ -1073,6 +1086,10 @@ document.addEventListener("click", async (event) => {
     if (action === "home") {
       event.preventDefault();
       goHome();
+    } else if (action === "operator-home") {
+      Study.pausePolling();
+      showView("home");
+      await loadSessions();
     } else if (action === "refresh-sessions") {
       await loadSessions();
       showNotice("세션 목록을 새로고침했습니다.");
@@ -1246,14 +1263,18 @@ async function initialize() {
   const sessionId = new URLSearchParams(window.location.search).get("session");
   if (sessionId) {
     try {
+      const data = await request(`/sessions/${encodeURIComponent(sessionId)}`);
+      if (data.session.study?.assignment_id && !new URLSearchParams(location.search).has("review")) {
+        await Study.home(data.session.study.tester);
+        return;
+      }
       await openSession(sessionId, false);
       return;
     } catch (error) {
       showNotice(error.message, true);
     }
   }
-  showView("home");
-  await loadSessions();
+  await Study.home();
 }
 
 initialize();

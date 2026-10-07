@@ -1,4 +1,6 @@
 import ast
+import csv
+import io
 import json
 import re
 import sqlite3
@@ -6,10 +8,12 @@ import tempfile
 import threading
 import unittest
 import zipfile
+from datetime import datetime, timedelta, timezone
 from contextlib import closing
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
+from unittest.mock import patch
 
 from recorder.server import (
     BROWSER_CLIENT_HEADER,
@@ -32,6 +36,12 @@ class StoreTests(unittest.TestCase):
                 "environment": {"nvda_version": "2026.1"},
             }
         )
+        # Historical event fixtures predate this QA run.
+        original_start = self.store.start_session
+        def start_with_fixture_clock(session_id):
+            with patch("recorder.server.utc_now", return_value="2026-07-29T09:00:00.000Z"):
+                return original_start(session_id)
+        self.store.start_session = start_with_fixture_clock
 
     def tearDown(self):
         self.temporary.cleanup()
@@ -118,6 +128,92 @@ class StoreTests(unittest.TestCase):
         self.store.stop_session(self.session["id"], {"status": "completed"})
         with self.assertRaisesRegex(Exception, "초안 상태의 세션만"):
             self.store.start_session(self.session["id"])
+
+    def test_stopped_session_rejects_inactive_override(self):
+        self.store.start_session(self.session["id"])
+        self.store.stop_session(self.session["id"], {"status": "completed"})
+        with self.assertRaises(ApiError):
+            self.store.add_event({
+                "session_id": self.session["id"], "source": "nvda",
+                "type": "input", "allow_inactive": True,
+            })
+
+    def test_exports_include_more_than_ten_thousand_events(self):
+        self.store.start_session(self.session["id"])
+        with self.store.connect() as connection:
+            connection.executemany(
+                "INSERT INTO events (session_id, timestamp, source, type, payload, element)"
+                " VALUES (?, ?, 'nvda', 'input', '{}', '{}')",
+                [(self.session["id"], "2026-10-07T00:00:00.000Z")] * 10001,
+            )
+        exported = json.loads(self.store.export_json(self.session["id"]))
+        self.assertEqual(10001, len(exported["events"]))
+        self.assertEqual(10001, len(exported["interactions"]))
+        for content in (self.store.export_csv(self.session["id"]),
+                        self.store.export_interactions_csv(self.session["id"])):
+            self.assertEqual(10002, len(list(csv.reader(io.StringIO(content.decode("utf-8-sig"))))))
+
+    def test_event_cursor_does_not_skip_late_speech(self):
+        self.store.start_session(self.session["id"])
+        first = self.store.add_event({"source": "nvda", "type": "input",
+                                     "timestamp": "2026-10-07T00:00:01Z"})
+        second = self.store.add_event({"source": "nvda", "type": "speech_episode",
+                                      "timestamp": "2026-10-07T00:00:00Z"})
+        page = self.store.list_events(self.session["id"], limit=1)
+        next_page = self.store.list_events(self.session["id"], after_id=page[0]["id"], limit=1)
+        self.assertEqual([first["id"], second["id"]], [page[0]["id"], next_page[0]["id"]])
+
+    def test_late_pre_stop_speech_stays_in_original_session(self):
+        self.store.start_session(self.session["id"])
+        now = datetime.now(timezone.utc)
+        before = (now - timedelta(seconds=1)).isoformat()
+        after = (now + timedelta(seconds=1)).isoformat()
+        stopped = self.store.stop_session(self.session["id"], {"status": "completed"})
+        other = self.store.create_session({"title": "Next participant"})
+        self.store.start_session(other["id"])
+        event = self.store.add_event({
+            "session_id": self.session["id"], "source": "nvda", "type": "speech_episode",
+            "timestamp": before, "speech_end_ts": after,
+            "payload": {"raw_text": "before AFTER-STOP", "text": "before AFTER-STOP",
+                        "fragments": [{"timestamp": before, "text": "before"},
+                                      {"timestamp": after, "text": "AFTER-STOP"}],
+                        "end_reason": "synth_done"},
+        })
+        self.assertEqual(self.session["id"], event["session_id"])
+        self.assertEqual(stopped["ended_at"], event["speech_end_ts"])
+        self.assertEqual("session_stopped", event["payload"]["end_reason"])
+        self.assertEqual(after, event["payload"]["observed_speech_end_ts"])
+        self.assertNotIn("AFTER-STOP", json.dumps(event))
+        self.assertEqual([], self.store.list_events(other["id"]))
+
+    def test_late_event_grace_and_capture_boundaries(self):
+        self.store.start_session(self.session["id"])
+        captured = (datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat()
+        self.store.stop_session(self.session["id"], {"status": "completed"})
+        event = {"session_id": self.session["id"], "source": "browser", "type": "navigation",
+                 "timestamp": captured}
+        self.assertEqual(self.session["id"], self.store.add_event(event)["session_id"])
+        with self.assertRaises(ApiError):
+            self.store.add_event(dict(event, timestamp=(datetime.now(timezone.utc) + timedelta(seconds=1)).isoformat()))
+        with self.assertRaises(ApiError):
+            self.store.add_event(dict(event, timestamp="2020-01-01T00:00:00Z"))
+        with patch("recorder.server.utc_now", return_value=(datetime.now(timezone.utc) + timedelta(seconds=6)).isoformat()):
+            with self.assertRaises(ApiError):
+                self.store.add_event(event)
+
+    def test_late_dom_batch_excludes_changes_after_stop(self):
+        self.store.start_session(self.session["id"])
+        before = (datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat()
+        after = (datetime.now(timezone.utc) + timedelta(seconds=1)).isoformat()
+        self.store.stop_session(self.session["id"], {"status": "completed"})
+        event = self.store.add_event({"session_id": self.session["id"], "source": "browser",
+            "type": "dom_mutation", "timestamp": before,
+            "payload": {"added_nodes": 101, "changed_target_count": 2, "batches": [
+                {"timestamp": before, "added_nodes": 1},
+                {"timestamp": after, "added_nodes": 100}]}})
+        self.assertEqual(1, event["payload"]["added_nodes"])
+        self.assertEqual(1, len(event["payload"]["batches"]))
+        self.assertIsNone(event["payload"]["changed_target_count"])
 
     def test_export_does_not_flatten_structured_context(self):
         self.store.start_session(self.session["id"])
@@ -491,8 +587,38 @@ class HttpTests(unittest.TestCase):
         if origin:
             headers["Origin"] = origin
         request = Request(self.base + path, data=data, headers=headers, method=method)
-        with urlopen(request, timeout=3) as response:
+        with urlopen(request, timeout=10) as response:
             return response, response.read()
+
+    def test_stop_response_drains_original_session_before_export(self):
+        _, body = self.request("/api/sessions", "POST", {"title": "Drain diagnostic"})
+        session_id = json.loads(body)["session"]["id"]
+        self.request("/api/sessions/{}/start".format(session_id), "POST", {})
+        captured = datetime.now(timezone.utc).isoformat()
+        stop_result = []
+        stopper = threading.Thread(target=lambda: stop_result.append(
+            self.request("/api/sessions/{}/stop".format(session_id), "POST", {})))
+        stopper.start()
+        try:
+            import time
+            for _ in range(100):
+                if self.server.store.get_session(session_id)["status"] == "completed":
+                    break
+                time.sleep(0.01)
+            _, body = self.request("/api/sessions", "POST", {"title": "Next participant"})
+            next_id = json.loads(body)["session"]["id"]
+            self.request("/api/sessions/{}/start".format(next_id), "POST", {})
+            self.request("/api/events", "POST", {"session_id": session_id, "source": "nvda",
+                "type": "speech_episode", "timestamp": captured,
+                "speech_end_ts": datetime.now(timezone.utc).isoformat(),
+                "payload": {"fragments": [{"timestamp": captured, "text": "Final utterance"}],
+                            "end_reason": "synth_done"}})
+        finally:
+            stopper.join(timeout=10)
+        self.assertEqual(1, len(stop_result))
+        _, body = self.request("/api/sessions/{}/export.json".format(session_id))
+        self.assertEqual("Final utterance", json.loads(body)["events"][0]["payload"]["raw_text"])
+        self.assertEqual([], self.server.store.list_events(next_id))
 
     def test_static_health_and_cors(self):
         response, body = self.request("/")
