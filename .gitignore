@@ -2,5 +2,7 @@ __pycache__/
 *.py[cod]
 .DS_Store
 data/
+.omc/
+.omx/
 dist/*
 !dist/a11yTaskRecorder-0.2.2.nvda-addon

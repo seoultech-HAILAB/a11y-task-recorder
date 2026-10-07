@@ -1,0 +1,59 @@
+name: Recorder verification
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      build_kit:
+        description: Build the Windows candidate as a workflow artifact without publishing a release
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python -m unittest discover -v
+      - run: node --test tests/browser_extension.test.cjs tests/study_browser.test.cjs
+      - run: python -m compileall -q recorder scripts nvda-addon tests
+      - run: node --check static/app.js
+      - run: node --check static/study.js
+      - run: node --check browser-extension/background.js
+      - run: node --check browser-extension/content.js
+      - run: node --check browser-extension/study-page.js
+      - run: node --check browser-extension/popup.js
+      - run: python scripts/build_nvda_addon.py
+
+  windows-kit:
+    if: github.event_name == 'workflow_dispatch' && inputs.build_kit
+    needs: verify
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python scripts/build_release_kit.py
+      - run: python scripts/verify_release_artifacts.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: recorder-windows-kit-unvalidated
+          path: |
+            dist/A11yTaskRecorder-*.zip
+            dist/SHA256SUMS
+            dist/qa/release-artifacts.json
+          retention-days: 14

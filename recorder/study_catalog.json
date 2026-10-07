@@ -1,0 +1,2768 @@
+{
+  "schema_version": 1,
+  "title": "웹 과업 평가",
+  "source": {
+    "spec_version": "scenario-final-20261008-hosted-v2",
+    "spec_sha256": "25af7b3ebefbce444b93f7d74598d42f2536a54108f43a2bd51bc28ee8af8e90",
+    "assignments_sha256": "8fe76768149a0c252d6c3f0cf5af36da1d72c2a93cfe857d1bd38ce3ef36a451"
+  },
+  "testers": [
+    {
+      "id": "T01",
+      "tasks": [
+        {
+          "id": "assignment-2b1c1a7e09bc1a0e7790674a",
+          "task_id": "task-f0b5bbb9edc5",
+          "order": 1,
+          "block": 1,
+          "site_name": "파라타항공",
+          "instruction": "메인 화면의 예약조회에서 예약번호 123456789와 이메일 hong@example.com으로 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/16a50b10a80c/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-387814afdb6bd22b76f0a6e5",
+          "task_id": "task-edfd87cb2b4d",
+          "order": 2,
+          "block": 1,
+          "site_name": "파라타항공",
+          "instruction": "탑승객을 성인 2명, 소아 1명으로 선택해 적용하고, 화면에 표시된 탑승객 구성을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/f495d6946794/p/413127f760b3356b.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-fca1222b6dcbe3bdd894a1e8",
+          "task_id": "task-f18125d89d4f",
+          "order": 3,
+          "block": 1,
+          "site_name": "파라타항공",
+          "instruction": "메인 화면의 예약조회에서 예약번호 987654321과 이메일 kim@example.com으로 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/f495d6946794/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-2e8adbc1fbcae157fd1cf73c",
+          "task_id": "task-af8fe2531103",
+          "order": 4,
+          "block": 1,
+          "site_name": "파라타항공",
+          "instruction": "탑승객을 성인 1명, 소아 1명으로 선택해 적용하고, 화면에 표시된 탑승객 구성을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/16a50b10a80c/p/413127f760b3356b.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-5fc711894a7e33f6223034b4",
+          "task_id": "task-bfc61490ad0c",
+          "order": 5,
+          "block": 2,
+          "site_name": "다이소몰",
+          "instruction": "수납 검색 결과에서 1,000원 상품만 보이도록 설정하고, 첫 번째 상품 이름을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/dfb33bed0046/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-f07c7bb14bc2dcc4c325ecd9",
+          "task_id": "task-88b007dec3cf",
+          "order": 6,
+          "block": 2,
+          "site_name": "다이소몰",
+          "instruction": "장바구니에 담긴 팬트리 수납 바구니 1호를 3개에서 1개로 줄이고, 바뀐 합계 금액을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/7fc83823c082/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": [
+            "기록 시작 전에 일반 화면 조작으로 팬트리 수납 바구니 1호 3개를 담고 장바구니를 연다. 준비 조작은 참여자 수행에 포함하지 않는다."
+          ]
+        },
+        {
+          "id": "assignment-c1de80fa6dadd17d64284597",
+          "task_id": "task-6aa5f59e47d1",
+          "order": 7,
+          "block": 2,
+          "site_name": "다이소몰",
+          "instruction": "수납 검색 결과에서 1,000원 상품만 보이도록 설정하고, 첫 번째 상품의 별점을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/7fc83823c082/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-c08baf1b8e6ac07aa80d174a",
+          "task_id": "task-7aa631e6b008",
+          "order": 8,
+          "block": 2,
+          "site_name": "다이소몰",
+          "instruction": "장바구니에 담긴 팬트리 수납 바구니 1호를 3개에서 2개로 줄이고, 바뀐 합계 금액을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/dfb33bed0046/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": [
+            "기록 시작 전에 일반 화면 조작으로 팬트리 수납 바구니 1호 3개를 담고 장바구니를 연다. 준비 조작은 참여자 수행에 포함하지 않는다."
+          ]
+        },
+        {
+          "id": "assignment-9c4b0ffb48d176753eb6c298",
+          "task_id": "task-5937fa74a818",
+          "order": 9,
+          "block": 3,
+          "site_name": "CJ",
+          "instruction": "메인의 Joyful Moments에서 콘텐츠를 넘겨 'KISS OF LIFE와 함께한 KCON Japan EP.2'가 나오게 하세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/8ddd4bdab636/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-1f3be789168dd145a5e8a2ce",
+          "task_id": "task-134203597b41",
+          "order": 10,
+          "block": 3,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 K-POP 분야로 바꾸고, 표시된 콘텐츠 수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/ad9126a6b9af/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-cf6ab403c5ddcfa94588cff0",
+          "task_id": "task-7215fee32356",
+          "order": 11,
+          "block": 3,
+          "site_name": "CJ",
+          "instruction": "메인의 Joyful Moments에서 콘텐츠를 넘겨 'izna와 함께한 KCON Japan EP.1'이 나오게 하세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/ad9126a6b9af/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-52db4d6edee1530b7556dff5",
+          "task_id": "task-32971e00d51e",
+          "order": 12,
+          "block": 3,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 SPORTS 분야로 바꾸고, 표시된 콘텐츠 수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        }
+      ]
+    },
+    {
+      "id": "T02",
+      "tasks": [
+        {
+          "id": "assignment-7fe1d6ab05e4a358c048067f",
+          "task_id": "task-1c2106f87e7c",
+          "order": 1,
+          "block": 1,
+          "site_name": "다이소몰",
+          "instruction": "1,000원짜리 팬트리 수납 바구니 1호 한 개를 장바구니에 담고, 담긴 결과 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/dfb33bed0046/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-9fb41f1b038b5829813fa420",
+          "task_id": "task-32241842ff20",
+          "order": 2,
+          "block": 1,
+          "site_name": "다이소몰",
+          "instruction": "수납 검색 결과에서 팬트리 수납 바구니 1호의 상세정보를 열어 리뷰 수를 확인한 뒤, 같은 검색 결과로 돌아와 알려 주세요.",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/7fc83823c082/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-a54002919e28cd87ec4b5dff",
+          "task_id": "task-e444cd3086f0",
+          "order": 3,
+          "block": 1,
+          "site_name": "다이소몰",
+          "instruction": "양면 다용도 수납 케이스 한 개를 장바구니에 담고, 담긴 결과 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/7fc83823c082/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-914783040a509a4c8110eeff",
+          "task_id": "task-712d5ee7f13b",
+          "order": 4,
+          "block": 1,
+          "site_name": "다이소몰",
+          "instruction": "수납 검색 결과에서 팬트리 수납 바구니 1호의 상세정보를 열어 가격을 확인한 뒤, 같은 검색 결과로 돌아와 알려 주세요.",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/dfb33bed0046/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-b13d012c18a447e51c62a5bc",
+          "task_id": "task-931b9d110111",
+          "order": 5,
+          "block": 2,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 이상민 감독 콘텐츠 정보를 열어, 소개된 영화 제목을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-9598cdaa27a1c9b496ec8bc0",
+          "task_id": "task-4f85be98116d",
+          "order": 6,
+          "block": 2,
+          "site_name": "CJ",
+          "instruction": "메인의 Joyful Moments에서 'KISS OF LIFE와 함께한 KCON Japan EP.1' 콘텐츠 정보를 열고, 콘텐츠 분류를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/ad9126a6b9af/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-50c3dc92e7facef2c8eb5671",
+          "task_id": "task-fffe0977ab12",
+          "order": 7,
+          "block": 2,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 'FLARE U와 함께한 KCON Japan EP.2' 콘텐츠 정보를 열어, 붙어 있는 태그를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/ad9126a6b9af/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-81a0cd3ecbe30b6c4e06d208",
+          "task_id": "task-1a2525db6539",
+          "order": 8,
+          "block": 2,
+          "site_name": "CJ",
+          "instruction": "메인의 Joyful Moments에서 'KISS OF LIFE와 함께한 KCON Japan EP.1' 콘텐츠 정보를 열고, 붙어 있는 태그를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/8ddd4bdab636/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-50eedf10c2b252a336671b86",
+          "task_id": "task-41708d0f86ea",
+          "order": 9,
+          "block": 3,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워 상영시간표에서 '극장판 치이카와' 상세정보를 열어 개봉일을 확인하고, 같은 영화관 상영시간표로 돌아와 개봉일을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/30b3755b6027/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-c13eb90b2bd25bbbf7843ccc",
+          "task_id": "task-41019e0323ae",
+          "order": 10,
+          "block": 3,
+          "site_name": "롯데시네마",
+          "instruction": "홈 화면에서 개봉 예정 영화 목록으로 바꾸고, 첫 번째 영화 소개의 첫 문장을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/4b333c53172f/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-1a9d9e7a0294f083d1edf393",
+          "task_id": "task-9b67c06d2196",
+          "order": 11,
+          "block": 3,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워 상영시간표에서 '극장판 치이카와' 상세정보를 열어 상영시간(분)을 확인하고, 같은 영화관 상영시간표로 돌아와 상영시간을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-f966962f91e58d9f27587b63",
+          "task_id": "task-e1018c4abfff",
+          "order": 12,
+          "block": 3,
+          "site_name": "롯데시네마",
+          "instruction": "홈 화면에서 개봉 예정 영화 목록으로 바꾸고, 몇 편이 표시됐는지 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/30b3755b6027/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        }
+      ]
+    },
+    {
+      "id": "T03",
+      "tasks": [
+        {
+          "id": "assignment-880e3b5ee075bdfcc28e35ad",
+          "task_id": "task-083d310e1c13",
+          "order": 1,
+          "block": 1,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 SUSTAINABILITY 분야만 보이게 하고, 표시된 콘텐츠의 제목을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-a25d63f2992456bb2c887469",
+          "task_id": "task-7215fee32356",
+          "order": 2,
+          "block": 1,
+          "site_name": "CJ",
+          "instruction": "메인의 Joyful Moments에서 콘텐츠를 넘겨 'izna와 함께한 KCON Japan EP.1'이 나오게 하세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/ad9126a6b9af/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-b8c00710031e7e346b0bd943",
+          "task_id": "task-8ccf47192c0e",
+          "order": 3,
+          "block": 1,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 SUSTAINABILITY 분야만 보이게 하고, 표시된 콘텐츠 수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/ad9126a6b9af/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-b0780161fee52b9e05dd5bc0",
+          "task_id": "task-5937fa74a818",
+          "order": 4,
+          "block": 1,
+          "site_name": "CJ",
+          "instruction": "메인의 Joyful Moments에서 콘텐츠를 넘겨 'KISS OF LIFE와 함께한 KCON Japan EP.2'가 나오게 하세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/8ddd4bdab636/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-982cc000763de11cc7b642d2",
+          "task_id": "task-b22cc26aa49b",
+          "order": 5,
+          "block": 2,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워에서 10월 6일에 '극장판 치이카와: 인어 섬의 비밀'을 볼 수 있는 첫 상영시간을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/30b3755b6027/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-39c6cc2bf7ee1e277e5f70fa",
+          "task_id": "task-78fb05bd0a08",
+          "order": 6,
+          "block": 2,
+          "site_name": "롯데시네마",
+          "instruction": "영화관 메뉴에서 서울 지역의 월드타워 영화관을 찾아 총 상영관 수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/4b333c53172f/p/332f6ff1d7466f70.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-62287ed56d6acf3bc6c249f7",
+          "task_id": "task-26918a2ffe70",
+          "order": 7,
+          "block": 2,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워에서 10월 6일에 '오디세이'를 볼 수 있는 첫 상영시간을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-d95c87cbbdecd760de9abfa6",
+          "task_id": "task-7c69a9c8a2b7",
+          "order": 8,
+          "block": 2,
+          "site_name": "롯데시네마",
+          "instruction": "영화관 메뉴에서 서울 지역의 월드타워 영화관을 찾아 주소를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/30b3755b6027/p/332f6ff1d7466f70.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-c37613c21c014785af9682cc",
+          "task_id": "task-1866e377f518",
+          "order": 9,
+          "block": 3,
+          "site_name": "한국에너지재단",
+          "instruction": "반복 메뉴를 건너뛰고 공지사항 본문으로 바로 이동해, 게시물 총 건수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/24aec581d26e/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-0099f7072f10f0ebf58639a2",
+          "task_id": "task-27efbac74c30",
+          "order": 10,
+          "block": 3,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항을 내용 기준으로 검색할 수 있도록 검색 분류를 바꾸세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/b40533a66bb1/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-a11312c92e5a3f481b7bf9ad",
+          "task_id": "task-c895a9da0d2a",
+          "order": 11,
+          "block": 3,
+          "site_name": "한국에너지재단",
+          "instruction": "반복 메뉴를 건너뛰고 공지사항 본문으로 바로 이동해, 첫 게시물 제목을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/b40533a66bb1/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-092ab8d6578816933b697115",
+          "task_id": "task-2905e54cbf96",
+          "order": 12,
+          "block": 3,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항을 작성자 기준으로 검색할 수 있도록 검색 분류를 바꾸세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/24aec581d26e/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        }
+      ]
+    },
+    {
+      "id": "T04",
+      "tasks": [
+        {
+          "id": "assignment-793a2388c50578b44dfc9a8e",
+          "task_id": "task-e1018c4abfff",
+          "order": 1,
+          "block": 1,
+          "site_name": "롯데시네마",
+          "instruction": "홈 화면에서 개봉 예정 영화 목록으로 바꾸고, 몇 편이 표시됐는지 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/30b3755b6027/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-9cc0c91ef70aa960c515d932",
+          "task_id": "task-c6f52df227a7",
+          "order": 2,
+          "block": 1,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워 영화관의 자가용·주차 안내를 열어, 영화 관람 시 주차 요금을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-2b65bdf8c59e6ddf638f813e",
+          "task_id": "task-41019e0323ae",
+          "order": 3,
+          "block": 1,
+          "site_name": "롯데시네마",
+          "instruction": "홈 화면에서 개봉 예정 영화 목록으로 바꾸고, 첫 번째 영화 소개의 첫 문장을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/4b333c53172f/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-38c47d59f987954f8945e13d",
+          "task_id": "task-1f0bde206d1e",
+          "order": 4,
+          "block": 1,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워 영화관의 대중교통 안내를 열어, 8호선 잠실역에서 올 때 어느 출구 방면으로 가야 하는지 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/30b3755b6027/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-029bb2baf220cdf57f002e1b",
+          "task_id": "task-261b0fbbb4d7",
+          "order": 5,
+          "block": 2,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항에서 제목에 '에너지'가 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/24aec581d26e/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-4bec64c9397515f04ce7cce0",
+          "task_id": "task-471dba785e66",
+          "order": 6,
+          "block": 2,
+          "site_name": "한국에너지재단",
+          "instruction": "상단 로고로 첫 화면에 간 뒤, 첫 화면의 보도자료 첫 글 제목을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/b40533a66bb1/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-f41f5469bef0fd6ea7b8aa9d",
+          "task_id": "task-11a63b4aab44",
+          "order": 7,
+          "block": 2,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항에서 제목에 '안내'가 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/b40533a66bb1/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-56d0970dba6193deae000550",
+          "task_id": "task-96a4cac3a7c8",
+          "order": 8,
+          "block": 2,
+          "site_name": "한국에너지재단",
+          "instruction": "상단 로고로 첫 화면에 간 뒤, 첫 화면의 공지사항 첫 글 제목을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/24aec581d26e/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-0ad2328538aad80cb8237ef3",
+          "task_id": "task-4140563d056c",
+          "order": 9,
+          "block": 3,
+          "site_name": "파라타항공",
+          "instruction": "국내선 운임 안내에서 출발 30일~8일 전에 취소할 때의 수수료를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/f495d6946794/p/715b3363ebc283f4.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-27ecb5348200ee5b20cbaeec",
+          "task_id": "task-8287e7fab86f",
+          "order": 10,
+          "block": 3,
+          "site_name": "파라타항공",
+          "instruction": "메인 화면의 체크인에서 예약번호 987654321, 성 김, 이름 민수로 체크인할 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/16a50b10a80c/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-da04d8db8ca4deeebf32c2f5",
+          "task_id": "task-4fcd76a49033",
+          "order": 11,
+          "block": 3,
+          "site_name": "파라타항공",
+          "instruction": "국내선 운임 안내에서 출발 7일~2일 전에 취소할 때의 수수료를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/16a50b10a80c/p/715b3363ebc283f4.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-4da112e0b3deda1d444a17e6",
+          "task_id": "task-51f2c4141607",
+          "order": 12,
+          "block": 3,
+          "site_name": "파라타항공",
+          "instruction": "메인 화면의 체크인에서 예약번호 123456789, 성 홍, 이름 길동으로 체크인할 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/f495d6946794/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        }
+      ]
+    },
+    {
+      "id": "T05",
+      "tasks": [
+        {
+          "id": "assignment-fa539b5f30eb738325a1b23c",
+          "task_id": "task-cf6392db23e7",
+          "order": 1,
+          "block": 1,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항에서 제목에 '지원'이 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/24aec581d26e/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-f41ea5def5b3db99d8ac6946",
+          "task_id": "task-c895a9da0d2a",
+          "order": 2,
+          "block": 1,
+          "site_name": "한국에너지재단",
+          "instruction": "반복 메뉴를 건너뛰고 공지사항 본문으로 바로 이동해, 첫 게시물 제목을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/b40533a66bb1/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-c886ca1b6c5b2169caff9b10",
+          "task_id": "task-df82460fa038",
+          "order": 3,
+          "block": 1,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항에서 제목에 '공고'가 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/b40533a66bb1/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-aadcbcf472913a1e73a4122e",
+          "task_id": "task-1866e377f518",
+          "order": 4,
+          "block": 1,
+          "site_name": "한국에너지재단",
+          "instruction": "반복 메뉴를 건너뛰고 공지사항 본문으로 바로 이동해, 게시물 총 건수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/24aec581d26e/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-e0cacc31b8029358f2f3bf5c",
+          "task_id": "task-b69db410aecb",
+          "order": 5,
+          "block": 2,
+          "site_name": "파라타항공",
+          "instruction": "탑승객 선택 창에서 탑승 수속 때 지참할 서류 안내를 확인하고, 창을 닫아 예약 화면으로 돌아온 뒤 그 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/f495d6946794/p/413127f760b3356b.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-84facccf10d1977ba9581096",
+          "task_id": "task-3ac30c0548fc",
+          "order": 6,
+          "block": 2,
+          "site_name": "파라타항공",
+          "instruction": "탑승객을 성인 2명, 소아 1명으로 선택해 적용하고, 화면에 표시된 탑승객 구성을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/16a50b10a80c/p/413127f760b3356b.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-b2b533aa7ae14de192a266dc",
+          "task_id": "task-cff1045758ac",
+          "order": 7,
+          "block": 2,
+          "site_name": "파라타항공",
+          "instruction": "탑승객 선택 창에서 소아·유아 기준 안내를 확인하고, 창을 닫아 예약 화면으로 돌아온 뒤 그 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/16a50b10a80c/p/413127f760b3356b.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-9d00f33cbce3afbcd6dce2a1",
+          "task_id": "task-d6da4ef9d562",
+          "order": 8,
+          "block": 2,
+          "site_name": "파라타항공",
+          "instruction": "탑승객을 성인 1명, 소아 1명으로 선택해 적용하고, 화면에 표시된 탑승객 구성을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/f495d6946794/p/413127f760b3356b.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-772e49f0a2e293d75f65f525",
+          "task_id": "task-6de0d84e32e7",
+          "order": 9,
+          "block": 3,
+          "site_name": "다이소몰",
+          "instruction": "수납 검색 결과에서 1,000원 상품만 보이도록 설정하고, 첫 번째 상품 이름을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/7fc83823c082/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-e99e2b951613a7cf9e7a65ba",
+          "task_id": "task-b2769cbe4af9",
+          "order": 10,
+          "block": 3,
+          "site_name": "다이소몰",
+          "instruction": "현재 검색 결과에서 수납바구니 상품만 보이도록 분류를 고르고, 첫 번째 상품 이름을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/dfb33bed0046/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-8e0f4ba9303040ba433c226e",
+          "task_id": "task-bda3a63d1e0c",
+          "order": 11,
+          "block": 3,
+          "site_name": "다이소몰",
+          "instruction": "수납 검색 결과에서 1,000원 상품만 보이도록 설정하고, 첫 번째 상품의 별점을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/dfb33bed0046/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-75cfb46b19a28a7f49eece39",
+          "task_id": "task-b8b86b63051d",
+          "order": 12,
+          "block": 3,
+          "site_name": "다이소몰",
+          "instruction": "현재 검색 결과에서 수납바구니 상품만 보이도록 분류를 고르고, 표시된 상품 수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/7fc83823c082/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        }
+      ]
+    },
+    {
+      "id": "T06",
+      "tasks": [
+        {
+          "id": "assignment-1293933204b9f6d0428bf082",
+          "task_id": "task-1ce950f1f732",
+          "order": 1,
+          "block": 1,
+          "site_name": "한국에너지재단",
+          "instruction": "상단 로고로 첫 화면에 간 뒤, 첫 화면의 공지사항 첫 글 제목을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/b40533a66bb1/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-5d2a08871a692865ae3d6649",
+          "task_id": "task-749fb8250d16",
+          "order": 2,
+          "block": 1,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항에서 제목에 '공고'가 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/24aec581d26e/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-709f064638bd3b450afb1c19",
+          "task_id": "task-fb19c18f0634",
+          "order": 3,
+          "block": 1,
+          "site_name": "한국에너지재단",
+          "instruction": "상단 로고로 첫 화면에 간 뒤, 첫 화면의 보도자료 첫 글 제목을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/24aec581d26e/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-940ef07d501ac8f57a26df80",
+          "task_id": "task-fe2ef70ebd83",
+          "order": 4,
+          "block": 1,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항에서 제목에 '지원'이 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/b40533a66bb1/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-69193e43da62f43d87ee78b3",
+          "task_id": "task-d5ec0e97f97f",
+          "order": 5,
+          "block": 2,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 SUSTAINABILITY 분야만 보이게 하고, 표시된 콘텐츠의 제목을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/ad9126a6b9af/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-b3219da783ed4a77a31d07e8",
+          "task_id": "task-ce40e6a955e7",
+          "order": 6,
+          "block": 2,
+          "site_name": "CJ",
+          "instruction": "메인의 Joyful Moments에서 'KISS OF LIFE와 함께한 KCON Japan EP.1' 콘텐츠 정보를 열고, 콘텐츠 분류를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/8ddd4bdab636/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-19bf6bd647807cc42dd88edd",
+          "task_id": "task-6f5b7313b40f",
+          "order": 7,
+          "block": 2,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 SUSTAINABILITY 분야만 보이게 하고, 표시된 콘텐츠 수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-cfe85a9b02dd0cbd3e2e0def",
+          "task_id": "task-3dc48d30a223",
+          "order": 8,
+          "block": 2,
+          "site_name": "CJ",
+          "instruction": "메인의 Joyful Moments에서 'KISS OF LIFE와 함께한 KCON Japan EP.1' 콘텐츠 정보를 열고, 붙어 있는 태그를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/ad9126a6b9af/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-dff2ea4c723d8bbaab1b0575",
+          "task_id": "task-94582a471604",
+          "order": 9,
+          "block": 3,
+          "site_name": "파라타항공",
+          "instruction": "메인 화면의 체크인에서 예약번호 987654321, 성 김, 이름 민수로 체크인할 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/f495d6946794/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-a12bfe56242dcb8339741a32",
+          "task_id": "task-cff1045758ac",
+          "order": 10,
+          "block": 3,
+          "site_name": "파라타항공",
+          "instruction": "탑승객 선택 창에서 소아·유아 기준 안내를 확인하고, 창을 닫아 예약 화면으로 돌아온 뒤 그 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/16a50b10a80c/p/413127f760b3356b.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-5f5470b39a304ecfc2cec51a",
+          "task_id": "task-6b5d5f6b60e4",
+          "order": 11,
+          "block": 3,
+          "site_name": "파라타항공",
+          "instruction": "메인 화면의 체크인에서 예약번호 123456789, 성 홍, 이름 길동으로 체크인할 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/16a50b10a80c/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-6a68531b5774d9f43e09db58",
+          "task_id": "task-b69db410aecb",
+          "order": 12,
+          "block": 3,
+          "site_name": "파라타항공",
+          "instruction": "탑승객 선택 창에서 탑승 수속 때 지참할 서류 안내를 확인하고, 창을 닫아 예약 화면으로 돌아온 뒤 그 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/f495d6946794/p/413127f760b3356b.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        }
+      ]
+    },
+    {
+      "id": "T07",
+      "tasks": [
+        {
+          "id": "assignment-084fb5c2a27fd8c378de81f0",
+          "task_id": "task-f18af90fbab1",
+          "order": 1,
+          "block": 1,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항을 작성자 기준으로 검색할 수 있도록 검색 분류를 바꾸세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/b40533a66bb1/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-8f5fdf68da592487035b145f",
+          "task_id": "task-1866e377f518",
+          "order": 2,
+          "block": 1,
+          "site_name": "한국에너지재단",
+          "instruction": "반복 메뉴를 건너뛰고 공지사항 본문으로 바로 이동해, 게시물 총 건수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/24aec581d26e/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-4658f9aa6ae3bcd3bcaaf1c1",
+          "task_id": "task-a837cfa8eb0a",
+          "order": 3,
+          "block": 1,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항을 내용 기준으로 검색할 수 있도록 검색 분류를 바꾸세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/24aec581d26e/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-1d04990d548c16c9add8ea15",
+          "task_id": "task-c895a9da0d2a",
+          "order": 4,
+          "block": 1,
+          "site_name": "한국에너지재단",
+          "instruction": "반복 메뉴를 건너뛰고 공지사항 본문으로 바로 이동해, 첫 게시물 제목을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/b40533a66bb1/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-e805b08505ecaa7557de23e1",
+          "task_id": "task-014d27404585",
+          "order": 5,
+          "block": 2,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워에서 10월 6일에 '오디세이'를 볼 수 있는 첫 상영시간을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/30b3755b6027/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-819e27887a97e4dfe8fc8c78",
+          "task_id": "task-c6f52df227a7",
+          "order": 6,
+          "block": 2,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워 영화관의 자가용·주차 안내를 열어, 영화 관람 시 주차 요금을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-099a6560518c15dffd64a97c",
+          "task_id": "task-6061d4f26766",
+          "order": 7,
+          "block": 2,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워에서 10월 6일에 '극장판 치이카와: 인어 섬의 비밀'을 볼 수 있는 첫 상영시간을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-bdd5e1a54b4d62fc22303d27",
+          "task_id": "task-1f0bde206d1e",
+          "order": 8,
+          "block": 2,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워 영화관의 대중교통 안내를 열어, 8호선 잠실역에서 올 때 어느 출구 방면으로 가야 하는지 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/30b3755b6027/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-21c68eded91df3b8e33e469a",
+          "task_id": "task-712d5ee7f13b",
+          "order": 9,
+          "block": 3,
+          "site_name": "다이소몰",
+          "instruction": "수납 검색 결과에서 팬트리 수납 바구니 1호의 상세정보를 열어 가격을 확인한 뒤, 같은 검색 결과로 돌아와 알려 주세요.",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/dfb33bed0046/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-d226e8ece784199949e9c5d5",
+          "task_id": "task-d541e6799999",
+          "order": 10,
+          "block": 3,
+          "site_name": "다이소몰",
+          "instruction": "현재 검색 결과에서 수납바구니 상품만 보이도록 분류를 고르고, 첫 번째 상품 이름을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/7fc83823c082/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-bf09eaaf8e03ea5645b92486",
+          "task_id": "task-32241842ff20",
+          "order": 11,
+          "block": 3,
+          "site_name": "다이소몰",
+          "instruction": "수납 검색 결과에서 팬트리 수납 바구니 1호의 상세정보를 열어 리뷰 수를 확인한 뒤, 같은 검색 결과로 돌아와 알려 주세요.",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/7fc83823c082/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-b23fc8a929a456a8bf025533",
+          "task_id": "task-1160458f7262",
+          "order": 12,
+          "block": 3,
+          "site_name": "다이소몰",
+          "instruction": "현재 검색 결과에서 수납바구니 상품만 보이도록 분류를 고르고, 표시된 상품 수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/dfb33bed0046/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        }
+      ]
+    },
+    {
+      "id": "T08",
+      "tasks": [
+        {
+          "id": "assignment-e9ee837c1528c01e2c5d12ba",
+          "task_id": "task-3ac30c0548fc",
+          "order": 1,
+          "block": 1,
+          "site_name": "파라타항공",
+          "instruction": "탑승객을 성인 2명, 소아 1명으로 선택해 적용하고, 화면에 표시된 탑승객 구성을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/16a50b10a80c/p/413127f760b3356b.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-640fc9f4067b20643fcec127",
+          "task_id": "task-f18125d89d4f",
+          "order": 2,
+          "block": 1,
+          "site_name": "파라타항공",
+          "instruction": "메인 화면의 예약조회에서 예약번호 987654321과 이메일 kim@example.com으로 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/f495d6946794/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-9c8e7ed5991cec888d9d0e91",
+          "task_id": "task-d6da4ef9d562",
+          "order": 3,
+          "block": 1,
+          "site_name": "파라타항공",
+          "instruction": "탑승객을 성인 1명, 소아 1명으로 선택해 적용하고, 화면에 표시된 탑승객 구성을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/f495d6946794/p/413127f760b3356b.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-15af6ba364bfdad00d55a80a",
+          "task_id": "task-f0b5bbb9edc5",
+          "order": 4,
+          "block": 1,
+          "site_name": "파라타항공",
+          "instruction": "메인 화면의 예약조회에서 예약번호 123456789와 이메일 hong@example.com으로 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/16a50b10a80c/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-bace62c3c10c00b539e57160",
+          "task_id": "task-bfc61490ad0c",
+          "order": 5,
+          "block": 2,
+          "site_name": "다이소몰",
+          "instruction": "수납 검색 결과에서 1,000원 상품만 보이도록 설정하고, 첫 번째 상품 이름을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/dfb33bed0046/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-bf11358ae60b31093a808a1b",
+          "task_id": "task-9b6666238c71",
+          "order": 6,
+          "block": 2,
+          "site_name": "다이소몰",
+          "instruction": "1,000원짜리 팬트리 수납 바구니 1호 한 개를 장바구니에 담고, 담긴 결과 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/7fc83823c082/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-0fbadb81b1c9d75a155e543b",
+          "task_id": "task-6aa5f59e47d1",
+          "order": 7,
+          "block": 2,
+          "site_name": "다이소몰",
+          "instruction": "수납 검색 결과에서 1,000원 상품만 보이도록 설정하고, 첫 번째 상품의 별점을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/7fc83823c082/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-add24613cfc95c5b9913d875",
+          "task_id": "task-5aec4736702b",
+          "order": 8,
+          "block": 2,
+          "site_name": "다이소몰",
+          "instruction": "양면 다용도 수납 케이스 한 개를 장바구니에 담고, 담긴 결과 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/dfb33bed0046/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-74e37f409a1f6df88959dd6f",
+          "task_id": "task-27efbac74c30",
+          "order": 9,
+          "block": 3,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항을 내용 기준으로 검색할 수 있도록 검색 분류를 바꾸세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/b40533a66bb1/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-7cf64cd6df0b993e94184b6f",
+          "task_id": "task-96a4cac3a7c8",
+          "order": 10,
+          "block": 3,
+          "site_name": "한국에너지재단",
+          "instruction": "상단 로고로 첫 화면에 간 뒤, 첫 화면의 공지사항 첫 글 제목을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/24aec581d26e/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-2bcb1645ba35de7e090eefc7",
+          "task_id": "task-2905e54cbf96",
+          "order": 11,
+          "block": 3,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항을 작성자 기준으로 검색할 수 있도록 검색 분류를 바꾸세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/24aec581d26e/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-306349bb05cf1537b15f0f93",
+          "task_id": "task-471dba785e66",
+          "order": 12,
+          "block": 3,
+          "site_name": "한국에너지재단",
+          "instruction": "상단 로고로 첫 화면에 간 뒤, 첫 화면의 보도자료 첫 글 제목을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/b40533a66bb1/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        }
+      ]
+    },
+    {
+      "id": "T09",
+      "tasks": [
+        {
+          "id": "assignment-7c9701003ca2aed9141a1f83",
+          "task_id": "task-adb1d6ca39c1",
+          "order": 1,
+          "block": 1,
+          "site_name": "CJ",
+          "instruction": "메인의 Joyful Moments에서 콘텐츠를 넘겨 'izna와 함께한 KCON Japan EP.1'이 나오게 하세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/8ddd4bdab636/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-8269d1b902da12d06bf1e1f8",
+          "task_id": "task-134203597b41",
+          "order": 2,
+          "block": 1,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 K-POP 분야로 바꾸고, 표시된 콘텐츠 수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/ad9126a6b9af/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-271049dcd131ff4234367aee",
+          "task_id": "task-082faf8d6b6a",
+          "order": 3,
+          "block": 1,
+          "site_name": "CJ",
+          "instruction": "메인의 Joyful Moments에서 콘텐츠를 넘겨 'KISS OF LIFE와 함께한 KCON Japan EP.2'가 나오게 하세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/ad9126a6b9af/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-f88e00c5707c565a070c467c",
+          "task_id": "task-32971e00d51e",
+          "order": 4,
+          "block": 1,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 SPORTS 분야로 바꾸고, 표시된 콘텐츠 수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-2811ae639334af1ffb14eff5",
+          "task_id": "task-b22cc26aa49b",
+          "order": 5,
+          "block": 2,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워에서 10월 6일에 '극장판 치이카와: 인어 섬의 비밀'을 볼 수 있는 첫 상영시간을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/30b3755b6027/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-689085fd8df3e605e40b5ed8",
+          "task_id": "task-75015cd43938",
+          "order": 6,
+          "block": 2,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워 영화관의 대중교통 안내를 열어, 8호선 잠실역에서 올 때 어느 출구 방면으로 가야 하는지 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-edaaa0a9fdedb017c8fe51f2",
+          "task_id": "task-26918a2ffe70",
+          "order": 7,
+          "block": 2,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워에서 10월 6일에 '오디세이'를 볼 수 있는 첫 상영시간을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-8d709488165ffc83338d4f53",
+          "task_id": "task-5e494ecd7298",
+          "order": 8,
+          "block": 2,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워 영화관의 자가용·주차 안내를 열어, 영화 관람 시 주차 요금을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/30b3755b6027/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-0f7ffcde6154591c2cf8ce84",
+          "task_id": "task-88b007dec3cf",
+          "order": 9,
+          "block": 3,
+          "site_name": "다이소몰",
+          "instruction": "장바구니에 담긴 팬트리 수납 바구니 1호를 3개에서 1개로 줄이고, 바뀐 합계 금액을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/7fc83823c082/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": [
+            "기록 시작 전에 일반 화면 조작으로 팬트리 수납 바구니 1호 3개를 담고 장바구니를 연다. 준비 조작은 참여자 수행에 포함하지 않는다."
+          ]
+        },
+        {
+          "id": "assignment-b666b745530ab2bab991623c",
+          "task_id": "task-1160458f7262",
+          "order": 10,
+          "block": 3,
+          "site_name": "다이소몰",
+          "instruction": "현재 검색 결과에서 수납바구니 상품만 보이도록 분류를 고르고, 표시된 상품 수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/dfb33bed0046/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-863ed57c803e907377070b38",
+          "task_id": "task-7aa631e6b008",
+          "order": 11,
+          "block": 3,
+          "site_name": "다이소몰",
+          "instruction": "장바구니에 담긴 팬트리 수납 바구니 1호를 3개에서 2개로 줄이고, 바뀐 합계 금액을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/dfb33bed0046/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": [
+            "기록 시작 전에 일반 화면 조작으로 팬트리 수납 바구니 1호 3개를 담고 장바구니를 연다. 준비 조작은 참여자 수행에 포함하지 않는다."
+          ]
+        },
+        {
+          "id": "assignment-1fc3c452588a02a2e751f100",
+          "task_id": "task-d541e6799999",
+          "order": 12,
+          "block": 3,
+          "site_name": "다이소몰",
+          "instruction": "현재 검색 결과에서 수납바구니 상품만 보이도록 분류를 고르고, 첫 번째 상품 이름을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/7fc83823c082/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        }
+      ]
+    },
+    {
+      "id": "T10",
+      "tasks": [
+        {
+          "id": "assignment-d008080594a84009cf1344cd",
+          "task_id": "task-f18af90fbab1",
+          "order": 1,
+          "block": 1,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항을 작성자 기준으로 검색할 수 있도록 검색 분류를 바꾸세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/b40533a66bb1/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-b274921c92525aa16a1256e6",
+          "task_id": "task-96a4cac3a7c8",
+          "order": 2,
+          "block": 1,
+          "site_name": "한국에너지재단",
+          "instruction": "상단 로고로 첫 화면에 간 뒤, 첫 화면의 공지사항 첫 글 제목을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/24aec581d26e/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-5a0af0a45d8325f8bdc671f4",
+          "task_id": "task-a837cfa8eb0a",
+          "order": 3,
+          "block": 1,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항을 내용 기준으로 검색할 수 있도록 검색 분류를 바꾸세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/24aec581d26e/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-126a8cceb56200da1453b8fc",
+          "task_id": "task-471dba785e66",
+          "order": 4,
+          "block": 1,
+          "site_name": "한국에너지재단",
+          "instruction": "상단 로고로 첫 화면에 간 뒤, 첫 화면의 보도자료 첫 글 제목을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/b40533a66bb1/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-e941a8419f11d96fee9aee18",
+          "task_id": "task-134203597b41",
+          "order": 5,
+          "block": 2,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 K-POP 분야로 바꾸고, 표시된 콘텐츠 수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/ad9126a6b9af/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-a5056f579499b0d4adce86aa",
+          "task_id": "task-5937fa74a818",
+          "order": 6,
+          "block": 2,
+          "site_name": "CJ",
+          "instruction": "메인의 Joyful Moments에서 콘텐츠를 넘겨 'KISS OF LIFE와 함께한 KCON Japan EP.2'가 나오게 하세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/8ddd4bdab636/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-ddbcfb79c18c1eddaad9e5a3",
+          "task_id": "task-32971e00d51e",
+          "order": 7,
+          "block": 2,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 SPORTS 분야로 바꾸고, 표시된 콘텐츠 수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-5abfc7e6260d07d8284f7343",
+          "task_id": "task-7215fee32356",
+          "order": 8,
+          "block": 2,
+          "site_name": "CJ",
+          "instruction": "메인의 Joyful Moments에서 콘텐츠를 넘겨 'izna와 함께한 KCON Japan EP.1'이 나오게 하세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/ad9126a6b9af/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-1b6b7e68e776e523cf235e68",
+          "task_id": "task-c2c28ae49ffd",
+          "order": 9,
+          "block": 3,
+          "site_name": "롯데시네마",
+          "instruction": "홈 화면에서 개봉 예정 영화 목록으로 바꾸고, 첫 번째 영화 소개의 첫 문장을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/30b3755b6027/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-58ce27fbddd99c3a89ad0f70",
+          "task_id": "task-6061d4f26766",
+          "order": 10,
+          "block": 3,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워에서 10월 6일에 '극장판 치이카와: 인어 섬의 비밀'을 볼 수 있는 첫 상영시간을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-f58973d6a894d77ff54fbd17",
+          "task_id": "task-a2f7b0754e1f",
+          "order": 11,
+          "block": 3,
+          "site_name": "롯데시네마",
+          "instruction": "홈 화면에서 개봉 예정 영화 목록으로 바꾸고, 몇 편이 표시됐는지 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/4b333c53172f/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-934451714d66ed453bf16199",
+          "task_id": "task-014d27404585",
+          "order": 12,
+          "block": 3,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워에서 10월 6일에 '오디세이'를 볼 수 있는 첫 상영시간을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/30b3755b6027/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        }
+      ]
+    },
+    {
+      "id": "T11",
+      "tasks": [
+        {
+          "id": "assignment-336ad0ccad329e94b903ffb2",
+          "task_id": "task-4f85be98116d",
+          "order": 1,
+          "block": 1,
+          "site_name": "CJ",
+          "instruction": "메인의 Joyful Moments에서 'KISS OF LIFE와 함께한 KCON Japan EP.1' 콘텐츠 정보를 열고, 콘텐츠 분류를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/ad9126a6b9af/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-e574eee0e0a4d1c2d60deb13",
+          "task_id": "task-083d310e1c13",
+          "order": 2,
+          "block": 1,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 SUSTAINABILITY 분야만 보이게 하고, 표시된 콘텐츠의 제목을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-4612dec7f8dd3a4158d67527",
+          "task_id": "task-1a2525db6539",
+          "order": 3,
+          "block": 1,
+          "site_name": "CJ",
+          "instruction": "메인의 Joyful Moments에서 'KISS OF LIFE와 함께한 KCON Japan EP.1' 콘텐츠 정보를 열고, 붙어 있는 태그를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/8ddd4bdab636/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-b111017f2ffd930bd39e95a8",
+          "task_id": "task-8ccf47192c0e",
+          "order": 4,
+          "block": 1,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 SUSTAINABILITY 분야만 보이게 하고, 표시된 콘텐츠 수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/ad9126a6b9af/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-637062d10c2d6b142a7a8699",
+          "task_id": "task-32241842ff20",
+          "order": 5,
+          "block": 2,
+          "site_name": "다이소몰",
+          "instruction": "수납 검색 결과에서 팬트리 수납 바구니 1호의 상세정보를 열어 리뷰 수를 확인한 뒤, 같은 검색 결과로 돌아와 알려 주세요.",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/7fc83823c082/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-45c5f2236984f70184864949",
+          "task_id": "task-6d7f9dfb15cd",
+          "order": 6,
+          "block": 2,
+          "site_name": "다이소몰",
+          "instruction": "장바구니에 담긴 팬트리 수납 바구니 1호를 3개에서 1개로 줄이고, 바뀐 합계 금액을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/dfb33bed0046/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": [
+            "기록 시작 전에 일반 화면 조작으로 팬트리 수납 바구니 1호 3개를 담고 장바구니를 연다. 준비 조작은 참여자 수행에 포함하지 않는다."
+          ]
+        },
+        {
+          "id": "assignment-4408ae635b80f03c3d4eb249",
+          "task_id": "task-712d5ee7f13b",
+          "order": 7,
+          "block": 2,
+          "site_name": "다이소몰",
+          "instruction": "수납 검색 결과에서 팬트리 수납 바구니 1호의 상세정보를 열어 가격을 확인한 뒤, 같은 검색 결과로 돌아와 알려 주세요.",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/dfb33bed0046/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-491dc16fe000ccb79bc9c89e",
+          "task_id": "task-ba5dd7424288",
+          "order": 8,
+          "block": 2,
+          "site_name": "다이소몰",
+          "instruction": "장바구니에 담긴 팬트리 수납 바구니 1호를 3개에서 2개로 줄이고, 바뀐 합계 금액을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/7fc83823c082/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": [
+            "기록 시작 전에 일반 화면 조작으로 팬트리 수납 바구니 1호 3개를 담고 장바구니를 연다. 준비 조작은 참여자 수행에 포함하지 않는다."
+          ]
+        },
+        {
+          "id": "assignment-fa39680480006627fa51cc11",
+          "task_id": "task-c2c28ae49ffd",
+          "order": 9,
+          "block": 3,
+          "site_name": "롯데시네마",
+          "instruction": "홈 화면에서 개봉 예정 영화 목록으로 바꾸고, 첫 번째 영화 소개의 첫 문장을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/30b3755b6027/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-07cd5183efd9b93e46626f82",
+          "task_id": "task-6a5ca8149aae",
+          "order": 10,
+          "block": 3,
+          "site_name": "롯데시네마",
+          "instruction": "영화관 메뉴에서 서울 지역의 월드타워 영화관을 찾아 주소를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/4b333c53172f/p/332f6ff1d7466f70.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-a64f89eec4323c8b66a99702",
+          "task_id": "task-a2f7b0754e1f",
+          "order": 11,
+          "block": 3,
+          "site_name": "롯데시네마",
+          "instruction": "홈 화면에서 개봉 예정 영화 목록으로 바꾸고, 몇 편이 표시됐는지 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/4b333c53172f/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-ac624b378351074bf5479f41",
+          "task_id": "task-a325ebbcd344",
+          "order": 12,
+          "block": 3,
+          "site_name": "롯데시네마",
+          "instruction": "영화관 메뉴에서 서울 지역의 월드타워 영화관을 찾아 총 상영관 수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/30b3755b6027/p/332f6ff1d7466f70.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        }
+      ]
+    },
+    {
+      "id": "T12",
+      "tasks": [
+        {
+          "id": "assignment-793cfcfb2b92ce05030a7ae5",
+          "task_id": "task-41708d0f86ea",
+          "order": 1,
+          "block": 1,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워 상영시간표에서 '극장판 치이카와' 상세정보를 열어 개봉일을 확인하고, 같은 영화관 상영시간표로 돌아와 개봉일을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/30b3755b6027/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-d4e2962be309e28692db05de",
+          "task_id": "task-41019e0323ae",
+          "order": 2,
+          "block": 1,
+          "site_name": "롯데시네마",
+          "instruction": "홈 화면에서 개봉 예정 영화 목록으로 바꾸고, 첫 번째 영화 소개의 첫 문장을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/4b333c53172f/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-dc36322d7c2a485ac95b3473",
+          "task_id": "task-9b67c06d2196",
+          "order": 3,
+          "block": 1,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워 상영시간표에서 '극장판 치이카와' 상세정보를 열어 상영시간(분)을 확인하고, 같은 영화관 상영시간표로 돌아와 상영시간을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-b6759b9fd5a0a0e5c8d9294b",
+          "task_id": "task-e1018c4abfff",
+          "order": 4,
+          "block": 1,
+          "site_name": "롯데시네마",
+          "instruction": "홈 화면에서 개봉 예정 영화 목록으로 바꾸고, 몇 편이 표시됐는지 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/30b3755b6027/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-3e3959605469ef1f9aef91ed",
+          "task_id": "task-cf6392db23e7",
+          "order": 5,
+          "block": 2,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항에서 제목에 '지원'이 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/24aec581d26e/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-c230c02be74e6c80343c131d",
+          "task_id": "task-27efbac74c30",
+          "order": 6,
+          "block": 2,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항을 내용 기준으로 검색할 수 있도록 검색 분류를 바꾸세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/b40533a66bb1/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-55f5c3eb0162928fc82387c6",
+          "task_id": "task-df82460fa038",
+          "order": 7,
+          "block": 2,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항에서 제목에 '공고'가 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/b40533a66bb1/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-6465dc23fb2e046593824d27",
+          "task_id": "task-2905e54cbf96",
+          "order": 8,
+          "block": 2,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항을 작성자 기준으로 검색할 수 있도록 검색 분류를 바꾸세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/24aec581d26e/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-78d4576f6da1eecf46063c03",
+          "task_id": "task-c0bcf5b6aa8b",
+          "order": 9,
+          "block": 3,
+          "site_name": "파라타항공",
+          "instruction": "탑승객 선택 창에서 탑승 수속 때 지참할 서류 안내를 확인하고, 창을 닫아 예약 화면으로 돌아온 뒤 그 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/16a50b10a80c/p/413127f760b3356b.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-6c785d3ff6e0eaae1eb23127",
+          "task_id": "task-94582a471604",
+          "order": 10,
+          "block": 3,
+          "site_name": "파라타항공",
+          "instruction": "메인 화면의 체크인에서 예약번호 987654321, 성 김, 이름 민수로 체크인할 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/f495d6946794/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-c1463ac4afaf3f17adfbef48",
+          "task_id": "task-dc2eedb9583b",
+          "order": 11,
+          "block": 3,
+          "site_name": "파라타항공",
+          "instruction": "탑승객 선택 창에서 소아·유아 기준 안내를 확인하고, 창을 닫아 예약 화면으로 돌아온 뒤 그 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/f495d6946794/p/413127f760b3356b.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-538e18058f7a593910232508",
+          "task_id": "task-6b5d5f6b60e4",
+          "order": 12,
+          "block": 3,
+          "site_name": "파라타항공",
+          "instruction": "메인 화면의 체크인에서 예약번호 123456789, 성 홍, 이름 길동으로 체크인할 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/16a50b10a80c/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        }
+      ]
+    },
+    {
+      "id": "T13",
+      "tasks": [
+        {
+          "id": "assignment-1396e2f652d2cc9d02a896ac",
+          "task_id": "task-f4828fe31fca",
+          "order": 1,
+          "block": 1,
+          "site_name": "다이소몰",
+          "instruction": "수납 검색 결과에서 팬트리 수납 바구니 1호의 상세정보를 열어 리뷰 수를 확인한 뒤, 같은 검색 결과로 돌아와 알려 주세요.",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/dfb33bed0046/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-62f70ffb307becc929573fa2",
+          "task_id": "task-e444cd3086f0",
+          "order": 2,
+          "block": 1,
+          "site_name": "다이소몰",
+          "instruction": "양면 다용도 수납 케이스 한 개를 장바구니에 담고, 담긴 결과 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/7fc83823c082/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-6216d3be7d603cafe56c85d7",
+          "task_id": "task-8d6ab015d504",
+          "order": 3,
+          "block": 1,
+          "site_name": "다이소몰",
+          "instruction": "수납 검색 결과에서 팬트리 수납 바구니 1호의 상세정보를 열어 가격을 확인한 뒤, 같은 검색 결과로 돌아와 알려 주세요.",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/7fc83823c082/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-f291a94a396483845222672c",
+          "task_id": "task-1c2106f87e7c",
+          "order": 4,
+          "block": 1,
+          "site_name": "다이소몰",
+          "instruction": "1,000원짜리 팬트리 수납 바구니 1호 한 개를 장바구니에 담고, 담긴 결과 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/dfb33bed0046/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-5a84ae3db95db4114a92813b",
+          "task_id": "task-26918a2ffe70",
+          "order": 5,
+          "block": 2,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워에서 10월 6일에 '오디세이'를 볼 수 있는 첫 상영시간을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-3f1260ffe25e1e81b271a611",
+          "task_id": "task-41708d0f86ea",
+          "order": 6,
+          "block": 2,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워 상영시간표에서 '극장판 치이카와' 상세정보를 열어 개봉일을 확인하고, 같은 영화관 상영시간표로 돌아와 개봉일을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/30b3755b6027/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-db0a7ae20a03f759f000ec26",
+          "task_id": "task-b22cc26aa49b",
+          "order": 7,
+          "block": 2,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워에서 10월 6일에 '극장판 치이카와: 인어 섬의 비밀'을 볼 수 있는 첫 상영시간을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/30b3755b6027/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-1114ff8c4ee5e42aa827f66f",
+          "task_id": "task-9b67c06d2196",
+          "order": 8,
+          "block": 2,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워 상영시간표에서 '극장판 치이카와' 상세정보를 열어 상영시간(분)을 확인하고, 같은 영화관 상영시간표로 돌아와 상영시간을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-3189a058cfdda0cc0b13d65b",
+          "task_id": "task-2f91d3bd54bd",
+          "order": 9,
+          "block": 3,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 'FLARE U와 함께한 KCON Japan EP.2' 콘텐츠 정보를 열어, 붙어 있는 태그를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-5723576d7c96b699c0b20e86",
+          "task_id": "task-7215fee32356",
+          "order": 10,
+          "block": 3,
+          "site_name": "CJ",
+          "instruction": "메인의 Joyful Moments에서 콘텐츠를 넘겨 'izna와 함께한 KCON Japan EP.1'이 나오게 하세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/ad9126a6b9af/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-1e9da8c496bb60c419865922",
+          "task_id": "task-eaf7fa6a19e4",
+          "order": 11,
+          "block": 3,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 이상민 감독 콘텐츠 정보를 열어, 소개된 영화 제목을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/ad9126a6b9af/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-96ea654c1e9e66a456dea51b",
+          "task_id": "task-5937fa74a818",
+          "order": 12,
+          "block": 3,
+          "site_name": "CJ",
+          "instruction": "메인의 Joyful Moments에서 콘텐츠를 넘겨 'KISS OF LIFE와 함께한 KCON Japan EP.2'가 나오게 하세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/8ddd4bdab636/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        }
+      ]
+    },
+    {
+      "id": "T14",
+      "tasks": [
+        {
+          "id": "assignment-c1383c0f422ee21f8777da92",
+          "task_id": "task-b8b86b63051d",
+          "order": 1,
+          "block": 1,
+          "site_name": "다이소몰",
+          "instruction": "현재 검색 결과에서 수납바구니 상품만 보이도록 분류를 고르고, 표시된 상품 수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/7fc83823c082/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-7cbf4154672e2c086c045ed4",
+          "task_id": "task-1c2106f87e7c",
+          "order": 2,
+          "block": 1,
+          "site_name": "다이소몰",
+          "instruction": "1,000원짜리 팬트리 수납 바구니 1호 한 개를 장바구니에 담고, 담긴 결과 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/dfb33bed0046/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-b024eb3590e8ce27fea40414",
+          "task_id": "task-b2769cbe4af9",
+          "order": 3,
+          "block": 1,
+          "site_name": "다이소몰",
+          "instruction": "현재 검색 결과에서 수납바구니 상품만 보이도록 분류를 고르고, 첫 번째 상품 이름을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/dfb33bed0046/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-04124916798da576ac0b32fd",
+          "task_id": "task-e444cd3086f0",
+          "order": 4,
+          "block": 1,
+          "site_name": "다이소몰",
+          "instruction": "양면 다용도 수납 케이스 한 개를 장바구니에 담고, 담긴 결과 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/7fc83823c082/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-0c86a9d95146ff086fea63a7",
+          "task_id": "task-4140563d056c",
+          "order": 5,
+          "block": 2,
+          "site_name": "파라타항공",
+          "instruction": "국내선 운임 안내에서 출발 30일~8일 전에 취소할 때의 수수료를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/f495d6946794/p/715b3363ebc283f4.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-3771e2a48940cd860d099e60",
+          "task_id": "task-c0bcf5b6aa8b",
+          "order": 6,
+          "block": 2,
+          "site_name": "파라타항공",
+          "instruction": "탑승객 선택 창에서 탑승 수속 때 지참할 서류 안내를 확인하고, 창을 닫아 예약 화면으로 돌아온 뒤 그 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/16a50b10a80c/p/413127f760b3356b.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-f5c986da0c4b2eeaccdf36be",
+          "task_id": "task-4fcd76a49033",
+          "order": 7,
+          "block": 2,
+          "site_name": "파라타항공",
+          "instruction": "국내선 운임 안내에서 출발 7일~2일 전에 취소할 때의 수수료를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/16a50b10a80c/p/715b3363ebc283f4.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-b53d6030d745e3cdfabc4398",
+          "task_id": "task-dc2eedb9583b",
+          "order": 8,
+          "block": 2,
+          "site_name": "파라타항공",
+          "instruction": "탑승객 선택 창에서 소아·유아 기준 안내를 확인하고, 창을 닫아 예약 화면으로 돌아온 뒤 그 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/f495d6946794/p/413127f760b3356b.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-92777605dc530a12ea299351",
+          "task_id": "task-8b4c209c3e95",
+          "order": 9,
+          "block": 3,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항에서 제목에 '안내'가 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/24aec581d26e/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-b8243de5e8a8956a96a798f3",
+          "task_id": "task-c895a9da0d2a",
+          "order": 10,
+          "block": 3,
+          "site_name": "한국에너지재단",
+          "instruction": "반복 메뉴를 건너뛰고 공지사항 본문으로 바로 이동해, 첫 게시물 제목을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/b40533a66bb1/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-c10f783d09b2d119fe8f3d14",
+          "task_id": "task-71d3381cceb0",
+          "order": 11,
+          "block": 3,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항에서 제목에 '에너지'가 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/b40533a66bb1/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-6f671780d1c690a616db15a9",
+          "task_id": "task-1866e377f518",
+          "order": 12,
+          "block": 3,
+          "site_name": "한국에너지재단",
+          "instruction": "반복 메뉴를 건너뛰고 공지사항 본문으로 바로 이동해, 게시물 총 건수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/24aec581d26e/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        }
+      ]
+    },
+    {
+      "id": "T15",
+      "tasks": [
+        {
+          "id": "assignment-0f00d23c624d1ae949769159",
+          "task_id": "task-62aaa7a70cb1",
+          "order": 1,
+          "block": 1,
+          "site_name": "파라타항공",
+          "instruction": "메인 화면의 예약조회에서 예약번호 987654321과 이메일 kim@example.com으로 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/16a50b10a80c/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-1f1c46672264baf1328528e2",
+          "task_id": "task-b69db410aecb",
+          "order": 2,
+          "block": 1,
+          "site_name": "파라타항공",
+          "instruction": "탑승객 선택 창에서 탑승 수속 때 지참할 서류 안내를 확인하고, 창을 닫아 예약 화면으로 돌아온 뒤 그 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/f495d6946794/p/413127f760b3356b.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-ec44fdf18606c2199b6d7e9f",
+          "task_id": "task-fd73fe17cb1e",
+          "order": 3,
+          "block": 1,
+          "site_name": "파라타항공",
+          "instruction": "메인 화면의 예약조회에서 예약번호 123456789와 이메일 hong@example.com으로 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/f495d6946794/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-90f76b9286a106a8eda6b874",
+          "task_id": "task-cff1045758ac",
+          "order": 4,
+          "block": 1,
+          "site_name": "파라타항공",
+          "instruction": "탑승객 선택 창에서 소아·유아 기준 안내를 확인하고, 창을 닫아 예약 화면으로 돌아온 뒤 그 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/16a50b10a80c/p/413127f760b3356b.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-51d24989d386a4839a10b194",
+          "task_id": "task-6f5b7313b40f",
+          "order": 5,
+          "block": 2,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 SUSTAINABILITY 분야만 보이게 하고, 표시된 콘텐츠 수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-60cdbf243140ef50e80c4a2a",
+          "task_id": "task-fffe0977ab12",
+          "order": 6,
+          "block": 2,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 'FLARE U와 함께한 KCON Japan EP.2' 콘텐츠 정보를 열어, 붙어 있는 태그를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/ad9126a6b9af/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-53863189d7280ffb1a1520cb",
+          "task_id": "task-d5ec0e97f97f",
+          "order": 7,
+          "block": 2,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 SUSTAINABILITY 분야만 보이게 하고, 표시된 콘텐츠의 제목을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/ad9126a6b9af/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-d2d935d9106676ba220e48c8",
+          "task_id": "task-931b9d110111",
+          "order": 8,
+          "block": 2,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 이상민 감독 콘텐츠 정보를 열어, 소개된 영화 제목을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-9b54a35088e57efb4aed3c8e",
+          "task_id": "task-78fb05bd0a08",
+          "order": 9,
+          "block": 3,
+          "site_name": "롯데시네마",
+          "instruction": "영화관 메뉴에서 서울 지역의 월드타워 영화관을 찾아 총 상영관 수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/4b333c53172f/p/332f6ff1d7466f70.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-c49e4054ade2aafeb897ef56",
+          "task_id": "task-5e494ecd7298",
+          "order": 10,
+          "block": 3,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워 영화관의 자가용·주차 안내를 열어, 영화 관람 시 주차 요금을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/30b3755b6027/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-fb25678c0078c702ea218042",
+          "task_id": "task-7c69a9c8a2b7",
+          "order": 11,
+          "block": 3,
+          "site_name": "롯데시네마",
+          "instruction": "영화관 메뉴에서 서울 지역의 월드타워 영화관을 찾아 주소를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/30b3755b6027/p/332f6ff1d7466f70.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-3030004d7af14bf83c71fe69",
+          "task_id": "task-75015cd43938",
+          "order": 12,
+          "block": 3,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워 영화관의 대중교통 안내를 열어, 8호선 잠실역에서 올 때 어느 출구 방면으로 가야 하는지 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        }
+      ]
+    },
+    {
+      "id": "T16",
+      "tasks": [
+        {
+          "id": "assignment-b270e0bc5c8aaa660ecb9a07",
+          "task_id": "task-f18125d89d4f",
+          "order": 1,
+          "block": 1,
+          "site_name": "파라타항공",
+          "instruction": "메인 화면의 예약조회에서 예약번호 987654321과 이메일 kim@example.com으로 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/f495d6946794/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-f78ad1f98c5cc4b9a0c53bfb",
+          "task_id": "task-af8fe2531103",
+          "order": 2,
+          "block": 1,
+          "site_name": "파라타항공",
+          "instruction": "탑승객을 성인 1명, 소아 1명으로 선택해 적용하고, 화면에 표시된 탑승객 구성을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/16a50b10a80c/p/413127f760b3356b.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-6d95c8417fd07ecfe5347cf8",
+          "task_id": "task-f0b5bbb9edc5",
+          "order": 3,
+          "block": 1,
+          "site_name": "파라타항공",
+          "instruction": "메인 화면의 예약조회에서 예약번호 123456789와 이메일 hong@example.com으로 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/16a50b10a80c/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-dd77d2de1fe7dbb68d65b156",
+          "task_id": "task-edfd87cb2b4d",
+          "order": 4,
+          "block": 1,
+          "site_name": "파라타항공",
+          "instruction": "탑승객을 성인 2명, 소아 1명으로 선택해 적용하고, 화면에 표시된 탑승객 구성을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/f495d6946794/p/413127f760b3356b.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-bd371d31d2809c3e2d30bf68",
+          "task_id": "task-6aa5f59e47d1",
+          "order": 5,
+          "block": 2,
+          "site_name": "다이소몰",
+          "instruction": "수납 검색 결과에서 1,000원 상품만 보이도록 설정하고, 첫 번째 상품의 별점을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/7fc83823c082/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-526983ae2e28e99dfc393d0d",
+          "task_id": "task-f4828fe31fca",
+          "order": 6,
+          "block": 2,
+          "site_name": "다이소몰",
+          "instruction": "수납 검색 결과에서 팬트리 수납 바구니 1호의 상세정보를 열어 리뷰 수를 확인한 뒤, 같은 검색 결과로 돌아와 알려 주세요.",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/dfb33bed0046/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-2cabb46f98f2935047f90b8f",
+          "task_id": "task-bfc61490ad0c",
+          "order": 7,
+          "block": 2,
+          "site_name": "다이소몰",
+          "instruction": "수납 검색 결과에서 1,000원 상품만 보이도록 설정하고, 첫 번째 상품 이름을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/dfb33bed0046/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-8f33b33b753c0e8a46686089",
+          "task_id": "task-8d6ab015d504",
+          "order": 8,
+          "block": 2,
+          "site_name": "다이소몰",
+          "instruction": "수납 검색 결과에서 팬트리 수납 바구니 1호의 상세정보를 열어 가격을 확인한 뒤, 같은 검색 결과로 돌아와 알려 주세요.",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/7fc83823c082/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-b7e4c81bece6d6158d33bc4b",
+          "task_id": "task-3dc48d30a223",
+          "order": 9,
+          "block": 3,
+          "site_name": "CJ",
+          "instruction": "메인의 Joyful Moments에서 'KISS OF LIFE와 함께한 KCON Japan EP.1' 콘텐츠 정보를 열고, 붙어 있는 태그를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/ad9126a6b9af/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-6b69b24cb27450ed00f1f690",
+          "task_id": "task-16cd45b9b7cf",
+          "order": 10,
+          "block": 3,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 K-POP 분야로 바꾸고, 표시된 콘텐츠 수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-a1a4b444b7ba71ff2a6aa5a7",
+          "task_id": "task-ce40e6a955e7",
+          "order": 11,
+          "block": 3,
+          "site_name": "CJ",
+          "instruction": "메인의 Joyful Moments에서 'KISS OF LIFE와 함께한 KCON Japan EP.1' 콘텐츠 정보를 열고, 콘텐츠 분류를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/8ddd4bdab636/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-dba99244fd4978ea8918b0fe",
+          "task_id": "task-41284c5fc8b4",
+          "order": 12,
+          "block": 3,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 SPORTS 분야로 바꾸고, 표시된 콘텐츠 수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/ad9126a6b9af/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        }
+      ]
+    },
+    {
+      "id": "T17",
+      "tasks": [
+        {
+          "id": "assignment-bf6cd8308fda97463c3f49f2",
+          "task_id": "task-5ab14cd5581e",
+          "order": 1,
+          "block": 1,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워 상영시간표에서 '극장판 치이카와' 상세정보를 열어 개봉일을 확인하고, 같은 영화관 상영시간표로 돌아와 개봉일을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-2340d7586d39d52dc913c8e3",
+          "task_id": "task-e1018c4abfff",
+          "order": 2,
+          "block": 1,
+          "site_name": "롯데시네마",
+          "instruction": "홈 화면에서 개봉 예정 영화 목록으로 바꾸고, 몇 편이 표시됐는지 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/30b3755b6027/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-9a6982c68a7fc248bd6c2cb5",
+          "task_id": "task-3d4990177308",
+          "order": 3,
+          "block": 1,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워 상영시간표에서 '극장판 치이카와' 상세정보를 열어 상영시간(분)을 확인하고, 같은 영화관 상영시간표로 돌아와 상영시간을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/30b3755b6027/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-fd88f82bc3898b6bbb45b32b",
+          "task_id": "task-41019e0323ae",
+          "order": 4,
+          "block": 1,
+          "site_name": "롯데시네마",
+          "instruction": "홈 화면에서 개봉 예정 영화 목록으로 바꾸고, 첫 번째 영화 소개의 첫 문장을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/4b333c53172f/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-8b2f9ca81195d0e01c28d6d6",
+          "task_id": "task-8287e7fab86f",
+          "order": 5,
+          "block": 2,
+          "site_name": "파라타항공",
+          "instruction": "메인 화면의 체크인에서 예약번호 987654321, 성 김, 이름 민수로 체크인할 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/16a50b10a80c/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-382d22fd2eb9ee71e384b74e",
+          "task_id": "task-c1ced80e78ff",
+          "order": 6,
+          "block": 2,
+          "site_name": "파라타항공",
+          "instruction": "국내선 운임 안내에서 출발 7일~2일 전에 취소할 때의 수수료를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/f495d6946794/p/715b3363ebc283f4.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-a0c30aaaf847a995d78f79f5",
+          "task_id": "task-51f2c4141607",
+          "order": 7,
+          "block": 2,
+          "site_name": "파라타항공",
+          "instruction": "메인 화면의 체크인에서 예약번호 123456789, 성 홍, 이름 길동으로 체크인할 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/f495d6946794/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-0f20f2dd9a673ae58156fa65",
+          "task_id": "task-cf7fabbed468",
+          "order": 8,
+          "block": 2,
+          "site_name": "파라타항공",
+          "instruction": "국내선 운임 안내에서 출발 30일~8일 전에 취소할 때의 수수료를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/16a50b10a80c/p/715b3363ebc283f4.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-d0f8079f952249acab12059d",
+          "task_id": "task-41284c5fc8b4",
+          "order": 9,
+          "block": 3,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 SPORTS 분야로 바꾸고, 표시된 콘텐츠 수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/ad9126a6b9af/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-5a9e1e856c1af17f67f60725",
+          "task_id": "task-931b9d110111",
+          "order": 10,
+          "block": 3,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 이상민 감독 콘텐츠 정보를 열어, 소개된 영화 제목을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-94c98f7d441b0402b46c23e7",
+          "task_id": "task-16cd45b9b7cf",
+          "order": 11,
+          "block": 3,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 K-POP 분야로 바꾸고, 표시된 콘텐츠 수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-76723bcbec416c7e008d4f68",
+          "task_id": "task-fffe0977ab12",
+          "order": 12,
+          "block": 3,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 'FLARE U와 함께한 KCON Japan EP.2' 콘텐츠 정보를 열어, 붙어 있는 태그를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/ad9126a6b9af/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        }
+      ]
+    },
+    {
+      "id": "T18",
+      "tasks": [
+        {
+          "id": "assignment-813e42850e19aa38bac491d7",
+          "task_id": "task-6de0d84e32e7",
+          "order": 1,
+          "block": 1,
+          "site_name": "다이소몰",
+          "instruction": "수납 검색 결과에서 1,000원 상품만 보이도록 설정하고, 첫 번째 상품 이름을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/7fc83823c082/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-8e11a1116c36926886a81d71",
+          "task_id": "task-7aa631e6b008",
+          "order": 2,
+          "block": 1,
+          "site_name": "다이소몰",
+          "instruction": "장바구니에 담긴 팬트리 수납 바구니 1호를 3개에서 2개로 줄이고, 바뀐 합계 금액을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/dfb33bed0046/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": [
+            "기록 시작 전에 일반 화면 조작으로 팬트리 수납 바구니 1호 3개를 담고 장바구니를 연다. 준비 조작은 참여자 수행에 포함하지 않는다."
+          ]
+        },
+        {
+          "id": "assignment-cae1aaf9e21482e172be5573",
+          "task_id": "task-bda3a63d1e0c",
+          "order": 3,
+          "block": 1,
+          "site_name": "다이소몰",
+          "instruction": "수납 검색 결과에서 1,000원 상품만 보이도록 설정하고, 첫 번째 상품의 별점을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/dfb33bed0046/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-127d12108cc18569af3be59d",
+          "task_id": "task-88b007dec3cf",
+          "order": 4,
+          "block": 1,
+          "site_name": "다이소몰",
+          "instruction": "장바구니에 담긴 팬트리 수납 바구니 1호를 3개에서 1개로 줄이고, 바뀐 합계 금액을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/7fc83823c082/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": [
+            "기록 시작 전에 일반 화면 조작으로 팬트리 수납 바구니 1호 3개를 담고 장바구니를 연다. 준비 조작은 참여자 수행에 포함하지 않는다."
+          ]
+        },
+        {
+          "id": "assignment-249105961e6d3ca197314927",
+          "task_id": "task-edfd87cb2b4d",
+          "order": 5,
+          "block": 2,
+          "site_name": "파라타항공",
+          "instruction": "탑승객을 성인 2명, 소아 1명으로 선택해 적용하고, 화면에 표시된 탑승객 구성을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/f495d6946794/p/413127f760b3356b.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-10cd882d3a2d11f1c005ec04",
+          "task_id": "task-cf7fabbed468",
+          "order": 6,
+          "block": 2,
+          "site_name": "파라타항공",
+          "instruction": "국내선 운임 안내에서 출발 30일~8일 전에 취소할 때의 수수료를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/16a50b10a80c/p/715b3363ebc283f4.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-d5952a89b2bdb6e28634eae5",
+          "task_id": "task-af8fe2531103",
+          "order": 7,
+          "block": 2,
+          "site_name": "파라타항공",
+          "instruction": "탑승객을 성인 1명, 소아 1명으로 선택해 적용하고, 화면에 표시된 탑승객 구성을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/16a50b10a80c/p/413127f760b3356b.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-1ac36652d66cb940dcc63996",
+          "task_id": "task-c1ced80e78ff",
+          "order": 8,
+          "block": 2,
+          "site_name": "파라타항공",
+          "instruction": "국내선 운임 안내에서 출발 7일~2일 전에 취소할 때의 수수료를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/f495d6946794/p/715b3363ebc283f4.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-946c95d6894dd453952ab9cb",
+          "task_id": "task-ec83683b3cd0",
+          "order": 9,
+          "block": 3,
+          "site_name": "한국에너지재단",
+          "instruction": "반복 메뉴를 건너뛰고 공지사항 본문으로 바로 이동해, 첫 게시물 제목을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/24aec581d26e/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-b2358207a66d2cde6b09574f",
+          "task_id": "task-df82460fa038",
+          "order": 10,
+          "block": 3,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항에서 제목에 '공고'가 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/b40533a66bb1/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-f19613f94556378c38f94632",
+          "task_id": "task-673d53300988",
+          "order": 11,
+          "block": 3,
+          "site_name": "한국에너지재단",
+          "instruction": "반복 메뉴를 건너뛰고 공지사항 본문으로 바로 이동해, 게시물 총 건수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/b40533a66bb1/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-a564e5d5cf2fa484bc8e836d",
+          "task_id": "task-cf6392db23e7",
+          "order": 12,
+          "block": 3,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항에서 제목에 '지원'이 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/24aec581d26e/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        }
+      ]
+    },
+    {
+      "id": "T19",
+      "tasks": [
+        {
+          "id": "assignment-032d8bc5e73ff25195616c1c",
+          "task_id": "task-083d310e1c13",
+          "order": 1,
+          "block": 1,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 SUSTAINABILITY 분야만 보이게 하고, 표시된 콘텐츠의 제목을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-7ac18ee8c3441e2864784b31",
+          "task_id": "task-082faf8d6b6a",
+          "order": 2,
+          "block": 1,
+          "site_name": "CJ",
+          "instruction": "메인의 Joyful Moments에서 콘텐츠를 넘겨 'KISS OF LIFE와 함께한 KCON Japan EP.2'가 나오게 하세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/ad9126a6b9af/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-42856bd213f41a34439b60e9",
+          "task_id": "task-8ccf47192c0e",
+          "order": 3,
+          "block": 1,
+          "site_name": "CJ",
+          "instruction": "브랜드 콘텐츠에서 SUSTAINABILITY 분야만 보이게 하고, 표시된 콘텐츠 수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/ad9126a6b9af/p/e1e20df018f4f6cd.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-537aafeaf7b7eaf739a0d490",
+          "task_id": "task-adb1d6ca39c1",
+          "order": 4,
+          "block": 1,
+          "site_name": "CJ",
+          "instruction": "메인의 Joyful Moments에서 콘텐츠를 넘겨 'izna와 함께한 KCON Japan EP.1'이 나오게 하세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/8ddd4bdab636/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-b2bc9b3735275327612471ef",
+          "task_id": "task-fb19c18f0634",
+          "order": 5,
+          "block": 2,
+          "site_name": "한국에너지재단",
+          "instruction": "상단 로고로 첫 화면에 간 뒤, 첫 화면의 보도자료 첫 글 제목을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/24aec581d26e/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-a5f5ccec0bb907536f07eae0",
+          "task_id": "task-71d3381cceb0",
+          "order": 6,
+          "block": 2,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항에서 제목에 '에너지'가 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/b40533a66bb1/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-f58454789a8061084f13202c",
+          "task_id": "task-1ce950f1f732",
+          "order": 7,
+          "block": 2,
+          "site_name": "한국에너지재단",
+          "instruction": "상단 로고로 첫 화면에 간 뒤, 첫 화면의 공지사항 첫 글 제목을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/b40533a66bb1/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-e7ab3b494e28e281a83c31df",
+          "task_id": "task-8b4c209c3e95",
+          "order": 8,
+          "block": 2,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항에서 제목에 '안내'가 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/24aec581d26e/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-3798717cc0f3543b88580556",
+          "task_id": "task-6de0d84e32e7",
+          "order": 9,
+          "block": 3,
+          "site_name": "다이소몰",
+          "instruction": "수납 검색 결과에서 1,000원 상품만 보이도록 설정하고, 첫 번째 상품 이름을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/7fc83823c082/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-9c6100b9114c44ea96737d03",
+          "task_id": "task-b2769cbe4af9",
+          "order": 10,
+          "block": 3,
+          "site_name": "다이소몰",
+          "instruction": "현재 검색 결과에서 수납바구니 상품만 보이도록 분류를 고르고, 첫 번째 상품 이름을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/dfb33bed0046/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-0fb68e1f2446c41b3fea4dc7",
+          "task_id": "task-bda3a63d1e0c",
+          "order": 11,
+          "block": 3,
+          "site_name": "다이소몰",
+          "instruction": "수납 검색 결과에서 1,000원 상품만 보이도록 설정하고, 첫 번째 상품의 별점을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/dfb33bed0046/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-4fe1e733bc585ac9058dc8a2",
+          "task_id": "task-b8b86b63051d",
+          "order": 12,
+          "block": 3,
+          "site_name": "다이소몰",
+          "instruction": "현재 검색 결과에서 수납바구니 상품만 보이도록 분류를 고르고, 표시된 상품 수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/7fc83823c082/p/798b30638c11123d.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        }
+      ]
+    },
+    {
+      "id": "T20",
+      "tasks": [
+        {
+          "id": "assignment-01213ec5ad8ceb5c531b16ff",
+          "task_id": "task-7c69a9c8a2b7",
+          "order": 1,
+          "block": 1,
+          "site_name": "롯데시네마",
+          "instruction": "영화관 메뉴에서 서울 지역의 월드타워 영화관을 찾아 주소를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/30b3755b6027/p/332f6ff1d7466f70.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-a1c61120374a27943df55039",
+          "task_id": "task-5ab14cd5581e",
+          "order": 2,
+          "block": 1,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워 상영시간표에서 '극장판 치이카와' 상세정보를 열어 개봉일을 확인하고, 같은 영화관 상영시간표로 돌아와 개봉일을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-7ba6ad6d54d332d2bdd0bfb2",
+          "task_id": "task-78fb05bd0a08",
+          "order": 3,
+          "block": 1,
+          "site_name": "롯데시네마",
+          "instruction": "영화관 메뉴에서 서울 지역의 월드타워 영화관을 찾아 총 상영관 수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/4b333c53172f/p/332f6ff1d7466f70.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-90b7a3306f028f668723ab1c",
+          "task_id": "task-3d4990177308",
+          "order": 4,
+          "block": 1,
+          "site_name": "롯데시네마",
+          "instruction": "월드타워 상영시간표에서 '극장판 치이카와' 상세정보를 열어 상영시간(분)을 확인하고, 같은 영화관 상영시간표로 돌아와 상영시간을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/30b3755b6027/p/665b9f17d17d0404.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-43c16d7d46ae574ef20da5b4",
+          "task_id": "task-fe2ef70ebd83",
+          "order": 5,
+          "block": 2,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항에서 제목에 '지원'이 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/b40533a66bb1/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-b7e923c2a5622bff5668c31d",
+          "task_id": "task-261b0fbbb4d7",
+          "order": 6,
+          "block": 2,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항에서 제목에 '에너지'가 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/24aec581d26e/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-cbd6e08738231d3a7ca82317",
+          "task_id": "task-749fb8250d16",
+          "order": 7,
+          "block": 2,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항에서 제목에 '공고'가 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/24aec581d26e/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-1d488fda5b497426c6fa1cac",
+          "task_id": "task-11a63b4aab44",
+          "order": 8,
+          "block": 2,
+          "site_name": "한국에너지재단",
+          "instruction": "공지사항에서 제목에 '안내'가 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/b40533a66bb1/p/2a262b495a056834.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-e3d34dc91e4ec14b895c4fcf",
+          "task_id": "task-fd73fe17cb1e",
+          "order": 9,
+          "block": 3,
+          "site_name": "파라타항공",
+          "instruction": "메인 화면의 예약조회에서 예약번호 123456789와 이메일 hong@example.com으로 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/f495d6946794/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-600bc2923180acbff2f4fe3c",
+          "task_id": "task-3ac30c0548fc",
+          "order": 10,
+          "block": 3,
+          "site_name": "파라타항공",
+          "instruction": "탑승객을 성인 2명, 소아 1명으로 선택해 적용하고, 화면에 표시된 탑승객 구성을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/16a50b10a80c/p/413127f760b3356b.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-5732a151af026457f68a3e59",
+          "task_id": "task-62aaa7a70cb1",
+          "order": 11,
+          "block": 3,
+          "site_name": "파라타항공",
+          "instruction": "메인 화면의 예약조회에서 예약번호 987654321과 이메일 kim@example.com으로 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/16a50b10a80c/index.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        },
+        {
+          "id": "assignment-5cca448984e1dfb4189473e6",
+          "task_id": "task-d6da4ef9d562",
+          "order": 12,
+          "block": 3,
+          "site_name": "파라타항공",
+          "instruction": "탑승객을 성인 1명, 소아 1명으로 선택해 적용하고, 화면에 표시된 탑승객 구성을 알려 주세요",
+          "start_url": "https://smc-gpu-server.tail3a2b2e.ts.net/s/f495d6946794/p/413127f760b3356b.html",
+          "time_limit_seconds": 600,
+          "preparation": []
+        }
+      ]
+    }
+  ],
+  "id": "study-0fad53c348a6a63f83d6d2e2"
+}
