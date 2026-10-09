@@ -1783,7 +1783,7 @@ class RecorderHandler(BaseHTTPRequestHandler):
             self._json(
                 {
                     "ok": True,
-                    "recorder_version": "0.3.1",
+                    "recorder_version": "0.3.2",
                     "time": utc_now(),
                     "nvda_connected": connected,
                     "nvda_last_seen": last_seen,
