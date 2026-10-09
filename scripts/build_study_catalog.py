@@ -16,7 +16,7 @@ SOURCE_DIR = WORKSPACE / "a11y-research/docs/261007_scenario_plan"
 DEFAULT_ASSIGNMENTS = SOURCE_DIR / "tester_tasks.csv"
 DEFAULT_SPEC = SOURCE_DIR / "scenario_spec_final.json"
 DEFAULT_OPERATOR_CATALOG = WORKSPACE / (
-    "a11y-user-context-lab/runs/hosted-benchmark-v2-scenario-checked/operator-catalog.private.json"
+    "a11y-user-context-lab/runs/hosted-benchmark-v3-perfe-20261009/operator-catalog.private.json"
 )
 DEFAULT_OUTPUT = ROOT / "recorder/study_catalog.json"
 
