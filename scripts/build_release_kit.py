@@ -229,7 +229,7 @@ kbd { background: #eee; border: 1px solid #bbb; border-radius: 4px; padding: 0 0
 </div>
 
 <h2>문의</h2>
-<p>(담당자 이름과 연락처를 여기에 적어 주세요)</p>
+<p>서울과학기술대학교 HAILAB 김유신 연구원 · <a href="mailto:yusinkim@seoultech.ac.kr">yusinkim@seoultech.ac.kr</a></p>
 </body>
 </html>
 """

@@ -146,6 +146,16 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             log.debugWarning("A11y Task Recorder focus capture failed", exc_info=True)
         nextHandler()
 
+    def _layoutFreeGesture(self, identifiers):
+        """Return the "kb:<keys>" form; NVDA lists "kb(desktop):<keys>" first."""
+        for identifier in identifiers:
+            value = identifier.lower()
+            if value.startswith("kb(") and "):" in value:
+                value = "kb:" + value.split("):", 1)[1]
+            if value.startswith("kb:"):
+                return value
+        return identifiers[0].lower() if identifiers else ""
+
     def _onGesture(self, gesture):
         """Observe gestures without changing whether NVDA executes them."""
         try:
@@ -158,16 +168,19 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
                 value = safeString(identifier, 180)
                 if value:
                     identifiers.append(value)
-            stableGesture = identifiers[0].lower() if identifiers else ""
-            isPrintable = len(displayName) == 1 and displayName.isprintable()
+            stableGesture = self._layoutFreeGesture(identifiers)
+            # Decide "named key" from the layout-free identifier, not the localized display
+            # name: Korean NVDA shows Tab as the single character "탭".
+            namedKey = stableGesture in SAFE_UNBOUND_KEYS or any(
+                modifier in stableGesture
+                for modifier in ("control+", "ctrl+", "alt+", "windows+", "win+")
+            )
+            isPrintable = not namedKey and len(displayName) == 1 and displayName.isprintable()
             if isPrintable and scriptObject is None:
                 # Do not store typed characters. This timestamp also redacts character echo speech.
                 self._lastTypedCharacterAt = time.monotonic()
                 return True
-            if scriptObject is None and stableGesture not in SAFE_UNBOUND_KEYS and not any(
-                modifier in stableGesture
-                for modifier in ("control+", "ctrl+", "alt+", "windows+", "win+")
-            ):
+            if scriptObject is None and not namedKey:
                 return True
             focus = api.getFocusObject()
             if not self._shouldRecord(focus):

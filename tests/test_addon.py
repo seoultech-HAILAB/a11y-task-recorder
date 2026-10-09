@@ -78,3 +78,52 @@ class AddonBoundaryTests(unittest.TestCase):
         event = self.plugin._events.get_nowait()
         self.assertTrue(event["payload"]["redacted"])
         self.assertNotIn("PRIVATE-FORM-CONTENT", json.dumps(event))
+
+
+class GestureClassificationTests(unittest.TestCase):
+    """Pilot 2026-10-08: Korean NVDA, unbound Tab and combobox arrows were dropped."""
+
+    def setUp(self):
+        cls = collector_class()
+        self.plugin = cls.__new__(cls)
+        self.plugin._events = queue.Queue()
+        self.plugin._sessionLock = threading.Lock()
+        self.plugin._speechLock = threading.RLock()
+        self.plugin._activeSession = "session-a"
+        self.plugin._activeSpeech = None
+        self.plugin._lastTypedCharacterAt = 0.0
+        self.plugin._shouldRecord = lambda obj: True
+        self.plugin._objectContext = lambda obj: {}
+        self.plugin._foregroundTitle = lambda: "Example"
+        self.plugin._onGesture.__globals__.update({
+            "api": SimpleNamespace(getFocusObject=lambda: object()), "time": time,
+            "SAFE_UNBOUND_KEYS": {"kb:tab", "kb:shift+tab", "kb:enter", "kb:downarrow"},
+        })
+
+    def gesture(self, display, key, script=None):
+        return SimpleNamespace(isModifier=False, displayName=display, script=script,
+                               identifiers=(f"kb(desktop):{key}", f"kb:{key}"))
+
+    def recorded(self):
+        events = []
+        while not self.plugin._events.empty():
+            events.append(self.plugin._events.get_nowait())
+        return [e for e in events if e["type"] == "input"]
+
+    def test_korean_tab_without_script_is_recorded_not_redacted(self):
+        self.plugin._onGesture(self.gesture("탭", "tab"))
+        self.assertEqual(["탭"], [e["payload"]["gesture"] for e in self.recorded()])
+        self.assertEqual(0.0, self.plugin._lastTypedCharacterAt)
+
+    def test_layout_specific_arrow_without_script_is_recorded(self):
+        self.plugin._onGesture(self.gesture("아래쪽 화살표", "downarrow"))
+        self.assertEqual(1, len(self.recorded()))
+
+    def test_typed_character_is_still_dropped_and_marks_echo(self):
+        self.plugin._onGesture(self.gesture("가", "a"))
+        self.assertEqual([], self.recorded())
+        self.assertGreater(self.plugin._lastTypedCharacterAt, 0)
+
+    def test_unlisted_unbound_key_is_ignored(self):
+        self.plugin._onGesture(self.gesture("F5", "f5"))
+        self.assertEqual([], self.recorded())
