@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
+from recorder import __version__
 from recorder.study import ADVANCING_OUTCOMES, STUDY_OUTCOMES, load_catalog, validate_setup
 
 
@@ -1202,11 +1203,15 @@ class RecorderStore:
         key_events = self._deduplicated_key_events(events)
         tab_forward = 0
         tab_backward = 0
+        typed_characters = 0
         shortcuts: Dict[str, int] = {}
         for event in key_events:
             chord = self._event_chord(event)
             normalized = self._normalized_event_key(event)
-            if normalized == "tab":
+            if event["payload"].get("input_kind") == "character":
+                # 0.3.3+ records typed characters; keep them out of the shortcut tally.
+                typed_characters += 1
+            elif normalized == "tab":
                 tab_forward += 1
             elif normalized == "shift+tab":
                 tab_backward += 1
@@ -1232,6 +1237,7 @@ class RecorderStore:
             "tab_forward": tab_forward,
             "tab_backward": tab_backward,
             "back_count": navigation_back,
+            "typed_character_count": typed_characters,
             "speech_count": sum(
                 1 for event in events if event["type"] in {"speech", "speech_episode"}
             ),
@@ -1783,7 +1789,7 @@ class RecorderHandler(BaseHTTPRequestHandler):
             self._json(
                 {
                     "ok": True,
-                    "recorder_version": "0.3.2",
+                    "recorder_version": __version__,
                     "time": utc_now(),
                     "nvda_connected": connected,
                     "nvda_last_seen": last_seen,

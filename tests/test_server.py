@@ -15,6 +15,7 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from unittest.mock import patch
 
+import recorder
 from recorder.server import (
     BROWSER_CLIENT_HEADER,
     BROWSER_CLIENT_ID,
@@ -116,6 +117,31 @@ class StoreTests(unittest.TestCase):
         )
         self.assertEqual("completed", stopped["status"])
         self.assertEqual("검색이 어려웠음", stopped["notes"])
+
+    def test_typed_characters_are_stored_and_kept_out_of_shortcuts(self):
+        self.store.start_session(self.session["id"])
+        for offset, (key, kind) in enumerate((("F", "character"), ("A", "character"),
+                                               ("탭", "key"), ("control+a", "key"))):
+            self.store.add_event({
+                "source": "nvda", "type": "input",
+                "timestamp": "2026-07-29T10:00:0{}.000Z".format(offset),
+                "payload": {"gesture": key, "display_name": key, "input_kind": kind,
+                            "identifiers": ["kb:" + ("tab" if key == "탭" else key.lower())]},
+            })
+        self.store.add_event({
+            "source": "nvda", "type": "speech_episode",
+            "timestamp": "2026-07-29T10:00:05.000Z",
+            "payload": {"raw_text": "FAKE-PNR-1234", "redacted": False},
+        })
+        summary = self.store.session_summary(self.session["id"])
+        self.assertEqual(2, summary["typed_character_count"])
+        self.assertEqual(1, summary["tab_forward"])
+        self.assertEqual({"control+a": 1}, summary["shortcut_counts"])
+        exported = json.loads(self.store.export_json(self.session["id"]))
+        keys = [event["payload"]["gesture"] for event in exported["events"]
+                if event["type"] == "input"]
+        self.assertEqual(["F", "A", "탭", "control+a"], keys)
+        self.assertIn("FAKE-PNR-1234", json.dumps(exported, ensure_ascii=False))
 
     def test_only_one_active_session(self):
         other = self.store.create_session({"title": "다른 과업"})
@@ -681,6 +707,7 @@ class HttpTests(unittest.TestCase):
 
         _, body = self.request("/api/health")
         payload = json.loads(body)
+        self.assertEqual(recorder.__version__, payload["recorder_version"])
         self.assertTrue(payload["nvda_connected"])
         self.assertIsNotNone(payload["nvda_last_seen"])
 

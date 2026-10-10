@@ -62,6 +62,9 @@ class ReleaseDownloadTests(unittest.TestCase):
                 artifact = build_release_kit.build_kit("3.12.9", "151.0.7922.71")
             version = build_release_kit.read_manifest_version(root / "nvda-addon/manifest.ini")
             self.assertEqual(version, json.loads((root / "browser-extension/manifest.json").read_text())["version"])
+            # 평가시작.bat compares /api/health recorder_version with the extension version.
+            init = (root / "recorder/__init__.py").read_text(encoding="utf-8")
+            self.assertIn('__version__ = "{}"'.format(version), init)
             prefix = artifact.stem + "/"
             with zipfile.ZipFile(artifact) as bundle:
                 launcher = bundle.read(prefix + "검수실행.bat").decode("ascii")

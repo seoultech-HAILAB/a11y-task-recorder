@@ -40,8 +40,8 @@
   let flushTimer = null;
   let documentVersion = 0;
 
-  function sanitizedUrl() {
-    return `${window.location.origin}${window.location.pathname}`;
+  function currentUrl() {
+    return window.location.href;
   }
 
   function xpath(element) {
@@ -74,7 +74,7 @@
         event: {
           type,
           timestamp,
-          url: sanitizedUrl(),
+          url: currentUrl(),
           page_title: document.title,
           payload,
           element: {},
