@@ -1,5 +1,25 @@
 (() => {
   const pageUrl = new URL(window.location.href);
+  if (pageUrl.origin === "http://127.0.0.1:8765") {
+    window.addEventListener("message", async (event) => {
+      const message = event.data;
+      if (event.source !== window || event.origin !== pageUrl.origin ||
+          message?.kind !== "a11y-study-command" ||
+          typeof message.requestId !== "string" ||
+          typeof message.sessionId !== "string" ||
+          !["prepare", "check", "start", "close"].includes(message.action)) return;
+      let result;
+      try {
+        result = await chrome.runtime.sendMessage({ kind: message.kind,
+          action: message.action, sessionId: message.sessionId });
+      } catch {
+        result = { ok: false, ready: false, reason: "extension_unavailable" };
+      }
+      window.postMessage({ kind: "a11y-study-response", requestId: message.requestId,
+        result }, pageUrl.origin);
+    });
+    return;
+  }
   if (
     ["127.0.0.1", "localhost"].includes(pageUrl.hostname) &&
     pageUrl.port === "8765"
@@ -15,12 +35,13 @@
     attributeNames: new Set(),
     xpaths: new Set(),
     firstChangeTs: null,
+    batches: [],
   };
   let flushTimer = null;
   let documentVersion = 0;
 
-  function sanitizedUrl() {
-    return `${window.location.origin}${window.location.pathname}`;
+  function currentUrl() {
+    return window.location.href;
   }
 
   function xpath(element) {
@@ -46,19 +67,19 @@
     return `/${parts.join("/")}`.slice(0, 1000);
   }
 
-  function send(type, payload = {}) {
+  function send(type, payload = {}, timestamp = new Date().toISOString()) {
     try {
       chrome.runtime.sendMessage({
         kind: "recorder-event",
         event: {
           type,
-          timestamp: new Date().toISOString(),
-          url: sanitizedUrl(),
+          timestamp,
+          url: currentUrl(),
           page_title: document.title,
           payload,
           element: {},
         },
-      });
+      }).catch(() => {});
     } catch {
       // 확장 업데이트 직후 메시지 포트가 닫힌 경우 다음 변화부터 다시 기록합니다.
     }
@@ -76,7 +97,8 @@
       character_data_changes: mutationBuffer.characterData,
       attribute_names: [...mutationBuffer.attributeNames].slice(0, 20),
       changed_target_count: mutationBuffer.xpaths.size,
-    });
+      batches: mutationBuffer.batches,
+    }, mutationBuffer.firstChangeTs);
     mutationBuffer.added = 0;
     mutationBuffer.removed = 0;
     mutationBuffer.attributes = 0;
@@ -84,22 +106,31 @@
     mutationBuffer.attributeNames.clear();
     mutationBuffer.xpaths.clear();
     mutationBuffer.firstChangeTs = null;
+    mutationBuffer.batches = [];
   }
 
   const observer = new MutationObserver((mutations) => {
+    const timestamp = new Date().toISOString();
+    const batch = { timestamp, added_nodes: 0, removed_nodes: 0,
+      attribute_changes: 0, character_data_changes: 0, attribute_names: [] };
     if (!mutationBuffer.firstChangeTs) {
       mutationBuffer.firstChangeTs = new Date().toISOString();
     }
     for (const mutation of mutations) {
       mutationBuffer.added += mutation.addedNodes?.length || 0;
       mutationBuffer.removed += mutation.removedNodes?.length || 0;
+      batch.added_nodes += mutation.addedNodes?.length || 0;
+      batch.removed_nodes += mutation.removedNodes?.length || 0;
       if (mutation.type === "attributes") {
         mutationBuffer.attributes += 1;
+        batch.attribute_changes += 1;
         if (mutation.attributeName) {
           mutationBuffer.attributeNames.add(mutation.attributeName);
+          if (!batch.attribute_names.includes(mutation.attributeName)) batch.attribute_names.push(mutation.attributeName);
         }
       } else if (mutation.type === "characterData") {
         mutationBuffer.characterData += 1;
+        batch.character_data_changes += 1;
       }
       const target =
         mutation.target instanceof Element
@@ -108,8 +139,8 @@
       const targetXpath = xpath(target);
       if (targetXpath) mutationBuffer.xpaths.add(targetXpath);
     }
-    clearTimeout(flushTimer);
-    flushTimer = setTimeout(flushMutations, 450);
+    mutationBuffer.batches.push(batch);
+    if (flushTimer === null) flushTimer = setTimeout(flushMutations, 450);
   });
 
   function start() {

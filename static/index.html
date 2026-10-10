@@ -29,7 +29,56 @@
     <main id="main" tabindex="-1">
       <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
 
-      <section id="home-view" class="page">
+      <section id="study-view" class="page study-page" hidden aria-labelledby="study-heading">
+        <header class="study-heading">
+          <div><h1 id="study-heading">배정된 과업</h1><p id="study-version" class="muted">배정표 확인 중</p></div>
+          <button type="button" class="button quiet compact" data-action="operator-home">진행자 기록 관리</button>
+        </header>
+        <form id="study-tester-form" class="study-selector">
+          <div class="field"><label for="study-tester">테스터 번호</label><select id="study-tester" required><option value="">번호 선택</option></select></div>
+          <button id="study-select" class="button primary" type="submit">배정 확인</button>
+        </form>
+        <p id="study-message" class="study-message" role="status" aria-live="polite"></p>
+        <div id="study-content" class="study-layout" hidden>
+          <section class="study-task" aria-labelledby="study-site">
+            <p id="study-order" class="study-order"></p>
+            <h2 id="study-site" tabindex="-1"></h2>
+            <p id="study-instruction" class="study-instruction"></p>
+            <p id="study-timer" class="muted"></p>
+            <p id="study-break" class="study-message" hidden>블록이 끝났습니다. 5분 휴식 후 다음 과업을 준비해 주세요.</p>
+            <div class="study-actions">
+              <button id="study-prepare" type="button" class="button primary">사이트 준비</button>
+              <button id="study-check" type="button" class="button quiet" hidden>접속 확인</button>
+              <button id="study-start" type="button" class="button primary" hidden>기록 시작</button>
+              <button id="study-next" type="button" class="button primary" hidden>다음 과업</button>
+              <button id="study-retry" type="button" class="button quiet" hidden>기술 문제 과업 재준비</button>
+            </div>
+            <form id="study-finish-form" hidden>
+              <div class="field"><label for="study-answer">과업 답변</label><textarea id="study-answer" rows="3"></textarea></div>
+              <div class="field"><label for="study-outcome">수행 결과</label><select id="study-outcome" required>
+                <option value="">결과 선택</option><option value="completed">과업을 마침</option><option value="blocked">진행할 수 없음</option><option value="timeout">제한 시간 도달</option><option value="technical">기록기·접속 등 기술 문제</option>
+              </select></div>
+              <div class="field"><label for="study-notes">불편한 점 또는 중단 사유</label><textarea id="study-notes" rows="3"></textarea></div>
+              <button id="study-finish" class="button primary" type="submit">답변 저장하고 기록 종료</button>
+            </form>
+            <p id="study-saved" role="status" hidden></p>
+            <button id="study-review" class="button quiet compact" type="button" hidden>상세 기록</button>
+          </section>
+          <aside class="study-progress" aria-labelledby="study-progress-heading">
+            <h2 id="study-progress-heading">진행 상황</h2>
+            <p id="study-progress-text"></p>
+            <progress id="study-progress-bar" max="12" value="0" aria-label="종료한 과업 수"></progress>
+            <ol id="study-task-list"></ol>
+          </aside>
+        </div>
+        <section id="study-complete" hidden>
+          <h2 tabindex="-1">배정된 과업을 모두 마쳤습니다.</h2>
+          <p>기록이 이 컴퓨터에 저장되었습니다.</p>
+          <button type="button" class="button primary" data-action="export-package">결과 패키지 만들기</button>
+        </section>
+      </section>
+
+      <section id="home-view" class="page" hidden>
         <div class="hero">
           <div>
             <p class="eyebrow">로컬 우선 · 개인정보 보호</p>
@@ -147,7 +196,7 @@
         <p id="nvda-warning" class="inline-warning" role="alert" hidden>
           NVDA 데이터가 들어오지 않고 있습니다. 기록을 중단하고
           <strong>평가시작.bat</strong>를 다시 실행한 뒤, 상단의 NVDA 연결 상태와
-          <kbd>NVDA+Control+Shift+R</kbd> 상승음을 확인하세요.
+          <kbd>NVDA+Control+L</kbd> 상승음을 확인하세요.
         </p>
 
         <header class="session-header">
@@ -389,6 +438,7 @@
       <p>모든 데이터는 이 컴퓨터의 로컬 SQLite 파일에 저장됩니다.</p>
     </footer>
 
+    <script src="/study.js"></script>
     <script src="/app.js"></script>
   </body>
 </html>

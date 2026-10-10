@@ -29,7 +29,8 @@ REQUEST_TIMEOUT_SECONDS = 0.8
 SUPPORTED_BROWSER_APPS = {"chrome", "msedge", "firefox", "brave", "opera"}
 SPEECH_MERGE_SECONDS = 1.2
 ADDON_VERSION = addonHandler.getCodeAddon().manifest["version"]
-SAFE_UNBOUND_KEYS = {
+# Named keys stay "key" even when NVDA shows them as one localized character ("탭").
+NAMED_UNBOUND_KEYS = {
     "kb:tab",
     "kb:shift+tab",
     "kb:enter",
@@ -64,7 +65,7 @@ def safeString(value, limit=1000):
 def normalizeSpeechText(value):
     """Conservatively remove common role/state narration while preserving raw text."""
     text = re.sub(r"\s+", " ", safeString(value, 5000)).strip()
-    if not text or text.startswith("[입력 문자"):
+    if not text:
         return text
     patterns = (
         r"(?:,\s*)?(?:clickable|visited|unvisited|selected|collapsed|expanded)$",
@@ -96,7 +97,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         self._activeTitle = ""
         self._environmentReportedSession = None
         self._sessionLock = threading.Lock()
-        self._lastTypedCharacterAt = 0.0
         self._speechLock = threading.RLock()
         self._activeSpeech = None
         self._speechHook = getattr(
@@ -146,10 +146,44 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             log.debugWarning("A11y Task Recorder focus capture failed", exc_info=True)
         nextHandler()
 
+    def _layoutFreeGesture(self, identifiers):
+        """Return the "kb:<keys>" form; NVDA lists "kb(desktop):<keys>" first."""
+        for identifier in identifiers:
+            value = identifier.lower()
+            if value.startswith("kb(") and "):" in value:
+                value = "kb:" + value.split("):", 1)[1]
+            if value.startswith("kb:"):
+                return value
+        return identifiers[0].lower() if identifiers else ""
+
+    def _inputKind(self, gesture, stableGesture, displayName, scriptObject):
+        """Classify an input as "command", "key" or "character" without dropping it."""
+        if scriptObject is not None:
+            return "command"
+        if stableGesture in NAMED_UNBOUND_KEYS or any(
+            modifier in stableGesture
+            for modifier in ("control+", "ctrl+", "alt+", "windows+", "win+")
+        ):
+            return "key"
+        try:
+            isCharacter = getattr(gesture, "isCharacter", None)
+        except Exception:
+            isCharacter = None
+        if isCharacter is None:
+            isCharacter = len(displayName) == 1 and displayName.isprintable()
+        return "character" if isCharacter else "key"
+
     def _onGesture(self, gesture):
-        """Observe gestures without changing whether NVDA executes them."""
+        """Record every non-modifier gesture without changing whether NVDA executes it.
+
+        Since 0.3.3 typed characters are stored as-is (study inputs are researcher-supplied
+        fake values); scoping to an active session in a browser stays in _shouldRecord.
+        """
         try:
             if getattr(gesture, "isModifier", False):
+                return True
+            focus = api.getFocusObject()
+            if not self._shouldRecord(focus):
                 return True
             displayName = safeString(getattr(gesture, "displayName", ""), 180)
             scriptObject = getattr(gesture, "script", None)
@@ -158,20 +192,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
                 value = safeString(identifier, 180)
                 if value:
                     identifiers.append(value)
-            stableGesture = identifiers[0].lower() if identifiers else ""
-            isPrintable = len(displayName) == 1 and displayName.isprintable()
-            if isPrintable and scriptObject is None:
-                # Do not store typed characters. This timestamp also redacts character echo speech.
-                self._lastTypedCharacterAt = time.monotonic()
-                return True
-            if scriptObject is None and stableGesture not in SAFE_UNBOUND_KEYS and not any(
-                modifier in stableGesture
-                for modifier in ("control+", "ctrl+", "alt+", "windows+", "win+")
-            ):
-                return True
-            focus = api.getFocusObject()
-            if not self._shouldRecord(focus):
-                return True
+            stableGesture = self._layoutFreeGesture(identifiers)
+            inputKind = self._inputKind(gesture, stableGesture, displayName, scriptObject)
             inputTimestamp = utcNow()
             self._finalizeSpeech(
                 speechEndTs=inputTimestamp,
@@ -191,6 +213,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
                         "gesture": displayName,
                         "display_name": displayName,
                         "identifiers": identifiers,
+                        "input_kind": inputKind,
                         "nvda_script": scriptName,
                         "script_description": scriptDescription,
                     },
@@ -203,6 +226,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         return True
 
     def _onSpeechQueued(self, speechSequence, priority=None, **kwargs):
+        """Store queued speech verbatim, including typed-character echo and edit fields."""
         try:
             focus = api.getFocusObject()
             if not self._shouldRecord(focus):
@@ -211,17 +235,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             text = " ".join(part.strip() for part in textParts if part.strip())
             if not text:
                 return
-            redacted = False
-            if (
-                time.monotonic() - self._lastTypedCharacterAt < 1.2
-                or self._isProtected(focus)
-                or self._isEditable(focus)
-            ):
-                text = "[입력 문자 음성 출력 숨김]"
-                redacted = True
-            navigator = None
             try:
-                navigator = api.getNavigatorObject()
+                navigator = api.getNavigatorObject() or focus
             except Exception:
                 navigator = focus
             element = self._objectContext(navigator or focus)
@@ -234,9 +249,14 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             }
             elementKey = self._elementKey(element)
             with self._speechLock:
+                with self._sessionLock:
+                    sessionId = self._activeSession
+                if not sessionId:
+                    return
                 active = self._activeSpeech
                 canMerge = (
                     active
+                    and active["session_id"] == sessionId
                     and active["element_key"] == elementKey
                     and nowMonotonic - active["last_monotonic"] <= SPEECH_MERGE_SECONDS
                 )
@@ -248,20 +268,17 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
                     )
                 if not canMerge:
                     self._activeSpeech = {
+                        "session_id": sessionId,
                         "timestamp": nowTimestamp,
                         "last_monotonic": nowMonotonic,
                         "element_key": elementKey,
                         "element": element,
                         "page_title": self._foregroundTitle(),
                         "priority": safeString(priority, 80),
-                        "redacted": redacted,
                         "fragments": [fragment],
                     }
                 else:
                     self._activeSpeech["last_monotonic"] = nowMonotonic
-                    self._activeSpeech["redacted"] = (
-                        self._activeSpeech["redacted"] or redacted
-                    )
                     self._activeSpeech["fragments"].append(fragment)
         except Exception:
             log.debugWarning("A11y Task Recorder speech capture failed", exc_info=True)
@@ -319,6 +336,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             self._enqueue(
                 {
                     "type": "speech_episode",
+                    "session_id": active["session_id"],
                     "timestamp": active["timestamp"],
                     "speech_end_ts": speechEndTs,
                     "interrupted": bool(interrupted),
@@ -329,7 +347,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
                         "fragments": fragments[:40],
                         "fragment_count": len(fragments),
                         "priority": active["priority"],
-                        "redacted": active["redacted"],
+                        # Schema compatibility only: nothing is redacted since 0.3.3.
+                        "redacted": False,
                         "end_reason": endReason,
                         "preprocessing": "role-descriptor-v1",
                     },
@@ -403,18 +422,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             return safeString(api.getForegroundObject().name, 1000)
         except Exception:
             return ""
-
-    def _isProtected(self, obj):
-        try:
-            return controlTypes.State.PROTECTED in obj.states
-        except Exception:
-            return False
-
-    def _isEditable(self, obj):
-        try:
-            return obj.role == controlTypes.Role.EDITABLETEXT
-        except Exception:
-            return False
 
     def _objectContext(self, obj):
         if obj is None:
@@ -497,6 +504,11 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         )
 
     def _enqueue(self, event):
+        if not event.get("session_id"):
+            with self._sessionLock:
+                event["session_id"] = self._activeSession
+        if not event["session_id"]:
+            return
         if not event.get("timestamp"):
             event["timestamp"] = utcNow()
         event["source"] = "nvda"
@@ -531,6 +543,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
                 data = json.loads(response.read().decode("utf-8"))
             session = data.get("session")
             sessionId = session.get("id") if session else None
+            with self._sessionLock:
+                previousSession = self._activeSession
+            if previousSession != sessionId:
+                self._finalizeSpeech(utcNow(), True, "session_boundary_observed")
             with self._sessionLock:
                 self._activeSession = sessionId
                 self._activeTitle = session.get("title", "") if session else ""
@@ -570,8 +586,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             pass
 
     def _postEvent(self, event):
-        with self._sessionLock:
-            sessionId = self._activeSession
+        sessionId = event.get("session_id")
         if not sessionId:
             return
         payload = dict(event)
@@ -592,7 +607,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         except urllib.error.HTTPError as error:
             if error.code == 409:
                 with self._sessionLock:
-                    self._activeSession = None
+                    if self._activeSession == sessionId:
+                        self._activeSession = None
             else:
                 log.debugWarning(
                     "A11y Task Recorder server returned HTTP %s" % error.code
