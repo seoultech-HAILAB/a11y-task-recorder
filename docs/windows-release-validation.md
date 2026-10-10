@@ -1,8 +1,13 @@
 # Windows / NVDA release validation
 
-Status: NOT RUN for the 2026-10-07 source changes. Linux unit tests and ZIP
-inspection do not validate NVDA extension points, speech timing, Windows launcher
-behavior, or participant usability. This is a release gate before distribution.
+Status: 0.3.2 was run on real Windows/NVDA on 2026-10-10 as an engineering pilot
+with a scripted participant (not human data): recorder and NVDA connected, key
+input capture 665/668, and all 14 result-package collection checks passed (repository
+`dist/pilot-20261010/RESULT.md` and `FOLLOWUP.md`). 0.3.3 removes collection-time
+redaction and records full URLs; it is PENDING re-verification on Windows/NVDA.
+Linux unit tests and ZIP inspection do not validate NVDA extension points, speech
+timing, Windows launcher behavior, or participant usability. This is a release gate
+before distribution.
 
 ## Environment and evidence
 
@@ -33,10 +38,12 @@ Run each supported NVDA version separately; do not infer older-version behavior.
    `end_reason`; a DOM change is never proof of spoken output.
 5. Type synthetic unique strings into plain text, password and contenteditable
    controls, including browse-mode reading, pasting, selecting, and returning to
-   the field. Search JSON, both CSVs and the backup DB for those strings. Do not
-   use personal data. Input echo should be redacted. Page titles, accessible names,
-   descriptions and ordinary webpage speech can contain site-reflected input;
-   this tool does not guarantee arbitrary-page personal-data anonymization.
+   the field. Use only researcher-supplied fake values, never personal data. Since
+   0.3.3 nothing is redacted at collection time: each typed key must appear as an
+   NVDA `input` event (`input_kind: character`), character echo and field speech
+   must appear verbatim in `speech_episode` (`redacted` is always false), and
+   browser URLs keep their query and hash. Search JSON, both CSVs and the backup DB
+   for those strings and confirm they are present.
 6. Stop mid-speech, then immediately create/start a different synthetic participant
    session. Keep navigating for at least five seconds. Check that completed-session
    events captured after Stop are rejected and old queued speech is not assigned

@@ -133,12 +133,14 @@ async function studyCommand(message, sender) {
   } catch (error) { return studyFailure("collector_error", error.message); }
 }
 
-function sanitizedUrl(value) {
+// Since 0.3.3 the full page URL (query and hash included) is recorded; only
+// non-web schemes such as chrome:// are left blank.
+function recordedUrl(value) {
   if (!value) return "";
   try {
     const url = new URL(value);
     if (!["http:", "https:"].includes(url.protocol)) return "";
-    return `${url.origin}${url.pathname}`;
+    return url.href;
   } catch {
     return "";
   }
@@ -219,7 +221,7 @@ async function sendEvent(event) {
     source: "browser",
     ...event,
   };
-  if (payload.url) payload.url = sanitizedUrl(payload.url);
+  if (payload.url) payload.url = recordedUrl(payload.url);
   try {
     const response = await fetch(`${COLLECTOR}/api/events`, {
       method: "POST",
@@ -239,7 +241,7 @@ async function sendEvent(event) {
 }
 
 function inferHistoryDirection(tabId, url, qualifiers) {
-  const cleanUrl = sanitizedUrl(url);
+  const cleanUrl = recordedUrl(url);
   const history = tabHistories.get(tabId) || { entries: [], index: -1 };
   const isHistory = qualifiers.includes("forward_back");
   let direction = "new";
