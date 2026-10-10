@@ -241,6 +241,26 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(1, len(event["payload"]["batches"]))
         self.assertIsNone(event["payload"]["changed_target_count"])
 
+    def test_capture_in_stop_millisecond_keeps_sub_millisecond_parts(self):
+        # A 15.6 ms Windows clock tick can put a pre-stop capture and ended_at in the
+        # same millisecond; bounds are stored truncated, so sub-ms digits must not drop it.
+        self.store.start_session(self.session["id"])
+        stopped = self.store.stop_session(self.session["id"], {"status": "completed"})
+        ended = datetime.fromisoformat(stopped["ended_at"].replace("Z", "+00:00"))
+        same_ms = (ended + timedelta(microseconds=456)).isoformat()
+        after = (datetime.now(timezone.utc) + timedelta(seconds=1)).isoformat()
+        speech = self.store.add_event({"session_id": self.session["id"], "source": "nvda",
+            "type": "speech_episode", "timestamp": same_ms, "speech_end_ts": after,
+            "payload": {"fragments": [{"timestamp": same_ms, "text": "Final utterance"},
+                                      {"timestamp": after, "text": "AFTER-STOP"}],
+                        "end_reason": "synth_done"}})
+        self.assertEqual("Final utterance", speech["payload"]["raw_text"])
+        dom = self.store.add_event({"session_id": self.session["id"], "source": "browser",
+            "type": "dom_mutation", "timestamp": same_ms,
+            "payload": {"batches": [{"timestamp": same_ms, "added_nodes": 2},
+                                    {"timestamp": after, "added_nodes": 100}]}})
+        self.assertEqual(2, dom["payload"]["added_nodes"])
+
     def test_export_does_not_flatten_structured_context(self):
         self.store.start_session(self.session["id"])
         self.store.add_event(

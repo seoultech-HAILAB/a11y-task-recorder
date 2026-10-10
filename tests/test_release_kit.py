@@ -41,6 +41,20 @@ class ReleaseDownloadTests(unittest.TestCase):
                 build_release_kit.download("https://example.invalid/runtime.zip", target)
             self.assertTrue(zipfile.is_zipfile(target))
 
+    def test_korean_progress_does_not_abort_on_non_korean_stdout(self):
+        # GitHub's windows-latest pipes stdout as cp1252, which cannot encode Hangul.
+        archive = io.BytesIO()
+        with zipfile.ZipFile(archive, "w") as bundle:
+            bundle.writestr("runtime.exe", b"fixture")
+        stdout = io.TextIOWrapper(io.BytesIO(), encoding="cp1252")
+        with tempfile.TemporaryDirectory() as directory, patch("sys.stdout", stdout), patch.object(
+            build_release_kit, "urlopen", return_value=io.BytesIO(archive.getvalue())
+        ):
+            build_release_kit.download("https://example.invalid/runtime.zip", Path(directory) / "runtime.zip")
+            stdout.flush()
+            output = stdout.buffer.getvalue().decode("cp1252")
+        self.assertIn("\\ub2e4\\uc6b4\\ub85c\\ub4dc: https://example.invalid/runtime.zip", output)
+
     def test_kit_packages_one_click_diagnostic_and_aligned_versions(self):
         source_root = Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory(prefix="recorder kit with spaces ") as directory:

@@ -60,6 +60,15 @@ def parse_timestamp(value: Optional[str]) -> datetime:
     return parsed.astimezone(timezone.utc)
 
 
+def parse_capture_instant(value: Optional[str]) -> datetime:
+    """Parse a collector timestamp at the millisecond precision of stored session bounds."""
+    # started_at/ended_at come from utc_now() (milliseconds), and event timestamps are
+    # normalised the same way. Comparing a raw microsecond value against a truncated
+    # bound would push an instant from the stop's own millisecond outside the interval.
+    parsed = parse_timestamp(value)
+    return parsed.replace(microsecond=parsed.microsecond - parsed.microsecond % 1000)
+
+
 def json_load(value: Optional[str], fallback: Any) -> Any:
     if not value:
         return fallback
@@ -959,7 +968,7 @@ class RecorderStore:
                     batches = payload.get("batches", [])
                     kept_batches = [batch for batch in batches if isinstance(batch, dict)
                                     and batch.get("timestamp")
-                                    and parse_timestamp(session["started_at"]) <= parse_timestamp(batch["timestamp"]) <= ended_at]
+                                    and parse_timestamp(session["started_at"]) <= parse_capture_instant(batch["timestamp"]) <= ended_at]
                     if not kept_batches:
                         raise ApiError(HTTPStatus.CONFLICT, "종료 전 DOM 변화 묶음이 없습니다.")
                     payload["batches"] = kept_batches
@@ -973,7 +982,7 @@ class RecorderStore:
                     fragments = payload.get("fragments", [])
                     kept = [fragment for fragment in fragments if isinstance(fragment, dict)
                             and fragment.get("timestamp")
-                            and parse_timestamp(fragment["timestamp"]) <= ended_at]
+                            and parse_capture_instant(fragment["timestamp"]) <= ended_at]
                     if not kept:
                         raise ApiError(HTTPStatus.CONFLICT, "종료 전 발화 조각이 없습니다.")
                     payload.update({
