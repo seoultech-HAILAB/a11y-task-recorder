@@ -75,7 +75,7 @@ class ReleaseDownloadTests(unittest.TestCase):
             ), patch.object(build_release_kit, "download", side_effect=[chrome, python]):
                 artifact = build_release_kit.build_kit("3.12.9", "151.0.7922.71")
             version = build_release_kit.read_manifest_version(root / "nvda-addon/manifest.ini")
-            self.assertEqual(version, json.loads((root / "browser-extension/manifest.json").read_text())["version"])
+            self.assertEqual(version, json.loads((root / "browser-extension/manifest.json").read_text(encoding="utf-8"))["version"])
             # 평가시작.bat compares /api/health recorder_version with the extension version.
             init = (root / "recorder/__init__.py").read_text(encoding="utf-8")
             self.assertIn('__version__ = "{}"'.format(version), init)
@@ -91,7 +91,7 @@ class ReleaseDownloadTests(unittest.TestCase):
                 self.assertIn(prefix + "windows-release-validation.md", bundle.namelist())
 
     def test_chrome_argument_templates_preserve_paths_with_spaces(self):
-        script = (Path(__file__).resolve().parents[1] / "scripts/verify_live_pipeline.ps1").read_text()
+        script = (Path(__file__).resolve().parents[1] / "scripts/verify_live_pipeline.ps1").read_text(encoding="utf-8")
         extension = re.search(r"\('([^']+)' -f \$extension\)", script).group(1)
         profile = re.search(r"\('([^']+)' -f \$profile\)", script).group(1)
         command = " ".join((extension.format(r"C:\Lab Kit\app\browser-extension"),
