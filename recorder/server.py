@@ -9,6 +9,7 @@ import sqlite3
 import sys
 import tempfile
 import threading
+import time
 import uuid
 import webbrowser
 import zipfile
@@ -20,9 +21,13 @@ from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
+from recorder import __version__
+from recorder.study import ADVANCING_OUTCOMES, STUDY_OUTCOMES, load_catalog, validate_setup
+
 
 # 애드온 폴링 주기(1.25초)의 여유 배수. 이 시간 안에 호출이 없으면 미연결로 본다.
 NVDA_LIVENESS_SECONDS = 10
+STOP_DRAIN_SECONDS = 5
 BROWSER_CLIENT_HEADER = "X-A11y-Recorder-Client"
 BROWSER_CLIENT_ID = "a11y-recorder-cft-v1"
 
@@ -55,6 +60,15 @@ def parse_timestamp(value: Optional[str]) -> datetime:
     return parsed.astimezone(timezone.utc)
 
 
+def parse_capture_instant(value: Optional[str]) -> datetime:
+    """Parse a collector timestamp at the millisecond precision of stored session bounds."""
+    # started_at/ended_at come from utc_now() (milliseconds), and event timestamps are
+    # normalised the same way. Comparing a raw microsecond value against a truncated
+    # bound would push an instant from the stop's own millisecond outside the interval.
+    parsed = parse_timestamp(value)
+    return parsed.replace(microsecond=parsed.microsecond - parsed.microsecond % 1000)
+
+
 def json_load(value: Optional[str], fallback: Any) -> Any:
     if not value:
         return fallback
@@ -75,6 +89,7 @@ class RecorderStore:
     def __init__(self, db_path: Path):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self.study_catalog_path = Path(__file__).with_name("study_catalog.json")
         self._schema_lock = threading.Lock()
         self.initialize()
 
@@ -165,6 +180,20 @@ class RecorderStore:
 
                 CREATE INDEX IF NOT EXISTS idx_issues_session
                     ON issues(session_id, created_at);
+
+                CREATE TABLE IF NOT EXISTS study_catalog (
+                    singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+                    catalog TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS study_attempts (
+                    session_id TEXT PRIMARY KEY REFERENCES sessions(id),
+                    catalog_id TEXT NOT NULL,
+                    tester TEXT NOT NULL,
+                    assignment_id TEXT NOT NULL,
+                    attempt INTEGER NOT NULL,
+                    retry_of TEXT UNIQUE REFERENCES sessions(id),
+                    UNIQUE(catalog_id, tester, assignment_id, attempt)
+                );
                 """
             )
             self._ensure_column(
@@ -194,6 +223,127 @@ class RecorderStore:
             self._ensure_column(
                 connection, "steps", "outcome_note", "TEXT NOT NULL DEFAULT ''"
             )
+            self._ensure_column(connection, "sessions", "study", "TEXT NOT NULL DEFAULT '{}'")
+            self._ensure_column(connection, "sessions", "study_outcome", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(connection, "sessions", "study_answer", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(connection, "sessions", "study_setup", "TEXT NOT NULL DEFAULT '{}'")
+
+    def _study_catalog(self, connection: sqlite3.Connection) -> Dict[str, Any]:
+        row = connection.execute("SELECT catalog FROM study_catalog WHERE singleton = 1").fetchone()
+        if row:
+            return json.loads(row["catalog"])
+        try:
+            catalog = load_catalog(self.study_catalog_path)
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            raise ApiError(HTTPStatus.SERVICE_UNAVAILABLE, "배정 과업 목록을 불러올 수 없습니다.") from error
+        connection.execute(
+            "INSERT OR IGNORE INTO study_catalog(singleton, catalog) VALUES (1, ?)",
+            (json.dumps(catalog, ensure_ascii=False),),
+        )
+        return json.loads(connection.execute(
+            "SELECT catalog FROM study_catalog WHERE singleton = 1"
+        ).fetchone()["catalog"])
+
+    def _study_progress(self, connection: sqlite3.Connection, catalog: Dict[str, Any], tester: str) -> Dict[str, Any]:
+        assigned = next((entry for entry in catalog["testers"] if entry["id"] == tester), None)
+        if assigned is None:
+            raise ApiError(HTTPStatus.NOT_FOUND, "테스터를 찾을 수 없습니다.")
+        rows = connection.execute(
+            "SELECT a.assignment_id, a.attempt, s.id, s.status, s.study_outcome "
+            "FROM study_attempts a JOIN sessions s ON s.id = a.session_id "
+            "WHERE a.catalog_id = ? AND a.tester = ? ORDER BY a.attempt",
+            (catalog["id"], tester),
+        ).fetchall()
+        latest = {row["assignment_id"]: row for row in rows}
+        tasks, finished, current = [], 0, None
+        for assignment in assigned["tasks"]:
+            row = latest.get(assignment["id"])
+            advances = row is not None and row["study_outcome"] in ADVANCING_OUTCOMES
+            if advances:
+                finished += 1
+            elif current is None:
+                current = assignment["order"]
+            task = dict(assignment)
+            task.update({
+                "status": (row["status"] if row["status"] in {"draft", "active"} else "finished") if row else "pending",
+                "session_id": row["id"] if row else None,
+                "outcome": row["study_outcome"] if row else "",
+            })
+            tasks.append(task)
+        return {"id": tester, "catalog_id": catalog["id"], "tasks": tasks,
+                "current_order": current, "finished": finished, "total": len(tasks)}
+
+    def get_study(self, tester: Optional[str] = None) -> Dict[str, Any]:
+        with self.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            catalog = self._study_catalog(connection)
+            if tester is not None:
+                return self._study_progress(connection, catalog, tester)
+            testers = []
+            for entry in catalog["testers"]:
+                progress = self._study_progress(connection, catalog, entry["id"])
+                testers.append({key: progress[key] for key in ("id", "total", "finished")})
+            return {"id": catalog["id"], "title": catalog["title"], "testers": testers,
+                    "evaluation_status": "NOT_SCORED"}
+
+    def _prepare_study(self, tester: str, retry_of: Optional[str] = None) -> Dict[str, Any]:
+        with self.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            catalog = self._study_catalog(connection)
+            progress = self._study_progress(connection, catalog, tester)
+            active = connection.execute("SELECT id FROM sessions WHERE status = 'active' LIMIT 1").fetchone()
+            if retry_of is not None:
+                source = connection.execute(
+                    "SELECT s.*, a.tester, a.catalog_id FROM sessions s "
+                    "JOIN study_attempts a ON s.id = a.session_id WHERE s.id = ?",
+                    (retry_of,),
+                ).fetchone()
+                if source is None or source["tester"] != tester or source["catalog_id"] != catalog["id"]:
+                    raise ApiError(HTTPStatus.CONFLICT, "이 테스터의 재시도 대상이 아닙니다.")
+                if source["study_outcome"] != "technical":
+                    raise ApiError(HTTPStatus.CONFLICT, "기술적 문제로 종료된 과업만 재시도할 수 있습니다.")
+                existing = connection.execute("SELECT session_id FROM study_attempts WHERE retry_of = ?", (retry_of,)).fetchone()
+                if existing:
+                    if active and active["id"] != existing["session_id"]:
+                        raise ApiError(HTTPStatus.CONFLICT, "다른 세션이 진행 중입니다.")
+                    session_id = existing["session_id"]
+                    return self.get_session(session_id)
+            if progress["current_order"] is None:
+                raise ApiError(HTTPStatus.CONFLICT, "모든 배정 과업이 종료되었습니다.")
+            task = next(task for task in progress["tasks"] if task["order"] == progress["current_order"])
+            if active and active["id"] != task["session_id"]:
+                raise ApiError(HTTPStatus.CONFLICT, "다른 세션이 진행 중입니다.")
+            if retry_of is not None and task["session_id"] != retry_of:
+                raise ApiError(HTTPStatus.CONFLICT, "현재 과업만 재시도할 수 있습니다.")
+            if retry_of is None and task["session_id"]:
+                session_id = task["session_id"]
+            else:
+                session_id = str(uuid.uuid4())
+                metadata = {key: task[key] for key in ("task_id", "order", "block", "site_name", "time_limit_seconds", "preparation")}
+                metadata.update({"catalog_id": catalog["id"], "assignment_id": task["id"],
+                                 "tester": tester, "total": progress["total"], "source": catalog["source"]})
+                attempt = source["round"] + 1 if retry_of else 1
+                group_id = source["group_id"] if retry_of else session_id
+                connection.execute(
+                    "INSERT INTO sessions(id, title, participant, target_url, scenario, created_at, group_id, round, study) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (session_id, "{} {}/{}".format(task["site_name"], task["order"], progress["total"]),
+                     tester, task["start_url"], task["instruction"], utc_now(), group_id, attempt,
+                     json.dumps(metadata, ensure_ascii=False)),
+                )
+                connection.execute(
+                    "INSERT INTO study_attempts(session_id, catalog_id, tester, assignment_id, attempt, retry_of) VALUES (?, ?, ?, ?, ?, ?)",
+                    (session_id, catalog["id"], tester, task["id"], attempt, retry_of),
+                )
+        return self.get_session(session_id)
+
+    def prepare_study(self, tester: str) -> Dict[str, Any]:
+        return self._prepare_study(tester)
+
+    def retry_study(self, tester: str, session_id: str) -> Dict[str, Any]:
+        if not session_id:
+            raise ApiError(HTTPStatus.BAD_REQUEST, "재시도할 세션을 지정해 주세요.")
+        return self._prepare_study(tester, retry_of=session_id)
 
     @staticmethod
     def _apply_default_outcomes(connection: sqlite3.Connection, session_id: str) -> None:
@@ -252,6 +402,10 @@ class RecorderStore:
     def session_from_row(row: sqlite3.Row) -> Dict[str, Any]:
         result = dict(row)
         result["environment"] = json_load(result.get("environment"), {})
+        result["study"] = json_load(result.get("study"), {})
+        result["study_setup"] = json_load(result.get("study_setup"), {})
+        if result["study"]:
+            result["study_evaluation"] = {"status": "NOT_SCORED", "basis": "participant_self_report"}
         return result
 
     @staticmethod
@@ -307,6 +461,8 @@ class RecorderStore:
     def rerun_session(self, session_id: str) -> Dict[str, Any]:
         """완료·중단된 세션의 과업 설정을 복사해 다음 회차 세션을 만든다."""
         source = self.get_session(session_id)
+        if source.get("study"):
+            raise ApiError(HTTPStatus.CONFLICT, "배정 과업은 기술적 문제 재시도 기능을 사용해 주세요.")
         if source["status"] not in {"completed", "abandoned"}:
             raise ApiError(
                 HTTPStatus.BAD_REQUEST, "완료되거나 중단된 세션만 다음 회차를 만들 수 있습니다."
@@ -380,7 +536,7 @@ class RecorderStore:
         result = self.session_from_row(row)
         result["summary"] = self.session_summary(session_id)
         if include_related:
-            result["events"] = self.list_events(session_id)
+            result["events"] = self.list_events(session_id, limit=None)
             result["issues"] = self.list_issues(session_id)
             result["steps"] = self.list_steps(session_id)
         else:
@@ -403,6 +559,14 @@ class RecorderStore:
         return self.session_from_row(row) if row else None
 
     def update_session(self, session_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        session = self.get_session(session_id)
+        if session.get("study"):
+            if set(data) - {"environment_merge", "notes"}:
+                raise ApiError(HTTPStatus.CONFLICT, "배정 과업 정보는 변경할 수 없습니다.")
+            allowed_environment = {"nvda_version", "nvda_addon_version", "synthesizer", "speech_rate", "browser", "browser_extension_version", "os", "python_version", "speech_mode"}
+            environment = data.get("environment_merge", {})
+            if not isinstance(environment, dict) or set(environment) - allowed_environment:
+                raise ApiError(HTTPStatus.BAD_REQUEST, "허용되지 않은 환경 정보입니다.")
         assignments = []
         values: List[Any] = []
         for field in SESSION_FIELDS:
@@ -453,8 +617,25 @@ class RecorderStore:
                     )
         return self.get_session(session_id)
 
-    def start_session(self, session_id: str) -> Dict[str, Any]:
+    def start_session(self, session_id: str, study_ready: bool = False, study_setup: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         with self.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
+            if row is None:
+                raise ApiError(HTTPStatus.NOT_FOUND, "세션을 찾을 수 없습니다.")
+            study = json_load(row["study"], {})
+            if study:
+                if study_ready is not True:
+                    raise ApiError(HTTPStatus.BAD_REQUEST, "과업 준비 사항을 확인해 주세요.")
+                if study_setup is not None:
+                    try:
+                        validate_setup(study_setup)
+                    except ValueError as error:
+                        raise ApiError(HTTPStatus.BAD_REQUEST, "과업 준비 기록이 올바르지 않습니다.") from error
+                progress = self._study_progress(connection, self._study_catalog(connection), study["tester"])
+                current = next((task for task in progress["tasks"] if task["order"] == progress["current_order"]), None)
+                if current is None or current["session_id"] != session_id:
+                    raise ApiError(HTTPStatus.CONFLICT, "현재 배정 과업만 시작할 수 있습니다.")
             active = connection.execute(
                 "SELECT id, title FROM sessions WHERE status = 'active' AND id != ? LIMIT 1",
                 (session_id,),
@@ -482,6 +663,11 @@ class RecorderStore:
                     HTTPStatus.CONFLICT,
                     "초안 상태의 세션만 시작할 수 있습니다. 새 평가에는 새 세션을 만들어 주세요.",
                 )
+            if study and study_setup is not None:
+                connection.execute(
+                    "UPDATE sessions SET study_setup = ? WHERE id = ?",
+                    (json.dumps(study_setup, ensure_ascii=False), session_id),
+                )
         return self.get_session(session_id)
 
     def stop_session(self, session_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -490,6 +676,16 @@ class RecorderStore:
             raise ApiError(HTTPStatus.BAD_REQUEST, "종료 상태가 올바르지 않습니다.")
         notes = data.get("notes")
         with self.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute("SELECT study FROM sessions WHERE id = ?", (session_id,)).fetchone()
+            study = json_load(row["study"], {}) if row else {}
+            if study:
+                outcome = data.get("study_outcome")
+                if not isinstance(outcome, str) or outcome not in STUDY_OUTCOMES:
+                    raise ApiError(HTTPStatus.BAD_REQUEST, "과업 종료 결과를 선택해 주세요.")
+                expected_status = "completed" if outcome == "completed" else "abandoned"
+                if final_status != expected_status:
+                    raise ApiError(HTTPStatus.BAD_REQUEST, "종료 상태와 과업 결과가 일치하지 않습니다.")
             ended_at = utc_now()
             active_step = connection.execute(
                 """
@@ -514,6 +710,11 @@ class RecorderStore:
                 )
             if cursor.rowcount == 0:
                 raise ApiError(HTTPStatus.CONFLICT, "진행 중인 세션만 종료할 수 있습니다.")
+            if study:
+                connection.execute(
+                    "UPDATE sessions SET study_outcome = ?, study_answer = ? WHERE id = ?",
+                    (outcome, str(data.get("answer", "")), session_id),
+                )
             connection.execute(
                 """
                 UPDATE steps SET status = 'completed', ended_at = ?
@@ -724,7 +925,7 @@ class RecorderStore:
             ).replace("+00:00", "Z")
         except (TypeError, ValueError):
             raise ApiError(HTTPStatus.BAD_REQUEST, "이벤트 timestamp 형식이 올바르지 않습니다.")
-        payload = data.get("payload") if isinstance(data.get("payload"), dict) else {}
+        payload = dict(data["payload"]) if isinstance(data.get("payload"), dict) else {}
         element = data.get("element") if isinstance(data.get("element"), dict) else {}
         speech_end_ts = None
         if data.get("speech_end_ts"):
@@ -744,12 +945,59 @@ class RecorderStore:
         step_id = str(data.get("step_id", "")).strip() or None
         with self.connect() as connection:
             session = connection.execute(
-                "SELECT status FROM sessions WHERE id = ?", (session_id,)
+                "SELECT status, started_at, ended_at FROM sessions WHERE id = ?", (session_id,)
             ).fetchone()
             if not session:
                 raise ApiError(HTTPStatus.NOT_FOUND, "세션을 찾을 수 없습니다.")
-            if session["status"] != "active" and not data.get("allow_inactive"):
-                raise ApiError(HTTPStatus.CONFLICT, "진행 중인 세션에만 이벤트를 기록할 수 있습니다.")
+            captured_at = parse_timestamp(timestamp)
+            if session["started_at"] and captured_at < parse_timestamp(session["started_at"]):
+                raise ApiError(HTTPStatus.CONFLICT, "세션 시작 전 이벤트는 기록할 수 없습니다.")
+            if session["status"] != "active":
+                ended_at = parse_timestamp(session["ended_at"]) if session["ended_at"] else None
+                late_capture = (
+                    source in {"nvda", "browser"}
+                    and data.get("session_id") and data.get("timestamp")
+                    and session["started_at"] and ended_at
+                    and captured_at <= ended_at
+                    and 0 <= (parse_timestamp(utc_now()) - ended_at).total_seconds() <= STOP_DRAIN_SECONDS
+                )
+                if not late_capture:
+                    raise ApiError(HTTPStatus.CONFLICT, "기록 구간 밖이거나 종료 유예 시간이 지난 이벤트입니다.")
+                payload["received_after_stop"] = True
+                if source == "browser" and event_type == "dom_mutation":
+                    batches = payload.get("batches", [])
+                    kept_batches = [batch for batch in batches if isinstance(batch, dict)
+                                    and batch.get("timestamp")
+                                    and parse_timestamp(session["started_at"]) <= parse_capture_instant(batch["timestamp"]) <= ended_at]
+                    if not kept_batches:
+                        raise ApiError(HTTPStatus.CONFLICT, "종료 전 DOM 변화 묶음이 없습니다.")
+                    payload["batches"] = kept_batches
+                    for key in ("added_nodes", "removed_nodes", "attribute_changes", "character_data_changes"):
+                        payload[key] = sum(int(batch.get(key, 0)) for batch in kept_batches)
+                    payload["attribute_names"] = sorted({name for batch in kept_batches for name in batch.get("attribute_names", [])})
+                    if len(kept_batches) != len(batches):
+                        payload["changed_target_count"] = None
+                        payload["target_count_unavailable_at_stop"] = True
+                if event_type == "speech_episode" and speech_end_ts and parse_timestamp(speech_end_ts) > ended_at:
+                    fragments = payload.get("fragments", [])
+                    kept = [fragment for fragment in fragments if isinstance(fragment, dict)
+                            and fragment.get("timestamp")
+                            and parse_capture_instant(fragment["timestamp"]) <= ended_at]
+                    if not kept:
+                        raise ApiError(HTTPStatus.CONFLICT, "종료 전 발화 조각이 없습니다.")
+                    payload.update({
+                        "fragments": kept,
+                        "fragment_count": len(kept),
+                        "raw_text": " ".join(str(fragment.get("text", "")) for fragment in kept),
+                        "observed_speech_end_ts": data["speech_end_ts"],
+                        "observed_end_reason": payload.get("end_reason"),
+                        "observed_interrupted": bool(data.get("interrupted")),
+                        "end_reason": "session_stopped",
+                        "preprocessing": "stop-boundary-fragments-v1",
+                    })
+                    payload["text"] = payload["normalized_text"] = payload["raw_text"]
+                    speech_end_ts = session["ended_at"]
+                    data = dict(data, interrupted=True)
             if step_id:
                 step = connection.execute(
                     "SELECT id FROM steps WHERE id = ? AND session_id = ?",
@@ -793,17 +1041,19 @@ class RecorderStore:
         return self.event_from_row(row)
 
     def list_events(
-        self, session_id: str, after_id: int = 0, limit: int = 2000
+        self, session_id: str, after_id: int = 0, limit: Optional[int] = 2000
     ) -> List[Dict[str, Any]]:
-        limit = min(max(limit, 1), 10000)
+        # HTTP callers stay bounded; exports explicitly request the complete history.
+        order = "timestamp ASC, id ASC" if limit is None else "id ASC"
+        limit = -1 if limit is None else min(max(limit, 1), 10000)
         with self.connect() as connection:
             rows = connection.execute(
                 """
                 SELECT * FROM events
                 WHERE session_id = ? AND id > ?
-                ORDER BY timestamp ASC, id ASC
+                ORDER BY {}
                 LIMIT ?
-                """,
+                """.format(order),
                 (session_id, after_id, limit),
             ).fetchall()
         return [self.event_from_row(row) for row in rows]
@@ -962,11 +1212,15 @@ class RecorderStore:
         key_events = self._deduplicated_key_events(events)
         tab_forward = 0
         tab_backward = 0
+        typed_characters = 0
         shortcuts: Dict[str, int] = {}
         for event in key_events:
             chord = self._event_chord(event)
             normalized = self._normalized_event_key(event)
-            if normalized == "tab":
+            if event["payload"].get("input_kind") == "character":
+                # 0.3.3+ records typed characters; keep them out of the shortcut tally.
+                typed_characters += 1
+            elif normalized == "tab":
                 tab_forward += 1
             elif normalized == "shift+tab":
                 tab_backward += 1
@@ -992,6 +1246,7 @@ class RecorderStore:
             "tab_forward": tab_forward,
             "tab_backward": tab_backward,
             "back_count": navigation_back,
+            "typed_character_count": typed_characters,
             "speech_count": sum(
                 1 for event in events if event["type"] in {"speech", "speech_episode"}
             ),
@@ -1100,7 +1355,7 @@ class RecorderStore:
         원본은 그대로 보존되며 각 행동의 `event_ids`로 되짚을 수 있다.
         """
         session = self.get_session(session_id)
-        events = self.list_events(session_id, limit=10000)
+        events = self.list_events(session_id, limit=None)
         steps = {step["id"]: step for step in session.get("steps", [])}
         started_at = parse_timestamp(session["started_at"]) if session.get("started_at") else None
 
@@ -1340,6 +1595,13 @@ class RecorderStore:
             "browser_data_present",
             "environment_complete",
         )
+        if payload.get("study"):
+            # Assigned collection records one task report, not inferred substeps.
+            del checks["steps_defined"]
+            del checks["step_outcomes_recorded"]
+            checks["study_outcome_recorded"] = payload["study_outcome"] in STUDY_OUTCOMES
+            warning_labels["study_outcome_recorded"] = "참가자의 과업 종료 결과가 기록되지 않았습니다."
+            critical_checks += ("study_outcome_recorded",)
         payload["data_quality"] = {
             "collection_check_passed": all(checks[name] for name in critical_checks),
             "checks": checks,
@@ -1367,7 +1629,7 @@ class RecorderStore:
                 "payload",
             ]
         )
-        for event in self.list_events(session_id, limit=10000):
+        for event in self.list_events(session_id, limit=None):
             writer.writerow(
                 [
                     event["id"],
@@ -1536,11 +1798,19 @@ class RecorderHandler(BaseHTTPRequestHandler):
             self._json(
                 {
                     "ok": True,
+                    "recorder_version": __version__,
                     "time": utc_now(),
                     "nvda_connected": connected,
                     "nvda_last_seen": last_seen,
                 }
             )
+            return
+        if path == "/api/study":
+            self._json(self.server.store.get_study())
+            return
+        match = re.fullmatch(r"/api/study/([^/]+)", path)
+        if match:
+            self._json(self.server.store.get_study(match.group(1)))
             return
         if path == "/api/active-session":
             # 애드온은 urllib으로 이 엔드포인트를 주기적으로 호출한다.
@@ -1576,6 +1846,7 @@ class RecorderHandler(BaseHTTPRequestHandler):
         match = re.fullmatch(r"/api/sessions/([^/]+)/export-interactions\.csv", path)
         if match:
             session_id = match.group(1)
+            self._wait_for_capture_drain(session_id)
             self._bytes(
                 self.server.store.export_interactions_csv(session_id),
                 "text/csv; charset=utf-8",
@@ -1585,6 +1856,7 @@ class RecorderHandler(BaseHTTPRequestHandler):
         match = re.fullmatch(r"/api/sessions/([^/]+)/export\.(json|csv)", path)
         if match:
             session_id, extension = match.groups()
+            self._wait_for_capture_drain(session_id)
             if extension == "json":
                 self._bytes(
                     self.server.store.export_json(session_id),
@@ -1603,6 +1875,19 @@ class RecorderHandler(BaseHTTPRequestHandler):
     def _handle_post(self) -> None:
         path = urlparse(self.path).path
         data = self._read_json()
+        match = re.fullmatch(r"/api/study/([^/]+)/(prepare|retry)", path)
+        if match:
+            tester, action = match.groups()
+            if action == "prepare":
+                if data:
+                    raise ApiError(HTTPStatus.BAD_REQUEST, "배정 과업은 순서대로 자동 준비됩니다.")
+                session = self.server.store.prepare_study(tester)
+            else:
+                if set(data) != {"session_id"} or not isinstance(data["session_id"], str):
+                    raise ApiError(HTTPStatus.BAD_REQUEST, "재시도할 세션을 지정해 주세요.")
+                session = self.server.store.retry_study(tester, data["session_id"])
+            self._json({"session": session})
+            return
         if path == "/api/sessions":
             self._json({"session": self.server.store.create_session(data)}, HTTPStatus.CREATED)
             return
@@ -1615,9 +1900,25 @@ class RecorderHandler(BaseHTTPRequestHandler):
         if match:
             session_id, action = match.groups()
             if action == "start":
-                session = self.server.store.start_session(session_id)
+                current = self.server.store.get_session(session_id)
+                if current.get("study"):
+                    if data.get("study_ready") is not True:
+                        raise ApiError(HTTPStatus.BAD_REQUEST, "과업 준비 사항을 확인해 주세요.")
+                    last_seen = self.server.nvda_last_seen
+                    age = (datetime.now(timezone.utc) - parse_timestamp(last_seen)).total_seconds() if last_seen else None
+                    if age is None or not 0 <= age <= NVDA_LIVENESS_SECONDS:
+                        raise ApiError(HTTPStatus.CONFLICT, "NVDA 연결을 확인한 뒤 시작해 주세요.")
+                    session = self.server.store.start_session(
+                        session_id, study_ready=True, study_setup=data.get("study_setup")
+                    )
+                else:
+                    session = self.server.store.start_session(session_id)
             else:
                 session = self.server.store.stop_session(session_id, data)
+                # Seal the capture interval immediately, then allow the collectors
+                # to deliver pre-stop evidence before the dashboard enables export.
+                time.sleep(STOP_DRAIN_SECONDS)
+                session = self.server.store.get_session(session_id)
             self._json({"session": session})
             return
         match = re.fullmatch(r"/api/sessions/([^/]+)/rerun", path)
@@ -1649,6 +1950,7 @@ class RecorderHandler(BaseHTTPRequestHandler):
             self._json({"event": hint}, HTTPStatus.CREATED)
             return
         if path == "/api/export-package":
+            self._wait_for_capture_drain()
             result = self.server.store.build_result_package()
             opener = getattr(os, "startfile", None)
             if opener and data.get("open_folder", True):
@@ -1681,6 +1983,18 @@ class RecorderHandler(BaseHTTPRequestHandler):
             )
             return
         raise ApiError(HTTPStatus.NOT_FOUND, "API 경로를 찾을 수 없습니다.")
+
+    def _wait_for_capture_drain(self, session_id: Optional[str] = None) -> None:
+        with self.server.store.connect() as connection:
+            rows = connection.execute(
+                "SELECT ended_at FROM sessions WHERE ended_at IS NOT NULL" +
+                (" AND id = ?" if session_id else ""),
+                (session_id,) if session_id else (),
+            ).fetchall()
+        remaining = max((STOP_DRAIN_SECONDS - (parse_timestamp(utc_now()) -
+                         parse_timestamp(row["ended_at"])).total_seconds() for row in rows), default=0)
+        if remaining > 0:
+            time.sleep(min(remaining, STOP_DRAIN_SECONDS))
 
     def _read_json(self) -> Dict[str, Any]:
         content_type = self.headers.get("Content-Type", "")
