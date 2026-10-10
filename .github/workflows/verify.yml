@@ -42,6 +42,11 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && inputs.build_kit
     needs: verify
     runs-on: windows-latest
+    # Readable Korean build logs; the script itself no longer depends on this.
+    # Kept out of `verify` so its Windows leg still runs with the runner's cp1252
+    # pipe and locale defaults and catches encoding assumptions.
+    env:
+      PYTHONIOENCODING: utf-8
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

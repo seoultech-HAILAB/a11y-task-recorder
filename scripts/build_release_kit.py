@@ -236,6 +236,16 @@ kbd { background: #eee; border: 1px solid #bbb; border-radius: 4px; padding: 0 0
 """
 
 
+def log(message: str = "") -> None:
+    """Print build progress without failing on a console or pipe that cannot encode Korean."""
+    try:
+        print(message)
+    except UnicodeEncodeError:
+        # e.g. a cp1252 pipe on an English Windows runner: escape instead of aborting the build.
+        encoding = getattr(sys.stdout, "encoding", None) or "ascii"
+        print(message.encode(encoding, "backslashreplace").decode(encoding))
+
+
 def read_manifest_version(path: Path, key: str = "version") -> str:
     for line in path.read_text(encoding="utf-8").splitlines():
         if line.strip().startswith(key):
@@ -245,9 +255,9 @@ def read_manifest_version(path: Path, key: str = "version") -> str:
 
 def download(url: str, target: Path) -> Path:
     if target.exists() and zipfile.is_zipfile(target):
-        print("캐시 사용: {}".format(target.name))
+        log("캐시 사용: {}".format(target.name))
         return target
-    print("다운로드: {}".format(url))
+    log("다운로드: {}".format(url))
     target.parent.mkdir(parents=True, exist_ok=True)
     partial = target.with_suffix(target.suffix + ".part")
     try:
@@ -258,7 +268,7 @@ def download(url: str, target: Path) -> Path:
         partial.replace(target)
     finally:
         partial.unlink(missing_ok=True)
-    print("  완료 ({:.1f} MB)".format(target.stat().st_size / 1024 / 1024))
+    log("  완료 ({:.1f} MB)".format(target.stat().st_size / 1024 / 1024))
     return target
 
 
@@ -294,7 +304,7 @@ def build_kit(python_version: str, chrome_version: str) -> Path:
         (ROOT / "browser-extension" / "manifest.json").read_text(encoding="utf-8")
     )["version"]
     addon_file = ROOT / "dist" / "a11yTaskRecorder-{}.nvda-addon".format(addon_version)
-    print("NVDA 애드온 설치 파일 생성 중...")
+    log("NVDA 애드온 설치 파일 생성 중...")
     subprocess.check_call([sys.executable, str(ROOT / "scripts" / "build_nvda_addon.py")])
 
     cft = (
@@ -309,7 +319,7 @@ def build_kit(python_version: str, chrome_version: str) -> Path:
             ),
         }
     )
-    print("Chrome for Testing 선택 버전: {}".format(cft["version"]))
+    log("Chrome for Testing 선택 버전: {}".format(cft["version"]))
     cft_zip = download(cft["url"], CACHE_DIR / "chrome-win64-{}.zip".format(cft["version"]))
     python_zip = download(
         "https://www.python.org/ftp/python/{0}/python-{0}-embed-amd64.zip".format(python_version),
@@ -323,7 +333,7 @@ def build_kit(python_version: str, chrome_version: str) -> Path:
     app = staging / "app"
     app.mkdir(parents=True)
 
-    print("구성 요소 복사 중...")
+    log("구성 요소 복사 중...")
     shutil.copytree(ROOT / "recorder", app / "recorder",
                     ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     shutil.copytree(ROOT / "static", app / "static")
@@ -334,9 +344,9 @@ def build_kit(python_version: str, chrome_version: str) -> Path:
     shutil.copy2(ROOT / "docs" / "windows-release-validation.md", staging / "windows-release-validation.md")
     shutil.copy2(ROOT / "docs" / "assigned-study-0.3.0.md", staging / "배정과업안내.md")
 
-    print("Chrome for Testing 압축 해제 중...")
+    log("Chrome for Testing 압축 해제 중...")
     extract_flat(cft_zip, app / "chrome")
-    print("임베디드 Python 압축 해제 중...")
+    log("임베디드 Python 압축 해제 중...")
     extract_flat(python_zip, app / "python")
 
     # 임베디드 Python은 ._pth에 적힌 경로만 sys.path로 쓰므로 app 폴더를 추가한다.
@@ -370,7 +380,7 @@ def build_kit(python_version: str, chrome_version: str) -> Path:
         encoding="utf-8",
     )
 
-    print("ZIP 생성 중...")
+    log("ZIP 생성 중...")
     zip_path = ROOT / "dist" / "{}.zip".format(kit_name)
     zip_path.parent.mkdir(parents=True, exist_ok=True)
     if zip_path.exists():
@@ -378,8 +388,8 @@ def build_kit(python_version: str, chrome_version: str) -> Path:
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as bundle:
         for path in sorted(staging.rglob("*")):
             bundle.write(path, Path(kit_name) / path.relative_to(staging))
-    print("완료: {} ({:.1f} MB)".format(zip_path, zip_path.stat().st_size / 1024 / 1024))
-    print("검증용 폴더: {}".format(staging))
+    log("완료: {} ({:.1f} MB)".format(zip_path, zip_path.stat().st_size / 1024 / 1024))
+    log("검증용 폴더: {}".format(staging))
     return zip_path
 
 

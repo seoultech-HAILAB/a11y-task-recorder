@@ -31,6 +31,10 @@ function Invoke-RestMethod {
 }
 function Start-Process { throw 'UNEXPECTED CHROME LAUNCH' }
 & (Join-Path $Kit 'verify_live_pipeline.ps1') -KitPath $Kit
+# `exit` inside a script run with `&` only sets $LASTEXITCODE; a -File host
+# that ends normally still exits 0. Forward the diagnostic's own exit code,
+# which the kit's .bat launcher receives directly from `powershell -File`.
+exit $LASTEXITCODE
 """.replace("ACTIVE_VALUE", active_value), encoding="utf-8")
             run = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
                                   "-File", str(harness), "-Kit", str(root)],
