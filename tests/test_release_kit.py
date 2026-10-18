@@ -81,14 +81,39 @@ class ReleaseDownloadTests(unittest.TestCase):
             self.assertIn('__version__ = "{}"'.format(version), init)
             prefix = artifact.stem + "/"
             with zipfile.ZipFile(artifact) as bundle:
-                launcher = bundle.read(prefix + "검수실행.bat").decode("ascii")
+                launcher = bundle.read(prefix + "_연구진용/검수실행.bat").decode("ascii")
                 self.assertIn('"%~dp0verify_live_pipeline.ps1"', launcher)
                 self.assertIn('-KitPath "%RECORDER_DIAGNOSTIC_KIT%"', launcher)
                 self.assertIn('exit /b %DIAGNOSTIC_EXIT%', launcher)
                 self.assertIn("\r\n", launcher)
                 self.assertEqual((root / "scripts/verify_live_pipeline.ps1").read_bytes(),
-                                 bundle.read(prefix + "verify_live_pipeline.ps1"))
-                self.assertIn(prefix + "windows-release-validation.md", bundle.namelist())
+                                 bundle.read(prefix + "_연구진용/verify_live_pipeline.ps1"))
+                self.assertIn(prefix + "_연구진용/windows-release-validation.md", bundle.namelist())
+                self.assertNotIn(prefix + "app/study_access.txt", bundle.namelist())
+            # --access-code-file embeds the code (fake value, 16+ characters) as app/study_access.txt.
+            code_file = root / "access.json"
+            code_file.write_text(json.dumps({"code": "fake-kit-code-for-tests-0001", "note": "x"}), encoding="utf-8")
+            with patch.object(build_release_kit, "ROOT", root), patch.object(
+                build_release_kit, "BUILD_DIR", root / "dist/kit-build"
+            ), patch.object(build_release_kit, "download", side_effect=[chrome, python]), \
+                    patch("sys.stdout", io.StringIO()) as printed:
+                artifact = build_release_kit.build_kit("3.12.9", "151.0.7922.71", code_file)
+            self.assertNotIn("fake-kit-code-for-tests-0001", printed.getvalue())
+            with zipfile.ZipFile(artifact) as bundle:
+                self.assertEqual("fake-kit-code-for-tests-0001\n",
+                                 bundle.read(prefix + "app/study_access.txt").decode("utf-8"))
+                self.assertNotIn("fake-kit-code-for-tests-0001", bundle.read(prefix + "_연구진용/KIT-INFO.txt").decode("utf-8"))
+
+    def test_access_code_file_accepts_bare_or_json_and_rejects_empty(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "code.txt"
+            path.write_text("\ufeff  fake-bare-code-for-tests-01 \n", encoding="utf-8")
+            self.assertEqual("fake-bare-code-for-tests-01", build_release_kit.read_access_code(path))
+            path.write_text('{"code": ""}', encoding="utf-8")
+            with self.assertRaises(SystemExit):
+                build_release_kit.read_access_code(path)
+            with self.assertRaises(SystemExit):
+                build_release_kit.read_access_code(Path(directory) / "missing.txt")
 
     def test_chrome_argument_templates_preserve_paths_with_spaces(self):
         script = (Path(__file__).resolve().parents[1] / "scripts/verify_live_pipeline.ps1").read_text(encoding="utf-8")

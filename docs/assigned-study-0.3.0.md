@@ -39,6 +39,18 @@ URL, 과업 문장, 순서를 수동 입력하지 않는다. T01과 T02는 서�
 - 자기보고 결과는 `study_evaluation.status=NOT_SCORED`이며 객관적 성공률이나 FE 판정이 아니다.
 - 0.3.3부터 수집 시점 가림이 없다. 입력한 글자(NVDA `input`, `input_kind=character`), 입력란·보호 필드의 발화와 문자 에코, URL의 쿼리와 해시를 그대로 저장한다. `speech_episode`의 `redacted`는 호환용 필드이며 항상 false다. 과업 입력값은 연구진이 제공한 가상 값이다.
 
+## 0.3.4 변경 (2026-10-12, 1차 수집용 안전 수정)
+
+- 배정 과업 기록 중 **준비된 과업 탭의 브라우저 이벤트만** 서버로 보낸다. 다른 탭의 DOM 변화·이동·제목은 기록하지 않는다(PC 파일럿 점검 R6: 과업 밖 탭 URL·제목이 기록되던 문제). 거부된 이벤트는 확장 응답 `reason=outside_task_tab`로 확인할 수 있다.
+- `답변 저장하고 기록 종료` 뒤 초점이 `다음 과업`(또는 `기술 문제 과업 재준비`, 완료 제목)으로 간다. 이전에는 버튼이 비활성인 동안 `focus()`를 불러 초점이 body로 떨어졌다.
+- 세션 `study.ui_mode`를 기록한다. 0.3.x는 `"tabbed"`(새 탭 방식). 0.4.0의 한 창 구조는 `"single_window"`로 적어 분석에서 구분한다.
+- 확장의 `Alt+Shift+M` 브라우저 명령을 없앴다(Windows 입력 언어 전환 키와 겹침). NVDA 애드온 `NVDA+Control+I`와 확장 팝업 버튼은 그대로다.
+- Windows/NVDA 실기 재확인 전이다(실기 미확인). 수집 전 `평가시작.bat`와 배정 과업 1건을 다시 확인한다.
+
+## 0.4.0 변경 (2026-10-12, 한 창 기록기)
+
+사이트 사본이 새 탭이 아니라 대시보드 안의 창 속 창(iframe)에 열리고, 평가원이 NVDA 단축키로 시작·종료하고 결과를 직접 입력한다. 세션 상태에 `answering`이 생겼고 `task_ended_at`, `end_reason`, `net_task_seconds`, `study_answer_entered_by`, `answer_history`, `study.ui_mode="single_window"`, `study.requires_answer`가 추가됐다. 과업이 끝날 때마다 세션 기록을 사본 서버에 올린다(실패해도 세션에 영향 없음, ZIP은 그대로). 자세한 것은 `single-window-0.4.0.md`. **Windows/NVDA 실기 미확인**: `261013_spike_nvda_iframe.md`, `261013_실기_점검표.md`를 통과한 뒤 수집에 쓴다.
+
 ## 이전 기록 유지
 
 서버가 완전히 종료된 상태에서 이전 키트의 `data` 폴더 전체를 새 키트에 복사한다.

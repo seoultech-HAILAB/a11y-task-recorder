@@ -1,13 +1,17 @@
 (() => {
   const pageUrl = new URL(window.location.href);
+  // window.top is undefined in unit harnesses; treat that as the top document.
+  const isTop = !window.top || window.top === window;
   if (pageUrl.origin === "http://127.0.0.1:8765") {
+    // The dashboard bridge lives only in the top-level recorder page.
+    if (!isTop) return;
     window.addEventListener("message", async (event) => {
       const message = event.data;
       if (event.source !== window || event.origin !== pageUrl.origin ||
           message?.kind !== "a11y-study-command" ||
           typeof message.requestId !== "string" ||
           typeof message.sessionId !== "string" ||
-          !["prepare", "check", "start", "close"].includes(message.action)) return;
+          !["prepare", "check", "start", "close", "status"].includes(message.action)) return;
       let result;
       try {
         result = await chrome.runtime.sendMessage({ kind: message.kind,
@@ -67,22 +71,26 @@
     return `/${parts.join("/")}`.slice(0, 1000);
   }
 
-  function send(type, payload = {}, timestamp = new Date().toISOString()) {
+  function post(message) {
     try {
-      chrome.runtime.sendMessage({
-        kind: "recorder-event",
-        event: {
-          type,
-          timestamp,
-          url: currentUrl(),
-          page_title: document.title,
-          payload,
-          element: {},
-        },
-      }).catch(() => {});
+      chrome.runtime.sendMessage(message).catch(() => {});
     } catch {
       // 확장 업데이트 직후 메시지 포트가 닫힌 경우 다음 변화부터 다시 기록합니다.
     }
+  }
+
+  function send(type, payload = {}, timestamp = new Date().toISOString()) {
+    post({
+      kind: "recorder-event",
+      event: {
+        type,
+        timestamp,
+        url: currentUrl(),
+        page_title: document.title,
+        payload,
+        element: {},
+      },
+    });
   }
 
   function flushMutations() {
@@ -143,11 +151,22 @@
     if (flushTimer === null) flushTimer = setTimeout(flushMutations, 450);
   });
 
+  // Since 0.4.0 the study copy runs inside the dashboard's iframe. The dashboard
+  // mirrors the copy's title into the window title (NVDA+T, help level 1), so the
+  // frame reports its title whenever it changes.
+  let reportedTitle = null;
+  function reportTitle() {
+    if (isTop || document.title === reportedTitle) return;
+    reportedTitle = document.title;
+    post({ kind: "recorder-frame-title", title: document.title, url: currentUrl() });
+  }
+
   function start() {
     send("page_ready", {
       kind: "content_script_ready",
       ready_state: document.readyState,
       language: document.documentElement.lang || "",
+      in_frame: !isTop,
     });
     observer.observe(document.documentElement, {
       subtree: true,
@@ -155,6 +174,8 @@
       attributes: true,
       characterData: true,
     });
+    reportTitle();
+    if (!isTop) setInterval(reportTitle, 1500);
   }
 
   if (document.readyState === "loading") {

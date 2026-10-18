@@ -60,7 +60,10 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await page.locator('#study-outcome').selectOption('blocked');
     await page.locator('#study-finish').click();
     await page.locator('#study-next').waitFor({ timeout: 10000 });
+    // 0.3.4: focus must land on the enabled next-task button, not fall back to body.
+    await page.waitForFunction(() => document.activeElement?.id === 'study-next', null, { timeout: 3000 });
     const record = await (await fetch(base + `/api/sessions/${session.id}/export.json`)).json();
+    assert.equal(record.study.ui_mode, 'tabbed');
     assert.equal(record.study_outcome, 'blocked');
     assert.equal(record.study_answer, 'ENGINEERING ONLY answer');
     assert.equal(record.study_evaluation.status, 'NOT_SCORED');
@@ -102,7 +105,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     assert.deepEqual(errors, []);
     const result = { status: 'PASS', evidence: 'Synthetic extension and NVDA heartbeat; real local backend and Chromium UI',
-      actual_nvda: 'NOT_RUN', checks: ['default assigned view', 'T01/T02 distinct assignments', 'NVDA gate', 'blocked result and answer', 'restart progress', 'next task', 'lost start/stop response reconciliation', 'technical retry preserves order', 'no GT in participant view', 'desktop/mobile layout'] };
+      actual_nvda: 'NOT_RUN', checks: ['default assigned view', 'T01/T02 distinct assignments', 'NVDA gate', 'blocked result and answer', 'focus on next task after finish', 'ui_mode recorded', 'restart progress', 'next task', 'lost start/stop response reconciliation', 'technical retry preserves order', 'no GT in participant view', 'desktop/mobile layout'] };
     fs.writeFileSync(path.join(output, 'result.json'), JSON.stringify(result, null, 2));
     console.log(JSON.stringify(result));
   } finally {

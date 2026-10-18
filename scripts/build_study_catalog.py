@@ -138,6 +138,8 @@ def build_catalog(assignments_path=DEFAULT_ASSIGNMENTS, operator_catalog_path=DE
         tester["tasks"].append({
             "id": assignment_id, "task_id": task["id"], "order": order, "block": block,
             "site_name": task["siteName"], "instruction": task["goal"], "start_url": task["startUrl"],
+            # State tasks ("…이 화면에 표시됨 (진행자 확인)") have no spoken answer; the flag leaks no answer text.
+            "requires_answer": "진행자 확인" not in task["scoring"],
             "time_limit_seconds": 600, "preparation": task["operatorPreparation"],
         })
     result = {"schema_version": 1, "title": "웹 과업 평가", "source": {
