@@ -396,7 +396,7 @@ def build_kit(python_version: str, chrome_version: str, access_code_file: Option
     (app / "kit_server.py").write_text(KIT_SERVER_PY, encoding="utf-8")
     if access_code:
         # recorder/upload.py reads app/study_access.txt for the iframe login and the upload bearer.
-        (app / "study_access.txt").write_text(access_code + "\n", encoding="utf-8")
+        (app / "study_access.txt").write_text(access_code + "\n", encoding="utf-8", newline="\n")
         log("사이트 접속 코드: 키트에 내장함")
     else:
         log("사이트 접속 코드: 내장하지 않음 (사이트 칸에서 입력)")
