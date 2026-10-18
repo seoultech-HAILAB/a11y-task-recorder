@@ -6,3 +6,4 @@ data/
 .omx/
 dist/*
 !dist/a11yTaskRecorder-0.2.2.nvda-addon
+/study_access.txt

@@ -18,6 +18,7 @@
           "site_name": "파라타항공",
           "instruction": "메인 화면의 예약조회에서 예약번호 123456789와 이메일 hong@example.com으로 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/16a50b10a80c/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -29,6 +30,7 @@
           "site_name": "파라타항공",
           "instruction": "탑승객을 성인 2명, 소아 1명으로 선택해 적용하고, 화면에 표시된 탑승객 구성을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/b002681db75e/p/413127f760b3356b.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -40,6 +42,7 @@
           "site_name": "파라타항공",
           "instruction": "메인 화면의 예약조회에서 예약번호 987654321과 이메일 kim@example.com으로 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/f161a96b8fbe/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -51,6 +54,7 @@
           "site_name": "파라타항공",
           "instruction": "탑승객을 성인 1명, 소아 1명으로 선택해 적용하고, 화면에 표시된 탑승객 구성을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/16a50b10a80c/p/413127f760b3356b.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -62,6 +66,7 @@
           "site_name": "다이소몰",
           "instruction": "수납 검색 결과에서 1,000원 상품만 보이도록 설정하고, 첫 번째 상품 이름을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/3cb22cff380d/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -73,6 +78,7 @@
           "site_name": "다이소몰",
           "instruction": "장바구니에 담긴 팬트리 수납 바구니 1호를 3개에서 1개로 줄이고, 바뀐 합계 금액을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/7fc83823c082/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": [
             "기록 시작 전에 일반 화면 조작으로 팬트리 수납 바구니 1호 3개를 담고 장바구니를 연다. 준비 조작은 참여자 수행에 포함하지 않는다."
@@ -86,6 +92,7 @@
           "site_name": "다이소몰",
           "instruction": "수납 검색 결과에서 1,000원 상품만 보이도록 설정하고, 첫 번째 상품의 별점을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/7fc83823c082/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -97,6 +104,7 @@
           "site_name": "다이소몰",
           "instruction": "장바구니에 담긴 팬트리 수납 바구니 1호를 3개에서 2개로 줄이고, 바뀐 합계 금액을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/b7fae91401ea/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": [
             "기록 시작 전에 일반 화면 조작으로 팬트리 수납 바구니 1호 3개를 담고 장바구니를 연다. 준비 조작은 참여자 수행에 포함하지 않는다."
@@ -110,6 +118,7 @@
           "site_name": "CJ",
           "instruction": "메인의 Joyful Moments에서 콘텐츠를 넘겨 'KISS OF LIFE와 함께한 KCON Japan EP.2'가 나오게 하세요",
           "start_url": "https://study-copy.invalid/s/8ddd4bdab636/index.html",
+          "requires_answer": false,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -121,6 +130,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 K-POP 분야로 바꾸고, 표시된 콘텐츠 수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/6b05355184c9/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -132,6 +142,7 @@
           "site_name": "CJ",
           "instruction": "메인의 Joyful Moments에서 콘텐츠를 넘겨 'izna와 함께한 KCON Japan EP.1'이 나오게 하세요",
           "start_url": "https://study-copy.invalid/s/6922637787fa/index.html",
+          "requires_answer": false,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -143,6 +154,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 SPORTS 분야로 바꾸고, 표시된 콘텐츠 수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         }
@@ -159,6 +171,7 @@
           "site_name": "다이소몰",
           "instruction": "1,000원짜리 팬트리 수납 바구니 1호 한 개를 장바구니에 담고, 담긴 결과 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/ecee23c7ba40/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -170,6 +183,7 @@
           "site_name": "다이소몰",
           "instruction": "수납 검색 결과에서 팬트리 수납 바구니 1호의 상세정보를 열어 리뷰 수를 확인한 뒤, 같은 검색 결과로 돌아와 알려 주세요.",
           "start_url": "https://study-copy.invalid/s/7fc83823c082/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -181,6 +195,7 @@
           "site_name": "다이소몰",
           "instruction": "양면 다용도 수납 케이스 한 개를 장바구니에 담고, 담긴 결과 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/7fc83823c082/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -192,6 +207,7 @@
           "site_name": "다이소몰",
           "instruction": "수납 검색 결과에서 팬트리 수납 바구니 1호의 상세정보를 열어 가격을 확인한 뒤, 같은 검색 결과로 돌아와 알려 주세요.",
           "start_url": "https://study-copy.invalid/s/92e519895a03/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -203,6 +219,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 이상민 감독 콘텐츠 정보를 열어, 소개된 영화 제목을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -214,6 +231,7 @@
           "site_name": "CJ",
           "instruction": "메인의 Joyful Moments에서 'KISS OF LIFE와 함께한 KCON Japan EP.1' 콘텐츠 정보를 열고, 콘텐츠 분류를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/6933d290d6a7/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -225,6 +243,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 'FLARE U와 함께한 KCON Japan EP.2' 콘텐츠 정보를 열어, 붙어 있는 태그를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/c6a79dd4182c/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -236,6 +255,7 @@
           "site_name": "CJ",
           "instruction": "메인의 Joyful Moments에서 'KISS OF LIFE와 함께한 KCON Japan EP.1' 콘텐츠 정보를 열고, 붙어 있는 태그를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/8ddd4bdab636/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -247,6 +267,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워 상영시간표에서 '극장판 치이카와' 상세정보를 열어 개봉일을 확인하고, 같은 영화관 상영시간표로 돌아와 개봉일을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/ed470c2a6fbd/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -258,6 +279,7 @@
           "site_name": "롯데시네마",
           "instruction": "홈 화면에서 개봉 예정 영화 목록으로 바꾸고, 첫 번째 영화 소개의 첫 문장을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4b333c53172f/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -269,6 +291,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워 상영시간표에서 '극장판 치이카와' 상세정보를 열어 상영시간(분)을 확인하고, 같은 영화관 상영시간표로 돌아와 상영시간을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -280,6 +303,7 @@
           "site_name": "롯데시네마",
           "instruction": "홈 화면에서 개봉 예정 영화 목록으로 바꾸고, 몇 편이 표시됐는지 알려 주세요",
           "start_url": "https://study-copy.invalid/s/e8f84ea0dafc/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         }
@@ -296,6 +320,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 SUSTAINABILITY 분야만 보이게 하고, 표시된 콘텐츠의 제목을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -307,6 +332,7 @@
           "site_name": "CJ",
           "instruction": "메인의 Joyful Moments에서 콘텐츠를 넘겨 'izna와 함께한 KCON Japan EP.1'이 나오게 하세요",
           "start_url": "https://study-copy.invalid/s/6922637787fa/index.html",
+          "requires_answer": false,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -318,6 +344,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 SUSTAINABILITY 분야만 보이게 하고, 표시된 콘텐츠 수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/62a9831067eb/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -329,6 +356,7 @@
           "site_name": "CJ",
           "instruction": "메인의 Joyful Moments에서 콘텐츠를 넘겨 'KISS OF LIFE와 함께한 KCON Japan EP.2'가 나오게 하세요",
           "start_url": "https://study-copy.invalid/s/8ddd4bdab636/index.html",
+          "requires_answer": false,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -340,6 +368,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워에서 10월 6일에 '극장판 치이카와: 인어 섬의 비밀'을 볼 수 있는 첫 상영시간을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/c06168dbd393/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -351,6 +380,7 @@
           "site_name": "롯데시네마",
           "instruction": "영화관 메뉴에서 서울 지역의 월드타워 영화관을 찾아 총 상영관 수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4b333c53172f/p/332f6ff1d7466f70.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -362,6 +392,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워에서 10월 6일에 '오디세이'를 볼 수 있는 첫 상영시간을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -373,6 +404,7 @@
           "site_name": "롯데시네마",
           "instruction": "영화관 메뉴에서 서울 지역의 월드타워 영화관을 찾아 주소를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4e4f3509c559/p/332f6ff1d7466f70.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -384,6 +416,7 @@
           "site_name": "한국에너지재단",
           "instruction": "반복 메뉴를 건너뛰고 공지사항 본문으로 바로 이동해, 게시물 총 건수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/24aec581d26e/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -395,6 +428,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항을 내용 기준으로 검색할 수 있도록 검색 분류를 바꾸세요",
           "start_url": "https://study-copy.invalid/s/1d9e34babfc3/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -406,6 +440,7 @@
           "site_name": "한국에너지재단",
           "instruction": "반복 메뉴를 건너뛰고 공지사항 본문으로 바로 이동해, 첫 게시물 제목을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/487efb96bf0f/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -417,6 +452,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항을 작성자 기준으로 검색할 수 있도록 검색 분류를 바꾸세요",
           "start_url": "https://study-copy.invalid/s/24aec581d26e/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         }
@@ -433,6 +469,7 @@
           "site_name": "롯데시네마",
           "instruction": "홈 화면에서 개봉 예정 영화 목록으로 바꾸고, 몇 편이 표시됐는지 알려 주세요",
           "start_url": "https://study-copy.invalid/s/e8f84ea0dafc/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -444,6 +481,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워 영화관의 자가용·주차 안내를 열어, 영화 관람 시 주차 요금을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -455,6 +493,7 @@
           "site_name": "롯데시네마",
           "instruction": "홈 화면에서 개봉 예정 영화 목록으로 바꾸고, 첫 번째 영화 소개의 첫 문장을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4b333c53172f/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -466,6 +505,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워 영화관의 대중교통 안내를 열어, 8호선 잠실역에서 올 때 어느 출구 방면으로 가야 하는지 알려 주세요",
           "start_url": "https://study-copy.invalid/s/093732b73026/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -477,6 +517,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항에서 제목에 '에너지'가 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/24aec581d26e/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -488,6 +529,7 @@
           "site_name": "한국에너지재단",
           "instruction": "상단 로고로 첫 화면에 간 뒤, 첫 화면의 보도자료 첫 글 제목을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/efc61f7f7c81/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -499,6 +541,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항에서 제목에 '안내'가 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/a4f142fa3194/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -510,6 +553,7 @@
           "site_name": "한국에너지재단",
           "instruction": "상단 로고로 첫 화면에 간 뒤, 첫 화면의 공지사항 첫 글 제목을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/24aec581d26e/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -521,6 +565,7 @@
           "site_name": "파라타항공",
           "instruction": "국내선 운임 안내에서 출발 30일~8일 전에 취소할 때의 수수료를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/d297ecf813af/p/715b3363ebc283f4.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -532,6 +577,7 @@
           "site_name": "파라타항공",
           "instruction": "메인 화면의 체크인에서 예약번호 987654321, 성 김, 이름 민수로 체크인할 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/16a50b10a80c/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -543,6 +589,7 @@
           "site_name": "파라타항공",
           "instruction": "국내선 운임 안내에서 출발 7일~2일 전에 취소할 때의 수수료를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/16a50b10a80c/p/715b3363ebc283f4.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -554,6 +601,7 @@
           "site_name": "파라타항공",
           "instruction": "메인 화면의 체크인에서 예약번호 123456789, 성 홍, 이름 길동으로 체크인할 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/5a95225d483e/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         }
@@ -570,6 +618,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항에서 제목에 '지원'이 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/24aec581d26e/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -581,6 +630,7 @@
           "site_name": "한국에너지재단",
           "instruction": "반복 메뉴를 건너뛰고 공지사항 본문으로 바로 이동해, 첫 게시물 제목을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/487efb96bf0f/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -592,6 +642,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항에서 제목에 '공고'가 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/3f0f5f35a265/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -603,6 +654,7 @@
           "site_name": "한국에너지재단",
           "instruction": "반복 메뉴를 건너뛰고 공지사항 본문으로 바로 이동해, 게시물 총 건수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/24aec581d26e/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -614,6 +666,7 @@
           "site_name": "파라타항공",
           "instruction": "탑승객 선택 창에서 탑승 수속 때 지참할 서류 안내를 확인하고, 창을 닫아 예약 화면으로 돌아온 뒤 그 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/a0fdaf1f116e/p/413127f760b3356b.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -625,6 +678,7 @@
           "site_name": "파라타항공",
           "instruction": "탑승객을 성인 2명, 소아 1명으로 선택해 적용하고, 화면에 표시된 탑승객 구성을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/16a50b10a80c/p/413127f760b3356b.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -636,6 +690,7 @@
           "site_name": "파라타항공",
           "instruction": "탑승객 선택 창에서 소아·유아 기준 안내를 확인하고, 창을 닫아 예약 화면으로 돌아온 뒤 그 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/16a50b10a80c/p/413127f760b3356b.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -647,6 +702,7 @@
           "site_name": "파라타항공",
           "instruction": "탑승객을 성인 1명, 소아 1명으로 선택해 적용하고, 화면에 표시된 탑승객 구성을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/b002681db75e/p/413127f760b3356b.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -658,6 +714,7 @@
           "site_name": "다이소몰",
           "instruction": "수납 검색 결과에서 1,000원 상품만 보이도록 설정하고, 첫 번째 상품 이름을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/7fc83823c082/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -669,6 +726,7 @@
           "site_name": "다이소몰",
           "instruction": "현재 검색 결과에서 수납바구니 상품만 보이도록 분류를 고르고, 첫 번째 상품 이름을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/a82ba4a20291/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -680,6 +738,7 @@
           "site_name": "다이소몰",
           "instruction": "수납 검색 결과에서 1,000원 상품만 보이도록 설정하고, 첫 번째 상품의 별점을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/3cb22cff380d/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -691,6 +750,7 @@
           "site_name": "다이소몰",
           "instruction": "현재 검색 결과에서 수납바구니 상품만 보이도록 분류를 고르고, 표시된 상품 수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/7fc83823c082/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         }
@@ -707,6 +767,7 @@
           "site_name": "한국에너지재단",
           "instruction": "상단 로고로 첫 화면에 간 뒤, 첫 화면의 공지사항 첫 글 제목을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/efc61f7f7c81/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -718,6 +779,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항에서 제목에 '공고'가 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/24aec581d26e/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -729,6 +791,7 @@
           "site_name": "한국에너지재단",
           "instruction": "상단 로고로 첫 화면에 간 뒤, 첫 화면의 보도자료 첫 글 제목을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/24aec581d26e/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -740,6 +803,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항에서 제목에 '지원'이 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/3f0f5f35a265/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -751,6 +815,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 SUSTAINABILITY 분야만 보이게 하고, 표시된 콘텐츠의 제목을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/62a9831067eb/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -762,6 +827,7 @@
           "site_name": "CJ",
           "instruction": "메인의 Joyful Moments에서 'KISS OF LIFE와 함께한 KCON Japan EP.1' 콘텐츠 정보를 열고, 콘텐츠 분류를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/8ddd4bdab636/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -773,6 +839,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 SUSTAINABILITY 분야만 보이게 하고, 표시된 콘텐츠 수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -784,6 +851,7 @@
           "site_name": "CJ",
           "instruction": "메인의 Joyful Moments에서 'KISS OF LIFE와 함께한 KCON Japan EP.1' 콘텐츠 정보를 열고, 붙어 있는 태그를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/6933d290d6a7/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -795,6 +863,7 @@
           "site_name": "파라타항공",
           "instruction": "메인 화면의 체크인에서 예약번호 987654321, 성 김, 이름 민수로 체크인할 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/5a95225d483e/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -806,6 +875,7 @@
           "site_name": "파라타항공",
           "instruction": "탑승객 선택 창에서 소아·유아 기준 안내를 확인하고, 창을 닫아 예약 화면으로 돌아온 뒤 그 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/16a50b10a80c/p/413127f760b3356b.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -817,6 +887,7 @@
           "site_name": "파라타항공",
           "instruction": "메인 화면의 체크인에서 예약번호 123456789, 성 홍, 이름 길동으로 체크인할 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/16a50b10a80c/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -828,6 +899,7 @@
           "site_name": "파라타항공",
           "instruction": "탑승객 선택 창에서 탑승 수속 때 지참할 서류 안내를 확인하고, 창을 닫아 예약 화면으로 돌아온 뒤 그 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/a0fdaf1f116e/p/413127f760b3356b.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         }
@@ -844,6 +916,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항을 작성자 기준으로 검색할 수 있도록 검색 분류를 바꾸세요",
           "start_url": "https://study-copy.invalid/s/1d9e34babfc3/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -855,6 +928,7 @@
           "site_name": "한국에너지재단",
           "instruction": "반복 메뉴를 건너뛰고 공지사항 본문으로 바로 이동해, 게시물 총 건수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/24aec581d26e/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -866,6 +940,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항을 내용 기준으로 검색할 수 있도록 검색 분류를 바꾸세요",
           "start_url": "https://study-copy.invalid/s/24aec581d26e/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -877,6 +952,7 @@
           "site_name": "한국에너지재단",
           "instruction": "반복 메뉴를 건너뛰고 공지사항 본문으로 바로 이동해, 첫 게시물 제목을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/487efb96bf0f/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -888,6 +964,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워에서 10월 6일에 '오디세이'를 볼 수 있는 첫 상영시간을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/c06168dbd393/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -899,6 +976,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워 영화관의 자가용·주차 안내를 열어, 영화 관람 시 주차 요금을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -910,6 +988,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워에서 10월 6일에 '극장판 치이카와: 인어 섬의 비밀'을 볼 수 있는 첫 상영시간을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -921,6 +1000,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워 영화관의 대중교통 안내를 열어, 8호선 잠실역에서 올 때 어느 출구 방면으로 가야 하는지 알려 주세요",
           "start_url": "https://study-copy.invalid/s/093732b73026/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -932,6 +1012,7 @@
           "site_name": "다이소몰",
           "instruction": "수납 검색 결과에서 팬트리 수납 바구니 1호의 상세정보를 열어 가격을 확인한 뒤, 같은 검색 결과로 돌아와 알려 주세요.",
           "start_url": "https://study-copy.invalid/s/92e519895a03/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -943,6 +1024,7 @@
           "site_name": "다이소몰",
           "instruction": "현재 검색 결과에서 수납바구니 상품만 보이도록 분류를 고르고, 첫 번째 상품 이름을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/7fc83823c082/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -954,6 +1036,7 @@
           "site_name": "다이소몰",
           "instruction": "수납 검색 결과에서 팬트리 수납 바구니 1호의 상세정보를 열어 리뷰 수를 확인한 뒤, 같은 검색 결과로 돌아와 알려 주세요.",
           "start_url": "https://study-copy.invalid/s/7fc83823c082/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -965,6 +1048,7 @@
           "site_name": "다이소몰",
           "instruction": "현재 검색 결과에서 수납바구니 상품만 보이도록 분류를 고르고, 표시된 상품 수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/a82ba4a20291/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         }
@@ -981,6 +1065,7 @@
           "site_name": "파라타항공",
           "instruction": "탑승객을 성인 2명, 소아 1명으로 선택해 적용하고, 화면에 표시된 탑승객 구성을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/16a50b10a80c/p/413127f760b3356b.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -992,6 +1077,7 @@
           "site_name": "파라타항공",
           "instruction": "메인 화면의 예약조회에서 예약번호 987654321과 이메일 kim@example.com으로 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/f161a96b8fbe/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1003,6 +1089,7 @@
           "site_name": "파라타항공",
           "instruction": "탑승객을 성인 1명, 소아 1명으로 선택해 적용하고, 화면에 표시된 탑승객 구성을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/b002681db75e/p/413127f760b3356b.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1014,6 +1101,7 @@
           "site_name": "파라타항공",
           "instruction": "메인 화면의 예약조회에서 예약번호 123456789와 이메일 hong@example.com으로 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/16a50b10a80c/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1025,6 +1113,7 @@
           "site_name": "다이소몰",
           "instruction": "수납 검색 결과에서 1,000원 상품만 보이도록 설정하고, 첫 번째 상품 이름을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/3cb22cff380d/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1036,6 +1125,7 @@
           "site_name": "다이소몰",
           "instruction": "1,000원짜리 팬트리 수납 바구니 1호 한 개를 장바구니에 담고, 담긴 결과 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/7fc83823c082/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1047,6 +1137,7 @@
           "site_name": "다이소몰",
           "instruction": "수납 검색 결과에서 1,000원 상품만 보이도록 설정하고, 첫 번째 상품의 별점을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/7fc83823c082/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1058,6 +1149,7 @@
           "site_name": "다이소몰",
           "instruction": "양면 다용도 수납 케이스 한 개를 장바구니에 담고, 담긴 결과 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/ecee23c7ba40/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1069,6 +1161,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항을 내용 기준으로 검색할 수 있도록 검색 분류를 바꾸세요",
           "start_url": "https://study-copy.invalid/s/1d9e34babfc3/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1080,6 +1173,7 @@
           "site_name": "한국에너지재단",
           "instruction": "상단 로고로 첫 화면에 간 뒤, 첫 화면의 공지사항 첫 글 제목을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/24aec581d26e/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1091,6 +1185,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항을 작성자 기준으로 검색할 수 있도록 검색 분류를 바꾸세요",
           "start_url": "https://study-copy.invalid/s/24aec581d26e/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1102,6 +1197,7 @@
           "site_name": "한국에너지재단",
           "instruction": "상단 로고로 첫 화면에 간 뒤, 첫 화면의 보도자료 첫 글 제목을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/efc61f7f7c81/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         }
@@ -1118,6 +1214,7 @@
           "site_name": "CJ",
           "instruction": "메인의 Joyful Moments에서 콘텐츠를 넘겨 'izna와 함께한 KCON Japan EP.1'이 나오게 하세요",
           "start_url": "https://study-copy.invalid/s/8ddd4bdab636/index.html",
+          "requires_answer": false,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1129,6 +1226,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 K-POP 분야로 바꾸고, 표시된 콘텐츠 수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/6b05355184c9/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1140,6 +1238,7 @@
           "site_name": "CJ",
           "instruction": "메인의 Joyful Moments에서 콘텐츠를 넘겨 'KISS OF LIFE와 함께한 KCON Japan EP.2'가 나오게 하세요",
           "start_url": "https://study-copy.invalid/s/6922637787fa/index.html",
+          "requires_answer": false,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1151,6 +1250,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 SPORTS 분야로 바꾸고, 표시된 콘텐츠 수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1162,6 +1262,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워에서 10월 6일에 '극장판 치이카와: 인어 섬의 비밀'을 볼 수 있는 첫 상영시간을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/c06168dbd393/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1173,6 +1274,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워 영화관의 대중교통 안내를 열어, 8호선 잠실역에서 올 때 어느 출구 방면으로 가야 하는지 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1184,6 +1286,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워에서 10월 6일에 '오디세이'를 볼 수 있는 첫 상영시간을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1195,6 +1298,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워 영화관의 자가용·주차 안내를 열어, 영화 관람 시 주차 요금을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/093732b73026/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1206,6 +1310,7 @@
           "site_name": "다이소몰",
           "instruction": "장바구니에 담긴 팬트리 수납 바구니 1호를 3개에서 1개로 줄이고, 바뀐 합계 금액을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/7fc83823c082/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": [
             "기록 시작 전에 일반 화면 조작으로 팬트리 수납 바구니 1호 3개를 담고 장바구니를 연다. 준비 조작은 참여자 수행에 포함하지 않는다."
@@ -1219,6 +1324,7 @@
           "site_name": "다이소몰",
           "instruction": "현재 검색 결과에서 수납바구니 상품만 보이도록 분류를 고르고, 표시된 상품 수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/a82ba4a20291/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1230,6 +1336,7 @@
           "site_name": "다이소몰",
           "instruction": "장바구니에 담긴 팬트리 수납 바구니 1호를 3개에서 2개로 줄이고, 바뀐 합계 금액을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/b7fae91401ea/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": [
             "기록 시작 전에 일반 화면 조작으로 팬트리 수납 바구니 1호 3개를 담고 장바구니를 연다. 준비 조작은 참여자 수행에 포함하지 않는다."
@@ -1243,6 +1350,7 @@
           "site_name": "다이소몰",
           "instruction": "현재 검색 결과에서 수납바구니 상품만 보이도록 분류를 고르고, 첫 번째 상품 이름을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/7fc83823c082/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         }
@@ -1259,6 +1367,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항을 작성자 기준으로 검색할 수 있도록 검색 분류를 바꾸세요",
           "start_url": "https://study-copy.invalid/s/1d9e34babfc3/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1270,6 +1379,7 @@
           "site_name": "한국에너지재단",
           "instruction": "상단 로고로 첫 화면에 간 뒤, 첫 화면의 공지사항 첫 글 제목을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/24aec581d26e/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1281,6 +1391,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항을 내용 기준으로 검색할 수 있도록 검색 분류를 바꾸세요",
           "start_url": "https://study-copy.invalid/s/24aec581d26e/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1292,6 +1403,7 @@
           "site_name": "한국에너지재단",
           "instruction": "상단 로고로 첫 화면에 간 뒤, 첫 화면의 보도자료 첫 글 제목을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/efc61f7f7c81/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1303,6 +1415,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 K-POP 분야로 바꾸고, 표시된 콘텐츠 수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/6b05355184c9/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1314,6 +1427,7 @@
           "site_name": "CJ",
           "instruction": "메인의 Joyful Moments에서 콘텐츠를 넘겨 'KISS OF LIFE와 함께한 KCON Japan EP.2'가 나오게 하세요",
           "start_url": "https://study-copy.invalid/s/8ddd4bdab636/index.html",
+          "requires_answer": false,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1325,6 +1439,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 SPORTS 분야로 바꾸고, 표시된 콘텐츠 수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1336,6 +1451,7 @@
           "site_name": "CJ",
           "instruction": "메인의 Joyful Moments에서 콘텐츠를 넘겨 'izna와 함께한 KCON Japan EP.1'이 나오게 하세요",
           "start_url": "https://study-copy.invalid/s/6922637787fa/index.html",
+          "requires_answer": false,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1347,6 +1463,7 @@
           "site_name": "롯데시네마",
           "instruction": "홈 화면에서 개봉 예정 영화 목록으로 바꾸고, 첫 번째 영화 소개의 첫 문장을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/e8f84ea0dafc/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1358,6 +1475,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워에서 10월 6일에 '극장판 치이카와: 인어 섬의 비밀'을 볼 수 있는 첫 상영시간을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1369,6 +1487,7 @@
           "site_name": "롯데시네마",
           "instruction": "홈 화면에서 개봉 예정 영화 목록으로 바꾸고, 몇 편이 표시됐는지 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4b333c53172f/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1380,6 +1499,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워에서 10월 6일에 '오디세이'를 볼 수 있는 첫 상영시간을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/c06168dbd393/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         }
@@ -1396,6 +1516,7 @@
           "site_name": "CJ",
           "instruction": "메인의 Joyful Moments에서 'KISS OF LIFE와 함께한 KCON Japan EP.1' 콘텐츠 정보를 열고, 콘텐츠 분류를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/6933d290d6a7/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1407,6 +1528,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 SUSTAINABILITY 분야만 보이게 하고, 표시된 콘텐츠의 제목을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1418,6 +1540,7 @@
           "site_name": "CJ",
           "instruction": "메인의 Joyful Moments에서 'KISS OF LIFE와 함께한 KCON Japan EP.1' 콘텐츠 정보를 열고, 붙어 있는 태그를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/8ddd4bdab636/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1429,6 +1552,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 SUSTAINABILITY 분야만 보이게 하고, 표시된 콘텐츠 수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/62a9831067eb/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1440,6 +1564,7 @@
           "site_name": "다이소몰",
           "instruction": "수납 검색 결과에서 팬트리 수납 바구니 1호의 상세정보를 열어 리뷰 수를 확인한 뒤, 같은 검색 결과로 돌아와 알려 주세요.",
           "start_url": "https://study-copy.invalid/s/7fc83823c082/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1451,6 +1576,7 @@
           "site_name": "다이소몰",
           "instruction": "장바구니에 담긴 팬트리 수납 바구니 1호를 3개에서 1개로 줄이고, 바뀐 합계 금액을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/b7fae91401ea/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": [
             "기록 시작 전에 일반 화면 조작으로 팬트리 수납 바구니 1호 3개를 담고 장바구니를 연다. 준비 조작은 참여자 수행에 포함하지 않는다."
@@ -1464,6 +1590,7 @@
           "site_name": "다이소몰",
           "instruction": "수납 검색 결과에서 팬트리 수납 바구니 1호의 상세정보를 열어 가격을 확인한 뒤, 같은 검색 결과로 돌아와 알려 주세요.",
           "start_url": "https://study-copy.invalid/s/92e519895a03/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1475,6 +1602,7 @@
           "site_name": "다이소몰",
           "instruction": "장바구니에 담긴 팬트리 수납 바구니 1호를 3개에서 2개로 줄이고, 바뀐 합계 금액을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/7fc83823c082/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": [
             "기록 시작 전에 일반 화면 조작으로 팬트리 수납 바구니 1호 3개를 담고 장바구니를 연다. 준비 조작은 참여자 수행에 포함하지 않는다."
@@ -1488,6 +1616,7 @@
           "site_name": "롯데시네마",
           "instruction": "홈 화면에서 개봉 예정 영화 목록으로 바꾸고, 첫 번째 영화 소개의 첫 문장을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/e8f84ea0dafc/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1499,6 +1628,7 @@
           "site_name": "롯데시네마",
           "instruction": "영화관 메뉴에서 서울 지역의 월드타워 영화관을 찾아 주소를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4b333c53172f/p/332f6ff1d7466f70.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1510,6 +1640,7 @@
           "site_name": "롯데시네마",
           "instruction": "홈 화면에서 개봉 예정 영화 목록으로 바꾸고, 몇 편이 표시됐는지 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4b333c53172f/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1521,6 +1652,7 @@
           "site_name": "롯데시네마",
           "instruction": "영화관 메뉴에서 서울 지역의 월드타워 영화관을 찾아 총 상영관 수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4e4f3509c559/p/332f6ff1d7466f70.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         }
@@ -1537,6 +1669,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워 상영시간표에서 '극장판 치이카와' 상세정보를 열어 개봉일을 확인하고, 같은 영화관 상영시간표로 돌아와 개봉일을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/ed470c2a6fbd/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1548,6 +1681,7 @@
           "site_name": "롯데시네마",
           "instruction": "홈 화면에서 개봉 예정 영화 목록으로 바꾸고, 첫 번째 영화 소개의 첫 문장을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4b333c53172f/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1559,6 +1693,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워 상영시간표에서 '극장판 치이카와' 상세정보를 열어 상영시간(분)을 확인하고, 같은 영화관 상영시간표로 돌아와 상영시간을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1570,6 +1705,7 @@
           "site_name": "롯데시네마",
           "instruction": "홈 화면에서 개봉 예정 영화 목록으로 바꾸고, 몇 편이 표시됐는지 알려 주세요",
           "start_url": "https://study-copy.invalid/s/e8f84ea0dafc/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1581,6 +1717,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항에서 제목에 '지원'이 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/24aec581d26e/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1592,6 +1729,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항을 내용 기준으로 검색할 수 있도록 검색 분류를 바꾸세요",
           "start_url": "https://study-copy.invalid/s/1d9e34babfc3/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1603,6 +1741,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항에서 제목에 '공고'가 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/3f0f5f35a265/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1614,6 +1753,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항을 작성자 기준으로 검색할 수 있도록 검색 분류를 바꾸세요",
           "start_url": "https://study-copy.invalid/s/24aec581d26e/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1625,6 +1765,7 @@
           "site_name": "파라타항공",
           "instruction": "탑승객 선택 창에서 탑승 수속 때 지참할 서류 안내를 확인하고, 창을 닫아 예약 화면으로 돌아온 뒤 그 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/16a50b10a80c/p/413127f760b3356b.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1636,6 +1777,7 @@
           "site_name": "파라타항공",
           "instruction": "메인 화면의 체크인에서 예약번호 987654321, 성 김, 이름 민수로 체크인할 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/5a95225d483e/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1647,6 +1789,7 @@
           "site_name": "파라타항공",
           "instruction": "탑승객 선택 창에서 소아·유아 기준 안내를 확인하고, 창을 닫아 예약 화면으로 돌아온 뒤 그 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/a0fdaf1f116e/p/413127f760b3356b.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1658,6 +1801,7 @@
           "site_name": "파라타항공",
           "instruction": "메인 화면의 체크인에서 예약번호 123456789, 성 홍, 이름 길동으로 체크인할 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/16a50b10a80c/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         }
@@ -1674,6 +1818,7 @@
           "site_name": "다이소몰",
           "instruction": "수납 검색 결과에서 팬트리 수납 바구니 1호의 상세정보를 열어 리뷰 수를 확인한 뒤, 같은 검색 결과로 돌아와 알려 주세요.",
           "start_url": "https://study-copy.invalid/s/92e519895a03/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1685,6 +1830,7 @@
           "site_name": "다이소몰",
           "instruction": "양면 다용도 수납 케이스 한 개를 장바구니에 담고, 담긴 결과 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/7fc83823c082/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1696,6 +1842,7 @@
           "site_name": "다이소몰",
           "instruction": "수납 검색 결과에서 팬트리 수납 바구니 1호의 상세정보를 열어 가격을 확인한 뒤, 같은 검색 결과로 돌아와 알려 주세요.",
           "start_url": "https://study-copy.invalid/s/7fc83823c082/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1707,6 +1854,7 @@
           "site_name": "다이소몰",
           "instruction": "1,000원짜리 팬트리 수납 바구니 1호 한 개를 장바구니에 담고, 담긴 결과 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/ecee23c7ba40/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1718,6 +1866,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워에서 10월 6일에 '오디세이'를 볼 수 있는 첫 상영시간을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1729,6 +1878,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워 상영시간표에서 '극장판 치이카와' 상세정보를 열어 개봉일을 확인하고, 같은 영화관 상영시간표로 돌아와 개봉일을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/ed470c2a6fbd/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1740,6 +1890,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워에서 10월 6일에 '극장판 치이카와: 인어 섬의 비밀'을 볼 수 있는 첫 상영시간을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/c06168dbd393/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1751,6 +1902,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워 상영시간표에서 '극장판 치이카와' 상세정보를 열어 상영시간(분)을 확인하고, 같은 영화관 상영시간표로 돌아와 상영시간을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1762,6 +1914,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 'FLARE U와 함께한 KCON Japan EP.2' 콘텐츠 정보를 열어, 붙어 있는 태그를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1773,6 +1926,7 @@
           "site_name": "CJ",
           "instruction": "메인의 Joyful Moments에서 콘텐츠를 넘겨 'izna와 함께한 KCON Japan EP.1'이 나오게 하세요",
           "start_url": "https://study-copy.invalid/s/6922637787fa/index.html",
+          "requires_answer": false,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1784,6 +1938,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 이상민 감독 콘텐츠 정보를 열어, 소개된 영화 제목을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/c6a79dd4182c/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1795,6 +1950,7 @@
           "site_name": "CJ",
           "instruction": "메인의 Joyful Moments에서 콘텐츠를 넘겨 'KISS OF LIFE와 함께한 KCON Japan EP.2'가 나오게 하세요",
           "start_url": "https://study-copy.invalid/s/8ddd4bdab636/index.html",
+          "requires_answer": false,
           "time_limit_seconds": 600,
           "preparation": []
         }
@@ -1811,6 +1967,7 @@
           "site_name": "다이소몰",
           "instruction": "현재 검색 결과에서 수납바구니 상품만 보이도록 분류를 고르고, 표시된 상품 수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/7fc83823c082/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1822,6 +1979,7 @@
           "site_name": "다이소몰",
           "instruction": "1,000원짜리 팬트리 수납 바구니 1호 한 개를 장바구니에 담고, 담긴 결과 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/ecee23c7ba40/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1833,6 +1991,7 @@
           "site_name": "다이소몰",
           "instruction": "현재 검색 결과에서 수납바구니 상품만 보이도록 분류를 고르고, 첫 번째 상품 이름을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/a82ba4a20291/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1844,6 +2003,7 @@
           "site_name": "다이소몰",
           "instruction": "양면 다용도 수납 케이스 한 개를 장바구니에 담고, 담긴 결과 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/7fc83823c082/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1855,6 +2015,7 @@
           "site_name": "파라타항공",
           "instruction": "국내선 운임 안내에서 출발 30일~8일 전에 취소할 때의 수수료를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/d297ecf813af/p/715b3363ebc283f4.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1866,6 +2027,7 @@
           "site_name": "파라타항공",
           "instruction": "탑승객 선택 창에서 탑승 수속 때 지참할 서류 안내를 확인하고, 창을 닫아 예약 화면으로 돌아온 뒤 그 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/16a50b10a80c/p/413127f760b3356b.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1877,6 +2039,7 @@
           "site_name": "파라타항공",
           "instruction": "국내선 운임 안내에서 출발 7일~2일 전에 취소할 때의 수수료를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/16a50b10a80c/p/715b3363ebc283f4.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1888,6 +2051,7 @@
           "site_name": "파라타항공",
           "instruction": "탑승객 선택 창에서 소아·유아 기준 안내를 확인하고, 창을 닫아 예약 화면으로 돌아온 뒤 그 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/a0fdaf1f116e/p/413127f760b3356b.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1899,6 +2063,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항에서 제목에 '안내'가 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/24aec581d26e/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1910,6 +2075,7 @@
           "site_name": "한국에너지재단",
           "instruction": "반복 메뉴를 건너뛰고 공지사항 본문으로 바로 이동해, 첫 게시물 제목을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/487efb96bf0f/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1921,6 +2087,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항에서 제목에 '에너지'가 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/a4f142fa3194/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1932,6 +2099,7 @@
           "site_name": "한국에너지재단",
           "instruction": "반복 메뉴를 건너뛰고 공지사항 본문으로 바로 이동해, 게시물 총 건수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/24aec581d26e/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         }
@@ -1948,6 +2116,7 @@
           "site_name": "파라타항공",
           "instruction": "메인 화면의 예약조회에서 예약번호 987654321과 이메일 kim@example.com으로 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/16a50b10a80c/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1959,6 +2128,7 @@
           "site_name": "파라타항공",
           "instruction": "탑승객 선택 창에서 탑승 수속 때 지참할 서류 안내를 확인하고, 창을 닫아 예약 화면으로 돌아온 뒤 그 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/a0fdaf1f116e/p/413127f760b3356b.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1970,6 +2140,7 @@
           "site_name": "파라타항공",
           "instruction": "메인 화면의 예약조회에서 예약번호 123456789와 이메일 hong@example.com으로 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/f161a96b8fbe/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1981,6 +2152,7 @@
           "site_name": "파라타항공",
           "instruction": "탑승객 선택 창에서 소아·유아 기준 안내를 확인하고, 창을 닫아 예약 화면으로 돌아온 뒤 그 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/16a50b10a80c/p/413127f760b3356b.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -1992,6 +2164,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 SUSTAINABILITY 분야만 보이게 하고, 표시된 콘텐츠 수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2003,6 +2176,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 'FLARE U와 함께한 KCON Japan EP.2' 콘텐츠 정보를 열어, 붙어 있는 태그를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/c6a79dd4182c/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2014,6 +2188,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 SUSTAINABILITY 분야만 보이게 하고, 표시된 콘텐츠의 제목을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/62a9831067eb/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2025,6 +2200,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 이상민 감독 콘텐츠 정보를 열어, 소개된 영화 제목을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2036,6 +2212,7 @@
           "site_name": "롯데시네마",
           "instruction": "영화관 메뉴에서 서울 지역의 월드타워 영화관을 찾아 총 상영관 수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4b333c53172f/p/332f6ff1d7466f70.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2047,6 +2224,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워 영화관의 자가용·주차 안내를 열어, 영화 관람 시 주차 요금을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/093732b73026/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2058,6 +2236,7 @@
           "site_name": "롯데시네마",
           "instruction": "영화관 메뉴에서 서울 지역의 월드타워 영화관을 찾아 주소를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4e4f3509c559/p/332f6ff1d7466f70.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2069,6 +2248,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워 영화관의 대중교통 안내를 열어, 8호선 잠실역에서 올 때 어느 출구 방면으로 가야 하는지 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         }
@@ -2085,6 +2265,7 @@
           "site_name": "파라타항공",
           "instruction": "메인 화면의 예약조회에서 예약번호 987654321과 이메일 kim@example.com으로 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/f161a96b8fbe/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2096,6 +2277,7 @@
           "site_name": "파라타항공",
           "instruction": "탑승객을 성인 1명, 소아 1명으로 선택해 적용하고, 화면에 표시된 탑승객 구성을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/16a50b10a80c/p/413127f760b3356b.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2107,6 +2289,7 @@
           "site_name": "파라타항공",
           "instruction": "메인 화면의 예약조회에서 예약번호 123456789와 이메일 hong@example.com으로 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/16a50b10a80c/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2118,6 +2301,7 @@
           "site_name": "파라타항공",
           "instruction": "탑승객을 성인 2명, 소아 1명으로 선택해 적용하고, 화면에 표시된 탑승객 구성을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/b002681db75e/p/413127f760b3356b.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2129,6 +2313,7 @@
           "site_name": "다이소몰",
           "instruction": "수납 검색 결과에서 1,000원 상품만 보이도록 설정하고, 첫 번째 상품의 별점을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/7fc83823c082/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2140,6 +2325,7 @@
           "site_name": "다이소몰",
           "instruction": "수납 검색 결과에서 팬트리 수납 바구니 1호의 상세정보를 열어 리뷰 수를 확인한 뒤, 같은 검색 결과로 돌아와 알려 주세요.",
           "start_url": "https://study-copy.invalid/s/92e519895a03/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2151,6 +2337,7 @@
           "site_name": "다이소몰",
           "instruction": "수납 검색 결과에서 1,000원 상품만 보이도록 설정하고, 첫 번째 상품 이름을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/3cb22cff380d/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2162,6 +2349,7 @@
           "site_name": "다이소몰",
           "instruction": "수납 검색 결과에서 팬트리 수납 바구니 1호의 상세정보를 열어 가격을 확인한 뒤, 같은 검색 결과로 돌아와 알려 주세요.",
           "start_url": "https://study-copy.invalid/s/7fc83823c082/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2173,6 +2361,7 @@
           "site_name": "CJ",
           "instruction": "메인의 Joyful Moments에서 'KISS OF LIFE와 함께한 KCON Japan EP.1' 콘텐츠 정보를 열고, 붙어 있는 태그를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/6933d290d6a7/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2184,6 +2373,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 K-POP 분야로 바꾸고, 표시된 콘텐츠 수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2195,6 +2385,7 @@
           "site_name": "CJ",
           "instruction": "메인의 Joyful Moments에서 'KISS OF LIFE와 함께한 KCON Japan EP.1' 콘텐츠 정보를 열고, 콘텐츠 분류를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/8ddd4bdab636/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2206,6 +2397,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 SPORTS 분야로 바꾸고, 표시된 콘텐츠 수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/6b05355184c9/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         }
@@ -2222,6 +2414,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워 상영시간표에서 '극장판 치이카와' 상세정보를 열어 개봉일을 확인하고, 같은 영화관 상영시간표로 돌아와 개봉일을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2233,6 +2426,7 @@
           "site_name": "롯데시네마",
           "instruction": "홈 화면에서 개봉 예정 영화 목록으로 바꾸고, 몇 편이 표시됐는지 알려 주세요",
           "start_url": "https://study-copy.invalid/s/e8f84ea0dafc/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2244,6 +2438,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워 상영시간표에서 '극장판 치이카와' 상세정보를 열어 상영시간(분)을 확인하고, 같은 영화관 상영시간표로 돌아와 상영시간을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/ed470c2a6fbd/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2255,6 +2450,7 @@
           "site_name": "롯데시네마",
           "instruction": "홈 화면에서 개봉 예정 영화 목록으로 바꾸고, 첫 번째 영화 소개의 첫 문장을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4b333c53172f/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2266,6 +2462,7 @@
           "site_name": "파라타항공",
           "instruction": "메인 화면의 체크인에서 예약번호 987654321, 성 김, 이름 민수로 체크인할 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/16a50b10a80c/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2277,6 +2474,7 @@
           "site_name": "파라타항공",
           "instruction": "국내선 운임 안내에서 출발 7일~2일 전에 취소할 때의 수수료를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/d297ecf813af/p/715b3363ebc283f4.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2288,6 +2486,7 @@
           "site_name": "파라타항공",
           "instruction": "메인 화면의 체크인에서 예약번호 123456789, 성 홍, 이름 길동으로 체크인할 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/5a95225d483e/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2299,6 +2498,7 @@
           "site_name": "파라타항공",
           "instruction": "국내선 운임 안내에서 출발 30일~8일 전에 취소할 때의 수수료를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/16a50b10a80c/p/715b3363ebc283f4.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2310,6 +2510,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 SPORTS 분야로 바꾸고, 표시된 콘텐츠 수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/6b05355184c9/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2321,6 +2522,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 이상민 감독 콘텐츠 정보를 열어, 소개된 영화 제목을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2332,6 +2534,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 K-POP 분야로 바꾸고, 표시된 콘텐츠 수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2343,6 +2546,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 'FLARE U와 함께한 KCON Japan EP.2' 콘텐츠 정보를 열어, 붙어 있는 태그를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/c6a79dd4182c/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         }
@@ -2359,6 +2563,7 @@
           "site_name": "다이소몰",
           "instruction": "수납 검색 결과에서 1,000원 상품만 보이도록 설정하고, 첫 번째 상품 이름을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/7fc83823c082/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2370,6 +2575,7 @@
           "site_name": "다이소몰",
           "instruction": "장바구니에 담긴 팬트리 수납 바구니 1호를 3개에서 2개로 줄이고, 바뀐 합계 금액을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/b7fae91401ea/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": [
             "기록 시작 전에 일반 화면 조작으로 팬트리 수납 바구니 1호 3개를 담고 장바구니를 연다. 준비 조작은 참여자 수행에 포함하지 않는다."
@@ -2383,6 +2589,7 @@
           "site_name": "다이소몰",
           "instruction": "수납 검색 결과에서 1,000원 상품만 보이도록 설정하고, 첫 번째 상품의 별점을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/3cb22cff380d/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2394,6 +2601,7 @@
           "site_name": "다이소몰",
           "instruction": "장바구니에 담긴 팬트리 수납 바구니 1호를 3개에서 1개로 줄이고, 바뀐 합계 금액을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/7fc83823c082/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": [
             "기록 시작 전에 일반 화면 조작으로 팬트리 수납 바구니 1호 3개를 담고 장바구니를 연다. 준비 조작은 참여자 수행에 포함하지 않는다."
@@ -2407,6 +2615,7 @@
           "site_name": "파라타항공",
           "instruction": "탑승객을 성인 2명, 소아 1명으로 선택해 적용하고, 화면에 표시된 탑승객 구성을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/b002681db75e/p/413127f760b3356b.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2418,6 +2627,7 @@
           "site_name": "파라타항공",
           "instruction": "국내선 운임 안내에서 출발 30일~8일 전에 취소할 때의 수수료를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/16a50b10a80c/p/715b3363ebc283f4.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2429,6 +2639,7 @@
           "site_name": "파라타항공",
           "instruction": "탑승객을 성인 1명, 소아 1명으로 선택해 적용하고, 화면에 표시된 탑승객 구성을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/16a50b10a80c/p/413127f760b3356b.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2440,6 +2651,7 @@
           "site_name": "파라타항공",
           "instruction": "국내선 운임 안내에서 출발 7일~2일 전에 취소할 때의 수수료를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/d297ecf813af/p/715b3363ebc283f4.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2451,6 +2663,7 @@
           "site_name": "한국에너지재단",
           "instruction": "반복 메뉴를 건너뛰고 공지사항 본문으로 바로 이동해, 첫 게시물 제목을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/24aec581d26e/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2462,6 +2675,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항에서 제목에 '공고'가 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/3f0f5f35a265/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2473,6 +2687,7 @@
           "site_name": "한국에너지재단",
           "instruction": "반복 메뉴를 건너뛰고 공지사항 본문으로 바로 이동해, 게시물 총 건수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/487efb96bf0f/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2484,6 +2699,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항에서 제목에 '지원'이 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/24aec581d26e/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         }
@@ -2500,6 +2716,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 SUSTAINABILITY 분야만 보이게 하고, 표시된 콘텐츠의 제목을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/8ddd4bdab636/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2511,6 +2728,7 @@
           "site_name": "CJ",
           "instruction": "메인의 Joyful Moments에서 콘텐츠를 넘겨 'KISS OF LIFE와 함께한 KCON Japan EP.2'가 나오게 하세요",
           "start_url": "https://study-copy.invalid/s/6922637787fa/index.html",
+          "requires_answer": false,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2522,6 +2740,7 @@
           "site_name": "CJ",
           "instruction": "브랜드 콘텐츠에서 SUSTAINABILITY 분야만 보이게 하고, 표시된 콘텐츠 수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/62a9831067eb/p/e1e20df018f4f6cd.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2533,6 +2752,7 @@
           "site_name": "CJ",
           "instruction": "메인의 Joyful Moments에서 콘텐츠를 넘겨 'izna와 함께한 KCON Japan EP.1'이 나오게 하세요",
           "start_url": "https://study-copy.invalid/s/8ddd4bdab636/index.html",
+          "requires_answer": false,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2544,6 +2764,7 @@
           "site_name": "한국에너지재단",
           "instruction": "상단 로고로 첫 화면에 간 뒤, 첫 화면의 보도자료 첫 글 제목을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/24aec581d26e/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2555,6 +2776,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항에서 제목에 '에너지'가 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/a4f142fa3194/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2566,6 +2788,7 @@
           "site_name": "한국에너지재단",
           "instruction": "상단 로고로 첫 화면에 간 뒤, 첫 화면의 공지사항 첫 글 제목을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/efc61f7f7c81/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2577,6 +2800,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항에서 제목에 '안내'가 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/24aec581d26e/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2588,6 +2812,7 @@
           "site_name": "다이소몰",
           "instruction": "수납 검색 결과에서 1,000원 상품만 보이도록 설정하고, 첫 번째 상품 이름을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/7fc83823c082/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2599,6 +2824,7 @@
           "site_name": "다이소몰",
           "instruction": "현재 검색 결과에서 수납바구니 상품만 보이도록 분류를 고르고, 첫 번째 상품 이름을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/a82ba4a20291/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2610,6 +2836,7 @@
           "site_name": "다이소몰",
           "instruction": "수납 검색 결과에서 1,000원 상품만 보이도록 설정하고, 첫 번째 상품의 별점을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/3cb22cff380d/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2621,6 +2848,7 @@
           "site_name": "다이소몰",
           "instruction": "현재 검색 결과에서 수납바구니 상품만 보이도록 분류를 고르고, 표시된 상품 수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/7fc83823c082/p/798b30638c11123d.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         }
@@ -2637,6 +2865,7 @@
           "site_name": "롯데시네마",
           "instruction": "영화관 메뉴에서 서울 지역의 월드타워 영화관을 찾아 주소를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4e4f3509c559/p/332f6ff1d7466f70.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2648,6 +2877,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워 상영시간표에서 '극장판 치이카와' 상세정보를 열어 개봉일을 확인하고, 같은 영화관 상영시간표로 돌아와 개봉일을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4b333c53172f/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2659,6 +2889,7 @@
           "site_name": "롯데시네마",
           "instruction": "영화관 메뉴에서 서울 지역의 월드타워 영화관을 찾아 총 상영관 수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/4b333c53172f/p/332f6ff1d7466f70.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2670,6 +2901,7 @@
           "site_name": "롯데시네마",
           "instruction": "월드타워 상영시간표에서 '극장판 치이카와' 상세정보를 열어 상영시간(분)을 확인하고, 같은 영화관 상영시간표로 돌아와 상영시간을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/ed470c2a6fbd/p/665b9f17d17d0404.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2681,6 +2913,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항에서 제목에 '지원'이 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/3f0f5f35a265/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2692,6 +2925,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항에서 제목에 '에너지'가 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/24aec581d26e/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2703,6 +2937,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항에서 제목에 '공고'가 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/24aec581d26e/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2714,6 +2949,7 @@
           "site_name": "한국에너지재단",
           "instruction": "공지사항에서 제목에 '안내'가 들어간 게시물을 검색하고 결과 건수를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/a4f142fa3194/p/2a262b495a056834.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2725,6 +2961,7 @@
           "site_name": "파라타항공",
           "instruction": "메인 화면의 예약조회에서 예약번호 123456789와 이메일 hong@example.com으로 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/f161a96b8fbe/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2736,6 +2973,7 @@
           "site_name": "파라타항공",
           "instruction": "탑승객을 성인 2명, 소아 1명으로 선택해 적용하고, 화면에 표시된 탑승객 구성을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/16a50b10a80c/p/413127f760b3356b.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2747,6 +2985,7 @@
           "site_name": "파라타항공",
           "instruction": "메인 화면의 예약조회에서 예약번호 987654321과 이메일 kim@example.com으로 예약을 조회하고, 화면에 나온 안내를 알려 주세요",
           "start_url": "https://study-copy.invalid/s/16a50b10a80c/index.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         },
@@ -2758,11 +2997,12 @@
           "site_name": "파라타항공",
           "instruction": "탑승객을 성인 1명, 소아 1명으로 선택해 적용하고, 화면에 표시된 탑승객 구성을 알려 주세요",
           "start_url": "https://study-copy.invalid/s/b002681db75e/p/413127f760b3356b.html",
+          "requires_answer": true,
           "time_limit_seconds": 600,
           "preparation": []
         }
       ]
     }
   ],
-  "id": "study-0db47f82477584216f5c8a08"
+  "id": "study-c99fcd959c2d0515463f3454"
 }

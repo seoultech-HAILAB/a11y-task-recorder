@@ -1,0 +1,7 @@
+body { font-family: Pretendard, "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif; margin: 0; padding: 32px; color: #1c1c1c; background: #fff; line-height: 1.6; }
+main { max-width: 640px; }
+h1 { font-size: 26px; margin: 0 0 16px; }
+nav a { margin-right: 20px; }
+button { font: inherit; font-size: 18px; padding: 10px 18px; border: 2px solid #1c1c1c; background: #f5f5f5; border-radius: 8px; cursor: pointer; }
+button:focus, a:focus { outline: 3px solid #ffb000; outline-offset: 3px; }
+#ingredients { margin-top: 20px; font-size: 20px; min-height: 32px; }

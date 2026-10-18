@@ -22,12 +22,17 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
 from recorder import __version__
+from recorder.common import ApiError, json_load, parse_capture_instant, parse_timestamp, utc_now
+from recorder.signals import ANNOUNCE_MODE, SignalBoard
 from recorder.study import ADVANCING_OUTCOMES, STUDY_OUTCOMES, load_catalog, validate_setup
+from recorder.study_flow import StudyFlowMixin
+from recorder.upload import UploadManager
 
 
 # 애드온 폴링 주기(1.25초)의 여유 배수. 이 시간 안에 호출이 없으면 미연결로 본다.
 NVDA_LIVENESS_SECONDS = 10
 STOP_DRAIN_SECONDS = 5
+STUDY_UI_MODE = "single_window"
 BROWSER_CLIENT_HEADER = "X-A11y-Recorder-Client"
 BROWSER_CLIENT_ID = "a11y-recorder-cft-v1"
 
@@ -46,46 +51,7 @@ SESSION_FIELDS = {
 }
 
 
-def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
-
-
-def parse_timestamp(value: Optional[str]) -> datetime:
-    if not value:
-        return datetime.now(timezone.utc)
-    normalized = value.replace("Z", "+00:00")
-    parsed = datetime.fromisoformat(normalized)
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
-
-
-def parse_capture_instant(value: Optional[str]) -> datetime:
-    """Parse a collector timestamp at the millisecond precision of stored session bounds."""
-    # started_at/ended_at come from utc_now() (milliseconds), and event timestamps are
-    # normalised the same way. Comparing a raw microsecond value against a truncated
-    # bound would push an instant from the stop's own millisecond outside the interval.
-    parsed = parse_timestamp(value)
-    return parsed.replace(microsecond=parsed.microsecond - parsed.microsecond % 1000)
-
-
-def json_load(value: Optional[str], fallback: Any) -> Any:
-    if not value:
-        return fallback
-    try:
-        return json.loads(value)
-    except (TypeError, json.JSONDecodeError):
-        return fallback
-
-
-class ApiError(Exception):
-    def __init__(self, status: int, message: str):
-        super().__init__(message)
-        self.status = status
-        self.message = message
-
-
-class RecorderStore:
+class RecorderStore(StudyFlowMixin):
     def __init__(self, db_path: Path):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -227,6 +193,14 @@ class RecorderStore:
             self._ensure_column(connection, "sessions", "study_outcome", "TEXT NOT NULL DEFAULT ''")
             self._ensure_column(connection, "sessions", "study_answer", "TEXT NOT NULL DEFAULT ''")
             self._ensure_column(connection, "sessions", "study_setup", "TEXT NOT NULL DEFAULT '{}'")
+            # 0.4.0 single-window flow: task interval, pauses and participant answers.
+            self._ensure_column(connection, "sessions", "task_ended_at", "TEXT")
+            self._ensure_column(connection, "sessions", "end_reason", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(connection, "sessions", "net_task_seconds", "REAL")
+            self._ensure_column(connection, "sessions", "paused_at", "TEXT")
+            self._ensure_column(connection, "sessions", "pause_reason", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(connection, "sessions", "study_answer_entered_by", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(connection, "sessions", "answer_history", "TEXT NOT NULL DEFAULT '[]'")
 
     def _study_catalog(self, connection: sqlite3.Connection) -> Dict[str, Any]:
         row = connection.execute("SELECT catalog FROM study_catalog WHERE singleton = 1").fetchone()
@@ -265,7 +239,7 @@ class RecorderStore:
                 current = assignment["order"]
             task = dict(assignment)
             task.update({
-                "status": (row["status"] if row["status"] in {"draft", "active"} else "finished") if row else "pending",
+                "status": (row["status"] if row["status"] in {"draft", "active", "answering"} else "finished") if row else "pending",
                 "session_id": row["id"] if row else None,
                 "outcome": row["study_outcome"] if row else "",
             })
@@ -275,7 +249,9 @@ class RecorderStore:
 
     def get_study(self, tester: Optional[str] = None) -> Dict[str, Any]:
         with self.connect() as connection:
-            connection.execute("BEGIN IMMEDIATE")
+            # _study_catalog() only inserts on first call; after that it only reads, so
+            # BEGIN IMMEDIATE is not needed and would cause unnecessary write-lock contention
+            # with concurrent update_answer() / _prepare_study() calls.
             catalog = self._study_catalog(connection)
             if tester is not None:
                 return self._study_progress(connection, catalog, tester)
@@ -320,8 +296,11 @@ class RecorderStore:
             else:
                 session_id = str(uuid.uuid4())
                 metadata = {key: task[key] for key in ("task_id", "order", "block", "site_name", "time_limit_seconds", "preparation")}
+                # ui_mode tells analysis which collection screen produced the record:
+                # "tabbed" opens the site in a new tab (0.3.x), "single_window" embeds it (0.4+).
                 metadata.update({"catalog_id": catalog["id"], "assignment_id": task["id"],
-                                 "tester": tester, "total": progress["total"], "source": catalog["source"]})
+                                 "tester": tester, "total": progress["total"], "source": catalog["source"],
+                                 "ui_mode": STUDY_UI_MODE})
                 attempt = source["round"] + 1 if retry_of else 1
                 group_id = source["group_id"] if retry_of else session_id
                 connection.execute(
@@ -404,6 +383,7 @@ class RecorderStore:
         result["environment"] = json_load(result.get("environment"), {})
         result["study"] = json_load(result.get("study"), {})
         result["study_setup"] = json_load(result.get("study_setup"), {})
+        result["answer_history"] = json_load(result.get("answer_history"), [])
         if result["study"]:
             result["study_evaluation"] = {"status": "NOT_SCORED", "basis": "participant_self_report"}
         return result
@@ -558,6 +538,15 @@ class RecorderStore:
             ).fetchone()
         return self.session_from_row(row) if row else None
 
+    def current_study_session(self) -> Optional[Dict[str, Any]]:
+        """The assigned task the dashboard is on: draft, active or answering."""
+        with self.connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM sessions WHERE status IN ('active', 'answering', 'draft') AND study != '{}'"
+                " ORDER BY CASE status WHEN 'active' THEN 0 WHEN 'answering' THEN 1 ELSE 2 END, created_at DESC LIMIT 1"
+            ).fetchone()
+        return self.session_from_row(row) if row else None
+
     def update_session(self, session_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
         session = self.get_session(session_id)
         if session.get("study"):
@@ -695,26 +684,23 @@ class RecorderStore:
                 """,
                 (session_id,),
             ).fetchone()
+            # Assigned tasks may stop from the result form ("answering"); manual sessions only from active.
+            allowed_states = "('active', 'answering')" if study else "('active')"
             if notes is None:
                 cursor = connection.execute(
-                    "UPDATE sessions SET status = ?, ended_at = ? WHERE id = ? AND status = 'active'",
+                    "UPDATE sessions SET status = ?, ended_at = ? WHERE id = ? AND status IN " + allowed_states,
                     (final_status, ended_at, session_id),
                 )
             else:
                 cursor = connection.execute(
-                    """
-                    UPDATE sessions SET status = ?, ended_at = ?, notes = ?
-                    WHERE id = ? AND status = 'active'
-                    """,
+                    "UPDATE sessions SET status = ?, ended_at = ?, notes = ? WHERE id = ? AND status IN " + allowed_states,
                     (final_status, ended_at, str(notes), session_id),
                 )
             if cursor.rowcount == 0:
                 raise ApiError(HTTPStatus.CONFLICT, "진행 중인 세션만 종료할 수 있습니다.")
             if study:
-                connection.execute(
-                    "UPDATE sessions SET study_outcome = ?, study_answer = ? WHERE id = ?",
-                    (outcome, str(data.get("answer", "")), session_id),
-                )
+                self.record_answer(connection, session_id, self.answer_entry(data, outcome))
+                self.finalize_task_timing(connection, session_id, ended_at)
             connection.execute(
                 """
                 UPDATE steps SET status = 'completed', ended_at = ?
@@ -945,7 +931,7 @@ class RecorderStore:
         step_id = str(data.get("step_id", "")).strip() or None
         with self.connect() as connection:
             session = connection.execute(
-                "SELECT status, started_at, ended_at FROM sessions WHERE id = ?", (session_id,)
+                "SELECT status, started_at, ended_at, task_ended_at FROM sessions WHERE id = ?", (session_id,)
             ).fetchone()
             if not session:
                 raise ApiError(HTTPStatus.NOT_FOUND, "세션을 찾을 수 없습니다.")
@@ -953,7 +939,9 @@ class RecorderStore:
             if session["started_at"] and captured_at < parse_timestamp(session["started_at"]):
                 raise ApiError(HTTPStatus.CONFLICT, "세션 시작 전 이벤트는 기록할 수 없습니다.")
             if session["status"] != "active":
-                ended_at = parse_timestamp(session["ended_at"]) if session["ended_at"] else None
+                # In "answering" the task interval is sealed by task_ended_at while ended_at is still open.
+                boundary = session["task_ended_at"] if session["status"] == "answering" else session["ended_at"]
+                ended_at = parse_timestamp(boundary) if boundary else None
                 late_capture = (
                     source in {"nvda", "browser"}
                     and data.get("session_id") and data.get("timestamp")
@@ -996,7 +984,7 @@ class RecorderStore:
                         "preprocessing": "stop-boundary-fragments-v1",
                     })
                     payload["text"] = payload["normalized_text"] = payload["raw_text"]
-                    speech_end_ts = session["ended_at"]
+                    speech_end_ts = boundary
                     data = dict(data, interrupted=True)
             if step_id:
                 step = connection.execute(
@@ -1720,6 +1708,10 @@ class RecorderHTTPServer(ThreadingHTTPServer):
         # NVDA 애드온이 마지막으로 서버를 호출한 시각. 애드온이 로드되지 않은
         # 채 평가가 진행되어 키 입력·발화가 통째로 유실되는 사고를 감지한다.
         self.nvda_last_seen: Optional[str] = None
+        self.signals = SignalBoard()
+        # Side channel to the study server; never blocks or fails a session (0.3.4).
+        self.uploads = UploadManager(store)
+        self.uploads.version = __version__
 
     def handle_error(self, request, client_address):
         # 브라우저가 keep-alive 연결을 끊는 것은 정상 동작이므로 평가자가 보는
@@ -1802,11 +1794,25 @@ class RecorderHandler(BaseHTTPRequestHandler):
                     "time": utc_now(),
                     "nvda_connected": connected,
                     "nvda_last_seen": last_seen,
+                    "ui_mode": STUDY_UI_MODE,
+                    "announce_mode": ANNOUNCE_MODE,
                 }
             )
             return
         if path == "/api/study":
             self._json(self.server.store.get_study())
+            return
+        if path == "/api/uploads":
+            self._json({"uploads": self.server.uploads.status()})
+            return
+        if path == "/api/study/access":
+            # Must precede /api/study/<tester>. Only the dashboard on this machine may read the code.
+            self._require_local_dashboard()
+            self._json(self.server.uploads.access())
+            return
+        if path == "/api/signals":
+            after = int((query.get("after") or ["0"])[0] or 0)
+            self._json(self.server.signals.since(after))
             return
         match = re.fullmatch(r"/api/study/([^/]+)", path)
         if match:
@@ -1896,6 +1902,39 @@ class RecorderHandler(BaseHTTPRequestHandler):
                 self._require_browser_client()
             self._json({"event": self.server.store.add_event(data)}, HTTPStatus.CREATED)
             return
+        if path == "/api/signals":
+            kind = str(data.get("kind", ""))
+            source = str(data.get("source", "nvda_addon"))
+            session = None if self.server.signals.practice else self.server.store.current_study_session()
+            result = self.server.signals.decide(kind, source, session)
+            if result["accepted"] and session is not None:
+                self.server.store.log_study_event(session["id"], "signal", {
+                    "kind": kind, "source": source, "seq": result["seq"], "status": session["status"],
+                })
+            self._json(result)
+            return
+        if path == "/api/signals/practice":
+            self.server.signals.practice = bool(data.get("on"))
+            self._json({"practice": self.server.signals.practice})
+            return
+        match = re.fullmatch(r"/api/sessions/([^/]+)/(end-task|resume-task|pause|resume|study-events)", path)
+        if match:
+            session_id, action = match.groups()
+            store = self.server.store
+            if action == "end-task":
+                session = store.end_task(session_id, data)
+            elif action == "resume-task":
+                session = store.resume_task(session_id, data)
+            elif action == "pause":
+                session = store.pause_task(session_id, data)
+            elif action == "resume":
+                session = store.resume_pause(session_id)
+            else:
+                self._json({"event": store.log_study_event(session_id, str(data.get("type", "")), data.get("payload"))},
+                           HTTPStatus.CREATED)
+                return
+            self._json({"session": session})
+            return
         match = re.fullmatch(r"/api/sessions/([^/]+)/(start|stop)", path)
         if match:
             session_id, action = match.groups()
@@ -1914,12 +1953,24 @@ class RecorderHandler(BaseHTTPRequestHandler):
                 else:
                     session = self.server.store.start_session(session_id)
             else:
+                before = self.server.store.get_session(session_id)
                 session = self.server.store.stop_session(session_id, data)
                 # Seal the capture interval immediately, then allow the collectors
                 # to deliver pre-stop evidence before the dashboard enables export.
-                time.sleep(STOP_DRAIN_SECONDS)
+                # A task that already passed through "answering" was sealed at end-task.
+                if before.get("status") == "active":
+                    time.sleep(STOP_DRAIN_SECONDS)
                 session = self.server.store.get_session(session_id)
+                if session.get("study") and self.server.uploads.enqueue(session_id):
+                    self.server.uploads.flush_async()
             self._json({"session": session})
+            return
+        if path == "/api/uploads/config":
+            self._json({"uploads": self.server.uploads.configure(data)})
+            return
+        if path == "/api/uploads/flush":
+            result = self.server.uploads.flush()
+            self._json({"uploads": self.server.uploads.status(), "result": result})
             return
         match = re.fullmatch(r"/api/sessions/([^/]+)/rerun", path)
         if match:
@@ -1952,6 +2003,8 @@ class RecorderHandler(BaseHTTPRequestHandler):
         if path == "/api/export-package":
             self._wait_for_capture_drain()
             result = self.server.store.build_result_package()
+            # Session end: retry anything still queued for the study server.
+            self.server.uploads.flush_async()
             opener = getattr(os, "startfile", None)
             if opener and data.get("open_folder", True):
                 try:
@@ -1981,6 +2034,14 @@ class RecorderHandler(BaseHTTPRequestHandler):
             self._json(
                 {"step": self.server.store.update_step_outcome(session_id, step_id, data)}
             )
+            return
+        match = re.fullmatch(r"/api/sessions/([^/]+)/answer", path)
+        if match:
+            session = self.server.store.update_answer(match.group(1), data)
+            # Corrected answers go up as a new revision of the same session.
+            if self.server.uploads.enqueue(match.group(1)):
+                self.server.uploads.flush_async()
+            self._json({"session": session})
             return
         raise ApiError(HTTPStatus.NOT_FOUND, "API 경로를 찾을 수 없습니다.")
 
@@ -2051,7 +2112,9 @@ class RecorderHandler(BaseHTTPRequestHandler):
         self._cors_headers()
         self.send_header("Content-Type", content_type)
         self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'")
+        # frame-src: the single-window dashboard embeds the HTTPS study copy (0.4.0); loopback http is for rehearsals.
+        self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self';"
+                         " frame-src 'self' https: http://127.0.0.1:* http://localhost:*")
         if download_name:
             self.send_header(
                 "Content-Disposition", 'attachment; filename="{}"'.format(download_name)
@@ -2059,6 +2122,19 @@ class RecorderHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def _require_local_dashboard(self) -> None:
+        """Loopback peer, loopback Host (no DNS rebinding), and no cross-origin caller."""
+        host = urlparse("//" + (self.headers.get("Host") or "")).hostname or ""
+        origin = self.headers.get("Origin")
+        local = (
+            self.client_address[0] in {"127.0.0.1", "::1", "::ffff:127.0.0.1"}
+            and host in {"127.0.0.1", "localhost"}
+            and (origin is None or origin == "http://" + (self.headers.get("Host") or ""))
+            and self.headers.get("Sec-Fetch-Site", "same-origin") in {"same-origin", "none"}
+        )
+        if not local:
+            raise ApiError(HTTPStatus.FORBIDDEN, "이 컴퓨터의 대시보드에서만 쓸 수 있습니다.")
 
     def _cors_headers(self) -> None:
         origin = self.headers.get("Origin", "")
@@ -2082,12 +2158,18 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--db", type=Path, default=DEFAULT_DB)
     parser.add_argument("--no-browser", action="store_true")
+    parser.add_argument("--catalog", type=Path, default=None,
+                        help="배정 카탈로그 JSON (기본: recorder/study_catalog.json). 로컬 리허설용")
     args = parser.parse_args()
 
     server = create_server(args.host, args.port, args.db)
+    if args.catalog:
+        server.store.study_catalog_path = args.catalog
+    server.uploads.start_retry_loop()
     url = "http://{}:{}".format(args.host, server.server_address[1])
     print("A11y Task Recorder: {}".format(url))
     print("데이터베이스: {}".format(args.db.resolve()))
+    print("사이트 접속 코드: {}".format("키트에 내장됨" if server.uploads.builtin_code else "내장되지 않음(사이트 칸에서 입력)"))
     print("종료하려면 Ctrl+C를 누르세요.")
     if not args.no_browser:
         threading.Timer(0.5, lambda: webbrowser.open(url)).start()

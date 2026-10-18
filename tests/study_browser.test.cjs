@@ -4,204 +4,198 @@ const vm = require('node:vm');
 const test = require('node:test');
 
 const target = 'https://study.example/s/0123456789ab/index.html';
-function background() {
+const origin = 'https://study.example';
+const DASHBOARD = 7;
+const FRAME = 41;
+// webNavigation listeners do not return their promise; let their async work settle.
+const flush = () => new Promise(resolve => setImmediate(resolve));
+
+// 0.4.0 harness: the copy lives in an iframe of the dashboard tab; no tabs are created.
+function background({ frameUrl = target } = {}) {
   const listeners = [];
-  const tabs = new Map();
   const storage = {};
   const calls = [];
-  const sessions = { one: { id: 'one', status: 'draft', target_url: target,
-    study: { preparation: [] } }, two: { id: 'two', status: 'draft',
-    target_url: target, study: { preparation: [] } } };
+  const navigation = {};
+  const sessions = { one: { id: 'one', status: 'draft', target_url: target, study: { preparation: [] } },
+    two: { id: 'two', status: 'draft', target_url: target, study: { preparation: [] } } };
   let active = null;
-  let nextTab = 10;
   let page = { ready: true, setup: { method: 'operator_automation', actions: [] } };
+  const frames = [{ frameId: 0, parentFrameId: -1, url: 'http://127.0.0.1:8765/' },
+    { frameId: FRAME, parentFrameId: 0, url: frameUrl }];
   const listener = { addListener() {} };
   const context = vm.createContext({ URL, Date, Map, Promise,
     setTimeout: fn => fn(), navigator: { userAgent: 'Chrome/151' },
     chrome: { runtime: { id: 'extension', onMessage: { addListener: fn => listeners.push(fn) },
-      onInstalled: listener, getManifest: () => ({ version: '0.2.5' }) },
+      onInstalled: listener, getManifest: () => ({ version: '0.4.0' }) },
       storage: { session: { get: async key => ({ [key]: storage[key] }),
         set: async data => Object.assign(storage, data), remove: async key => delete storage[key] } },
-      tabs: { onRemoved: listener, get: async id => { if (!tabs.has(id)) throw Error('missing'); return tabs.get(id); },
-        create: async options => { calls.push(['create', options]); const tab = { id: nextTab++, status: 'complete', ...options }; tabs.set(tab.id, tab); return tab; },
-        update: async (id, options) => { calls.push(['update', id, options]); Object.assign(tabs.get(id), options); },
-        remove: async id => { calls.push(['remove', id]); tabs.delete(id); },
-        sendMessage: async (id, msg) => { calls.push(['page', id, msg]); return page; } },
+      tabs: { onRemoved: listener, get: async id => { if (id !== DASHBOARD) throw Error('missing'); return { id, url: 'http://127.0.0.1:8765/' }; },
+        create: async options => { calls.push(['create', options]); throw Error('tabs.create must not be used'); },
+        update: async (id, options) => { calls.push(['update', id, options]); },
+        remove: async id => { calls.push(['remove', id]); },
+        query: async () => [{ id: DASHBOARD, url: 'http://127.0.0.1:8765/', title: 'A11y Task Recorder' }],
+        sendMessage: async (id, msg, options) => { calls.push(['page', id, msg, options]); return page; } },
       action: { setBadgeText: async () => {}, setBadgeBackgroundColor: async () => {}, setTitle: async () => {} },
-      webNavigation: { onCommitted: listener, onHistoryStateUpdated: listener }, commands: { onCommand: listener } },
+      webNavigation: { getAllFrames: async ({ tabId }) => tabId === DASHBOARD ? frames : [],
+        onCommitted: { addListener: fn => navigation.committed = fn }, onHistoryStateUpdated: { addListener: fn => navigation.history = fn } } },
     fetch: async (url, options = {}) => {
       calls.push(['fetch', url, options]);
       if (url.endsWith('/api/active-session')) return { ok: true, json: async () => ({ session: active }) };
+      if (url.endsWith('/api/events')) return { ok: true, status: 201, json: async () => ({}) };
       const id = url.split('/')[5];
       if (url.endsWith('/start')) { sessions[id].status = 'active'; active = sessions[id]; }
       return { ok: true, json: async () => ({ session: sessions[id] }) };
     } });
   vm.runInContext(fs.readFileSync('browser-extension/background.js', 'utf8'), context);
-  return { calls, tabs, sessions, chrome: context.chrome,
-    restart() { listeners.length = 0; vm.runInNewContext(fs.readFileSync('browser-extension/background.js', 'utf8'), { ...context }); },
+  const sender = { url: 'http://127.0.0.1:8765/', frameId: 0, tab: { id: DASHBOARD } };
+  return { calls, sessions, frames, storage, navigation, chrome: context.chrome, sender,
     setActive: value => active = value, setPage: value => page = value,
-    async command(action, sessionId = 'one', sender = { url: 'http://127.0.0.1:8765/', frameId: 0 }, extra = {}) {
+    async message(message, from = sender) {
       let resolve; const result = new Promise(r => resolve = r);
       let handled = false;
-      for (const fn of listeners) handled = fn({ kind: 'a11y-study-command', action, sessionId, ...extra }, sender, resolve) || handled;
+      for (const fn of listeners) handled = fn(message, from, resolve) || handled;
       return handled ? result : { reason: 'unhandled' };
-    } };
+    },
+    command(action, sessionId = 'one', from = sender) {
+      return this.message({ kind: 'a11y-study-command', action, sessionId }, from);
+    },
+    events() { return calls.filter(c => c[0] === 'fetch' && c[1].endsWith('/api/events')).map(c => JSON.parse(c[2].body)); } };
 }
 
-test('background only accepts the exact dashboard origin', async () => {
+test('background only accepts the exact dashboard origin in the top frame', async () => {
   const app = background();
-  for (const url of ['https://127.0.0.1:8765/', 'http://localhost:8765/', 'https://evil.example/']) {
-    assert.equal((await app.command('prepare', 'one', { url, frameId: 0 })).reason, 'untrusted_origin');
+  for (const from of [{ url: 'https://127.0.0.1:8765/', frameId: 0, tab: { id: DASHBOARD } },
+    { url: 'http://localhost:8765/', frameId: 0, tab: { id: DASHBOARD } },
+    { url: 'https://evil.example/', frameId: 0, tab: { id: DASHBOARD } },
+    { url: 'http://127.0.0.1:8765/', frameId: 3, tab: { id: DASHBOARD } }]) {
+    assert.equal((await app.command('prepare', 'one', from)).reason, 'untrusted_origin');
   }
+});
+
+test('prepare claims the dashboard tab, finds the copy frame, and never creates a tab', async () => {
+  const app = background();
+  const result = await app.command('prepare');
+  assert.equal(result.ready, true);
+  assert.equal(result.frameId, FRAME);
+  assert.equal(result.tabId, DASHBOARD);
   assert.equal(app.calls.filter(c => c[0] === 'create').length, 0);
+  const page = app.calls.find(c => c[0] === 'page');
+  assert.equal(JSON.stringify(page[3]), JSON.stringify({ frameId: FRAME }));
+  assert.equal(page[1], DASHBOARD);
+  const again = await app.command('prepare');
+  assert.equal(again.ready, true);
+  assert.equal(app.calls.filter(c => c[0] === 'page').length, 2);
 });
 
-test('prepare gets assignment from collector, opens fresh tab without opener, and is idempotent', async () => {
-  const app = background();
-  const first = await app.command('prepare', 'one', undefined, { url: 'https://evil.example/' });
-  assert.equal(first.ready, true);
-  assert.equal((await app.command('prepare')).tabId, first.tabId);
-  const creates = app.calls.filter(c => c[0] === 'create');
-  assert.equal(creates.length, 1);
-  assert.equal(creates[0][1].url, target);
-  assert.equal(creates[0][1].active, false);
-  assert.equal('openerTabId' in creates[0][1], false);
-});
-
-test('an active session blocks preparation and never closes its tab', async () => {
-  const app = background();
-  await app.command('prepare');
-  app.setActive(app.sessions.one);
-  app.sessions.one.status = 'active';
-  assert.equal((await app.command('prepare', 'two')).reason, 'active_session_conflict');
-  assert.equal(app.calls.some(c => c[0] === 'remove'), false);
-});
-
-test('worker restart reuses saved ownership and does not repeat setup', async () => {
-  const app = background();
-  const prepared = await app.command('prepare');
-  app.restart();
-  const restored = await app.command('prepare');
-  assert.equal(restored.tabId, prepared.tabId);
-  assert.equal(app.calls.filter(c => c[0] === 'create').length, 1);
-  assert.equal(app.calls.filter(c => c[0] === 'page').at(-1)[2].allowPreparation, false);
-});
-
-test('explicit prepare replaces an invalid owned draft tab while checks never reset it', async () => {
-  for (const reason of ['preparation_required', 'preparation_failed', 'wrong_url', 'capture_missing']) {
-    const app = background();
-    const first = await app.command('prepare');
-    app.setPage({ ready: false, reason });
-    assert.equal((await app.command('check')).reason, reason);
-    assert.equal(app.calls.some(c => c[0] === 'remove'), false);
-    assert.equal(app.calls.filter(c => c[0] === 'page').at(-1)[2].allowPreparation, false);
-    const create = app.chrome.tabs.create;
-    app.chrome.tabs.create = async options => {
-      app.setPage({ ready: true, setup: { method: 'operator_automation', actions: ['cart_add'] } });
-      return create(options);
-    };
-    const recovered = await app.command('prepare');
-    assert.equal(recovered.ready, true, reason);
-    assert.notEqual(recovered.tabId, first.tabId);
-    assert.equal(app.tabs.has(first.tabId), false);
-    assert.equal(app.calls.filter(c => c[0] === 'page').at(-1)[2].allowPreparation, true);
-    assert.equal(recovered.setup.actions[0], 'cart_add');
-  }
-});
-
-test('recovery never closes a task whose recording became active', async () => {
-  const app = background();
-  await app.command('prepare');
-  app.setPage({ ready: false, reason: 'preparation_required' });
-  app.setActive({ ...app.sessions.one, status: 'active' });
-  assert.equal((await app.command('prepare')).reason, 'already_started');
-  assert.equal(app.calls.some(c => c[0] === 'remove'), false);
-});
-
-test('active assigned task cannot perform preparation or start again', async () => {
-  const app = background();
-  await app.command('prepare');
-  app.sessions.one.status = 'active';
-  app.setActive(app.sessions.one);
-  const pageCount = app.calls.filter(c => c[0] === 'page').length;
-  for (const action of ['prepare', 'check', 'start']) {
-    assert.equal((await app.command(action)).reason, 'already_started');
-  }
-  assert.equal(app.calls.filter(c => c[0] === 'page').length, pageCount);
-});
-
-test('failed tab creation returns an explicit popup failure', async () => {
-  const app = background();
-  app.chrome.tabs.create = async () => { throw Error('blocked'); };
-  assert.equal((await app.command('prepare')).reason, 'popup_blocked');
-});
-
-test('wrong URL and login prevent start; login focuses the owned tab', async () => {
-  const app = background();
-  const first = await app.command('prepare');
-  app.tabs.get(first.tabId).url = 'https://study.example/other';
-  assert.equal((await app.command('start')).reason, 'wrong_url');
-  app.tabs.get(first.tabId).url = target;
+test('frame still loading or showing the login page cannot start; another dashboard tab is refused', async () => {
+  const app = background({ frameUrl: `${origin}/access` });
   app.setPage({ ready: false, reason: 'login_required' });
-  assert.equal((await app.command('check')).reason, 'login_required');
-  assert.equal(app.calls.at(-1)[0], 'update');
-  assert.equal(app.calls.some(c => c[1]?.endsWith?.('/start')), false);
-});
-
-test('login failure at hosted /access remains recognizable and cannot start recording', async () => {
-  const app = background();
-  const prepared = await app.command('prepare');
-  app.tabs.get(prepared.tabId).url = 'https://study.example/access';
-  app.setPage({ ready: false, reason: 'login_required' });
+  const result = await app.command('prepare');
+  assert.equal(result.ready, false);
+  assert.equal(result.reason, 'login_required');
   assert.equal((await app.command('start')).reason, 'login_required');
-  assert.equal(app.calls.some(c => c[1]?.endsWith?.('/start')), false);
-  const page = studyPage({ login: true, url: 'https://study.example/access' });
-  assert.equal((await page.run()).reason, 'login_required');
+  app.frames[1].url = 'https://other.example/';
+  assert.equal((await app.command('check')).reason, 'wrong_url');
+  app.frames.length = 1;
+  assert.equal((await app.command('check')).reason, 'loading');
+  assert.equal((await app.command('check', 'one', { ...app.sender, tab: { id: 99 } })).reason, 'wrong_dashboard_tab');
 });
 
-test('start checks readiness, sends explicit gate, then focuses task', async () => {
+test('start gates on readiness, posts the start, and records frame metadata without focusing tabs', async () => {
   const app = background();
-  const prepared = await app.command('prepare');
+  await app.command('prepare');
+  await app.message({ kind: 'recorder-frame-title', title: '파라타항공 예약조회', url: target }, { tab: { id: DASHBOARD }, frameId: FRAME, url: target });
   const result = await app.command('start');
   assert.equal(result.started, true);
+  assert.equal(result.frame_title, '파라타항공 예약조회');
   const posted = app.calls.find(c => c[1]?.endsWith?.('/start'));
   assert.equal(JSON.parse(posted[2].body).study_ready, true);
-  assert.equal(app.calls.filter(c => c[0] === 'update').at(-1)[1], prepared.tabId);
-  assert.equal((await app.command('close')).reason, 'session_not_finished');
-});
-
-test('successful start records the already loaded task as recorder metadata without reloading', async () => {
-  const app = background();
-  const prepared = await app.command('prepare');
-  const update = app.chrome.tabs.update;
-  app.chrome.tabs.update = async (...args) => {
-    await update(...args);
-    app.tabs.get(prepared.tabId).title = 'Current task title';
-  };
-  await app.command('start');
-  const events = app.calls.filter(c => c[1]?.endsWith?.('/api/events'));
+  assert.equal(app.calls.filter(c => c[0] === 'update').length, 0);
+  const events = app.events();
   assert.equal(events.length, 1);
-  const event = JSON.parse(events[0][2].body);
-  assert.equal(event.session_id, 'one');
-  assert.equal(event.url, target);
-  assert.equal(event.page_title, 'Current task title');
-  assert.equal(event.source, 'browser');
-  assert.equal(event.type, 'page_ready');
-  assert.equal(event.payload.kind, 'study_recording_start');
-  assert.equal(event.payload.evidence_kind, 'recorder_metadata');
-  assert.equal(app.calls.filter(c => c[0] === 'create').length, 1);
-  assert.equal(app.calls.findIndex(c => c === events[0]) > app.calls.findIndex(c => c[0] === 'update'), true);
+  assert.equal(events[0].type, 'page_ready');
+  assert.equal(events[0].page_title, '파라타항공 예약조회');
+  assert.equal(events[0].payload.ui_mode, 'single_window');
+  assert.equal(events[0].payload.frame_id, FRAME);
+  assert.equal((await app.command('status')).frame_title, '파라타항공 예약조회');
+  assert.equal((await app.command('start')).reason, 'already_started');
+  assert.equal((await app.command('prepare', 'two')).reason, 'active_session_conflict');
 });
 
-test('only owned finished tabs close; a new idle task uses a new tab', async () => {
+test('recording accepts browser events only from the owned frame (R6, single window)', async () => {
   const app = background();
-  const first = await app.command('prepare');
-  const second = await app.command('prepare', 'two');
-  assert.equal(app.calls.filter(c => c[0] === 'create').length, 2);
-  assert.equal(app.calls.filter(c => c[0] === 'remove')[0][1], first.tabId);
-  app.sessions.two.status = 'completed';
-  assert.equal((await app.command('close', 'two')).closed, true);
-  assert.equal(app.tabs.has(second.tabId), false);
+  await app.command('prepare');
+  await app.command('start');
+  const before = app.events().length;
+  const event = { type: 'dom_mutation', timestamp: new Date().toISOString(), url: 'https://other.example/mail', page_title: 'Private mail', payload: {} };
+  for (const from of [{ tab: { id: DASHBOARD + 1 }, frameId: FRAME, url: 'https://other.example/mail' },
+    { tab: { id: DASHBOARD }, frameId: 0, url: 'http://127.0.0.1:8765/' },
+    { tab: { id: DASHBOARD }, frameId: FRAME + 9, url: 'https://other.example/popup' }, {}]) {
+    const result = await app.message({ kind: 'recorder-event', event }, from);
+    assert.equal(result.recorded, false);
+    assert.equal(result.reason, 'outside_task_frame');
+  }
+  await app.navigation.committed({ frameId: 0, tabId: DASHBOARD, url: 'http://127.0.0.1:8765/?x', transitionQualifiers: [] });
+  await app.navigation.committed({ frameId: FRAME, tabId: DASHBOARD + 1, url: 'https://other.example/next', transitionQualifiers: [] });
+  await flush();
+  assert.equal(app.events().length, before);
+  const own = await app.message({ kind: 'recorder-event', event: { ...event, url: target } }, { tab: { id: DASHBOARD }, frameId: FRAME, url: target });
+  assert.equal(own.recorded, true);
+  await app.navigation.committed({ frameId: FRAME, tabId: DASHBOARD, url: target.replace('index', 'p/0123456789abcdef'), transitionQualifiers: [] });
+  await app.navigation.history({ frameId: FRAME, tabId: DASHBOARD, url: target + '#a' });
+  await flush();
+  const posted = app.events().slice(before);
+  assert.deepEqual(posted.map(e => e.type), ['dom_mutation', 'navigation', 'history']);
+  assert.ok(posted.every(e => e.payload.tab_id === DASHBOARD && e.payload.frame_id === FRAME));
+  assert.ok(posted.every(e => !e.url.includes('other.example')));
+});
+
+test('frame titles are accepted only from the dashboard tab and the copy origin', async () => {
+  const app = background();
+  await app.command('prepare');
+  assert.equal((await app.message({ kind: 'recorder-frame-title', title: 'x', url: 'https://evil.example/' }, { tab: { id: DASHBOARD }, frameId: 77, url: 'https://evil.example/' })).accepted, false);
+  assert.equal((await app.message({ kind: 'recorder-frame-title', title: 'x', url: target }, { tab: { id: DASHBOARD + 1 }, frameId: FRAME, url: target })).accepted, false);
+  assert.equal((await app.message({ kind: 'recorder-frame-title', title: '제목', url: target }, { tab: { id: DASHBOARD }, frameId: FRAME, url: target })).accepted, true);
+  assert.equal(app.storage.a11yStudyOwnedTab.frameTitle, '제목');
+});
+
+test('close releases ownership only for finished sessions and removes no tabs', async () => {
+  const app = background();
+  await app.command('prepare');
+  assert.equal((await app.command('close')).reason, 'session_not_finished');
+  app.sessions.one.status = 'completed';
+  assert.equal((await app.command('close')).closed, true);
+  assert.equal(app.storage.a11yStudyOwnedTab, undefined);
+  assert.equal(app.calls.filter(c => c[0] === 'remove').length, 0);
+  assert.equal((await app.command('close')).closed, false);
+});
+
+test('manifest runs the content script in all frames and declares no browser command', () => {
+  const manifest = JSON.parse(fs.readFileSync('browser-extension/manifest.json', 'utf8'));
+  assert.equal(manifest.commands, undefined);
+  assert.equal(manifest.content_scripts[0].all_frames, true);
+  assert.equal(manifest.version, '0.4.0');
+  assert.equal(/chrome\.commands/.test(fs.readFileSync('browser-extension/background.js', 'utf8')), false);
+});
+
+test('content script in a sub-frame reports its title and marks page_ready as in_frame', async () => {
+  const messages = [];
+  const timers = [];
+  const window = { location: new URL(target), addEventListener() {} };
+  window.top = {};
+  const document = { readyState: 'complete', title: '예약조회', documentElement: { lang: 'ko' }, addEventListener() {} };
+  vm.runInNewContext(fs.readFileSync('browser-extension/content.js', 'utf8'), {
+    URL, Date, Set, Element: class {}, Node: { ELEMENT_NODE: 1 }, window, document,
+    MutationObserver: class { observe() {} }, setTimeout: fn => fn(), setInterval: fn => timers.push(fn),
+    chrome: { runtime: { sendMessage: async msg => { messages.push(msg); } } } });
+  assert.equal(messages[0].kind, 'recorder-event');
+  assert.equal(messages[0].event.payload.in_frame, true);
+  assert.equal(JSON.stringify(messages[1]), JSON.stringify({ kind: 'recorder-frame-title', title: '예약조회', url: target }));
+  document.title = '예약 결과';
+  timers[0]();
+  assert.equal(messages.at(-1).title, '예약 결과');
+  timers[0]();
+  assert.equal(messages.length, 3);
 });
 
 test('dashboard bridge ignores foreign window/origin and removes arbitrary payload fields', async () => {
@@ -211,6 +205,7 @@ test('dashboard bridge ignores foreign window/origin and removes arbitrary paylo
   const window = { location: new URL('http://127.0.0.1:8765/'),
     addEventListener: (name, fn) => handlers[name] = fn,
     postMessage: (...args) => responses.push(args) };
+  window.top = window;
   vm.runInNewContext(fs.readFileSync('browser-extension/content.js', 'utf8'), {
     URL, window, chrome: { runtime: { sendMessage: async msg => { messages.push(msg); return { ready: true }; } } } });
   assert.equal(typeof handlers.message, 'function');

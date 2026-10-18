@@ -16,8 +16,10 @@ import buildVersion
 import controlTypes
 import globalPluginHandler
 import inputCore
+import queueHandler
 import synthDriverHandler
 import tones
+import ui
 from logHandler import log
 from scriptHandler import script
 from speech import extensions as speechExtensions
@@ -28,6 +30,7 @@ POLL_SECONDS = 1.25
 REQUEST_TIMEOUT_SECONDS = 0.8
 SUPPORTED_BROWSER_APPS = {"chrome", "msedge", "firefox", "brave", "opera"}
 SPEECH_MERGE_SECONDS = 1.2
+SIGNAL_SOURCE = "nvda_addon"
 ADDON_VERSION = addonHandler.getCodeAddon().manifest["version"]
 # Named keys stay "key" even when NVDA shows them as one localized character ("탭").
 NAMED_UNBOUND_KEYS = {
@@ -99,6 +102,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         self._sessionLock = threading.Lock()
         self._speechLock = threading.RLock()
         self._activeSpeech = None
+        # >0 while this add-on itself is speaking a recorder prompt (ui.message).
+        self._promptDepth = 0
         self._speechHook = getattr(
             speechExtensions,
             "pre_speechQueued",
@@ -248,6 +253,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
                 "command_count": max(0, len(speechSequence) - len(textParts)),
             }
             elementKey = self._elementKey(element)
+            origin = "recorder_prompt" if self._promptDepth else "nvda"
             with self._speechLock:
                 with self._sessionLock:
                     sessionId = self._activeSession
@@ -258,6 +264,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
                     active
                     and active["session_id"] == sessionId
                     and active["element_key"] == elementKey
+                    and active.get("origin", "nvda") == origin
                     and nowMonotonic - active["last_monotonic"] <= SPEECH_MERGE_SECONDS
                 )
                 if active and not canMerge:
@@ -275,6 +282,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
                         "element": element,
                         "page_title": self._foregroundTitle(),
                         "priority": safeString(priority, 80),
+                        "origin": origin,
                         "fragments": [fragment],
                     }
                 else:
@@ -351,6 +359,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
                         "redacted": False,
                         "end_reason": endReason,
                         "preprocessing": "role-descriptor-v1",
+                        # "recorder_prompt": the add-on read a recorder prompt (instruction, result request).
+                        "origin": active.get("origin", "nvda"),
                     },
                     "element": active["element"],
                     "page_title": active["page_title"],
@@ -384,6 +394,72 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         tones.beep(880, 90)
 
     @script(
+        description="배정된 과업을 시작합니다 (단일 창 기록기).",
+        gestures=("kb:NVDA+control+shift+s",),
+        category=scriptCategory,
+    )
+    def script_startTask(self, gesture):
+        self._postSignal("start")
+
+    @script(
+        description="진행 중인 과업을 끝내고 결과 입력으로 넘어갑니다.",
+        gestures=("kb:NVDA+control+shift+e",),
+        category=scriptCategory,
+    )
+    def script_endTask(self, gesture):
+        self._postSignal("end")
+
+    @script(
+        description="현재 과업의 지시문을 다시 읽어 줍니다.",
+        gestures=("kb:NVDA+control+shift+t",),
+        category=scriptCategory,
+    )
+    def script_repeatInstruction(self, gesture):
+        self._postSignal("repeat")
+
+    def _postSignal(self, kind):
+        """Send a start/end/repeat signal from a worker thread; the server decides and may reply text."""
+        def run():
+            try:
+                data = json.dumps({"kind": kind, "source": SIGNAL_SOURCE}).encode("utf-8")
+                request = urllib.request.Request(
+                    COLLECTOR_URL + "/api/signals",
+                    data=data,
+                    headers={"Content-Type": "application/json; charset=utf-8", "Accept": "application/json"},
+                    method="POST",
+                )
+                with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
+                    result = json.loads(response.read().decode("utf-8"))
+            except Exception:
+                result = {"accepted": False, "reason": "collector_unavailable"}
+            self._afterSignal(kind, result)
+        threading.Thread(target=run, name="a11yTaskRecorderSignal", daemon=True).start()
+
+    def _afterSignal(self, kind, result):
+        """Low beep when the signal does not apply; short confirmation beep, then the reply text."""
+        if not isinstance(result, dict) or not result.get("accepted"):
+            self._queueMain(tones.beep, 220, 160)
+            return
+        self._queueMain(tones.beep, 660 if kind == "end" else 880, 90)
+        speak = safeString(result.get("speak"), 2000)
+        if speak:
+            self._queueMain(self._speakPrompt, speak)
+
+    def _queueMain(self, function, *args):
+        try:
+            queueHandler.queueFunction(queueHandler.eventQueue, function, *args)
+        except Exception:
+            function(*args)
+
+    def _speakPrompt(self, text):
+        """Speak a recorder prompt with NVDA's own voice; the episode is tagged origin=recorder_prompt."""
+        self._promptDepth += 1
+        try:
+            ui.message(text)
+        finally:
+            self._promptDepth -= 1
+
+    @script(
         description="A11y Task Recorder의 기록 상태를 소리로 확인합니다.",
         gestures=(
             "kb:NVDA+control+l",
@@ -410,12 +486,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             appName = safeString(obj.appModule.appName, 80).lower()
         except Exception:
             return False
-        if appName not in SUPPORTED_BROWSER_APPS:
-            return False
-        title = self._foregroundTitle().lower()
-        if "a11y task recorder" in title:
-            return False
-        return True
+        # 0.4.0: the dashboard and the task share one window, so the window title no
+        # longer excludes anything. The server's task phase and element.frame do that.
+        return appName in SUPPORTED_BROWSER_APPS
 
     def _foregroundTitle(self):
         try:
@@ -428,6 +501,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             return {}
         context = {}
         context["scope"] = self._objectScope(obj)
+        if context["scope"] == "web_content":
+            context["frame"] = self._objectFrame(obj)
         try:
             name = safeString(obj.name, 600)
             context["name"] = name
@@ -490,6 +565,24 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             except Exception:
                 break
         return "browser_ui"
+
+    def _objectFrame(self, obj):
+        """"task" when the object sits inside an embedded frame (the study copy), else "recorder"."""
+        frameRole = getattr(controlTypes.Role, "INTERNALFRAME", None)
+        current = obj
+        for _ in range(40):
+            if current is None:
+                break
+            try:
+                if frameRole is not None and current.role == frameRole:
+                    return "task"
+            except Exception:
+                pass
+            try:
+                current = current.parent
+            except Exception:
+                break
+        return "recorder"
 
     def _elementKey(self, element):
         return safeString(
