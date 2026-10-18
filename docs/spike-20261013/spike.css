@@ -1,0 +1,12 @@
+body { font-family: "Malgun Gothic", Pretendard, system-ui, sans-serif; margin: 0; padding: 16px 24px; line-height: 1.6; color: #1c1c1c; }
+h1 { font-size: 22px; margin: 0 0 8px; }
+#instruction { font-size: 20px; }
+#instruction:focus, #result-heading:focus, #saved:focus { outline: 3px solid #ffb000; outline-offset: 4px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+button { font: inherit; padding: 8px 14px; }
+iframe { width: 100%; height: 60vh; border: 2px solid #ccc; border-radius: 8px; margin-top: 12px; }
+iframe:focus { outline: 3px solid #ffb000; }
+iframe[inert] { opacity: 0.8; }
+#result { margin-top: 16px; padding: 16px; border: 2px solid #247355; border-radius: 8px; }
+[data-phase="active"] #top { opacity: 0.7; }
+body.frame { background: #fffdf5; }
