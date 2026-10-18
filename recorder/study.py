@@ -11,6 +11,8 @@ TASK_FIELDS = (
     "start_url", "time_limit_seconds", "preparation",
 )
 SOURCE_FIELDS = ("spec_version", "spec_sha256", "assignments_sha256")
+# Optional participant-safe flags with their defaults (older catalogs omit them).
+OPTIONAL_TASK_FIELDS = {"requires_answer": True}
 
 
 def validate_setup(receipt: dict) -> dict:
@@ -61,7 +63,10 @@ def load_catalog(path: Path) -> dict:
             ):
                 raise ValueError("Invalid preparation")
             assignment_ids.add(task["id"])
-            tasks.append({key: task[key] for key in TASK_FIELDS})
+            entry = {key: task[key] for key in TASK_FIELDS}
+            for key, default in OPTIONAL_TASK_FIELDS.items():
+                entry[key] = bool(task.get(key, default))
+            tasks.append(entry)
         if not tasks:
             raise ValueError("Empty assignments")
         catalog["testers"].append({"id": tester["id"], "tasks": tasks})

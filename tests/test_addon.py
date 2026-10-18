@@ -37,6 +37,7 @@ class AddonBoundaryTests(unittest.TestCase):
         self.plugin._sessionLock = threading.Lock()
         self.plugin._speechLock = threading.RLock()
         self.plugin._activeSession = "session-a"
+        self.plugin._promptDepth = 0
 
     def test_queue_binds_session_at_capture(self):
         self.plugin._enqueue({"type": "input"})
@@ -100,6 +101,7 @@ class GestureClassificationTests(unittest.TestCase):
         self.plugin._speechLock = threading.RLock()
         self.plugin._activeSession = "session-a"
         self.plugin._activeSpeech = None
+        self.plugin._promptDepth = 0
         self.plugin._shouldRecord = lambda obj: True
         self.plugin._objectContext = lambda obj: {"name": "예약번호", "role": "편집창"}
         self.plugin._foregroundTitle = lambda: "Example"
@@ -176,3 +178,66 @@ class GestureClassificationTests(unittest.TestCase):
         episode = [e for e in speech if e["type"] == "speech_episode"][0]
         self.assertEqual("1", episode["payload"]["raw_text"])
         self.assertFalse(episode["payload"]["redacted"])
+
+
+class SingleWindowAddonTests(unittest.TestCase):
+    """0.4.0: one window, frame tagging, recorder prompts and start/end/repeat signals."""
+
+    def setUp(self):
+        cls = collector_class()
+        self.plugin = cls.__new__(cls)
+        self.plugin._events = queue.Queue()
+        self.plugin._sessionLock = threading.Lock()
+        self.plugin._speechLock = threading.RLock()
+        self.plugin._activeSession = "session-a"
+        self.plugin._activeSpeech = None
+        self.plugin._promptDepth = 0
+        self.plugin._shouldRecord = lambda obj: True
+        self.plugin._objectContext = lambda obj: {}
+        self.plugin._foregroundTitle = lambda: "A11y Task Recorder - Chrome"
+        self.plugin._onSpeechQueued.__globals__.update({
+            "api": SimpleNamespace(getFocusObject=lambda: object(), getNavigatorObject=lambda: None),
+            "time": time, "SPEECH_MERGE_SECONDS": 1.2,
+        })
+
+    def test_window_title_no_longer_excludes_recording(self):
+        source = (Path(__file__).resolve().parents[1]
+                  / "nvda-addon/globalPlugins/a11yTaskRecorder.py").read_text(encoding="utf-8")
+        self.assertNotIn('"a11y task recorder" in title', source)
+        for gesture in ("kb:NVDA+control+shift+s", "kb:NVDA+control+shift+e", "kb:NVDA+control+shift+t"):
+            self.assertIn(gesture, source)
+
+    def test_frame_is_task_inside_internal_frame_and_recorder_outside(self):
+        roles = SimpleNamespace(INTERNALFRAME="frame", DOCUMENT="document")
+        self.plugin._objectFrame.__globals__.update({"controlTypes": SimpleNamespace(Role=roles)})
+        top = SimpleNamespace(role="document", parent=None)
+        frame = SimpleNamespace(role="frame", parent=top)
+        inner_doc = SimpleNamespace(role="document", parent=frame)
+        link = SimpleNamespace(role="link", parent=inner_doc)
+        heading = SimpleNamespace(role="heading", parent=top)
+        self.assertEqual("task", self.plugin._objectFrame(link))
+        self.assertEqual("recorder", self.plugin._objectFrame(heading))
+
+    def test_prompt_speech_is_tagged_and_not_merged_with_user_speech(self):
+        self.plugin._onSpeechQueued(["버튼 재료 보기"])
+        spoken = []
+        self.plugin._speakPrompt.__globals__.update({"ui": SimpleNamespace(message=lambda text: (
+            spoken.append(text), self.plugin._onSpeechQueued([text])))})
+        self.plugin._speakPrompt("과업이 끝났습니다. 결과를 입력해 주세요.")
+        self.assertEqual(0, self.plugin._promptDepth)
+        self.plugin._finalizeSpeech("2026-10-07T00:00:02.000Z", False, "synth_done")
+        episodes = [self.plugin._events.get_nowait() for _ in range(self.plugin._events.qsize())]
+        episodes = [e for e in episodes if e["type"] == "speech_episode"]
+        self.assertEqual(["nvda", "recorder_prompt"], [e["payload"]["origin"] for e in episodes])
+        self.assertEqual("과업이 끝났습니다. 결과를 입력해 주세요.", episodes[1]["payload"]["raw_text"])
+        self.assertEqual(spoken, ["과업이 끝났습니다. 결과를 입력해 주세요."])
+
+    def test_signal_reply_beeps_and_speaks_only_accepted_text(self):
+        calls = []
+        self.plugin._queueMain = lambda function, *args: calls.append((getattr(function, "__name__", "fn"), args))
+        self.plugin._afterSignal.__globals__.update({"tones": SimpleNamespace(beep=lambda *a: None)})
+        self.plugin._afterSignal("start", {"accepted": False, "reason": "no_prepared_task"})
+        self.plugin._afterSignal("repeat", {"accepted": True, "speak": "지시문입니다"})
+        self.plugin._afterSignal("end", {"accepted": True, "speak": ""})
+        self.assertEqual([("<lambda>", (220, 160)), ("<lambda>", (880, 90)), ("_speakPrompt", ("지시문입니다",)),
+                          ("<lambda>", (660, 90))], calls)

@@ -1,0 +1,78 @@
+"""Start / end / repeat signals from the NVDA add-on gestures (0.4.0).
+
+The add-on posts a signal; the server decides whether it applies to the current
+assigned task and what NVDA should say. The dashboard polls the signal list and
+performs the same action as its own buttons, so there is one executor.
+"""
+
+import os
+import threading
+from typing import Any, Dict, List, Optional
+
+from recorder.common import utc_now
+
+SIGNAL_KINDS = frozenset({"start", "end", "repeat"})
+SIGNAL_SOURCES = frozenset({"nvda_addon", "facilitator", "dashboard"})
+# "focus": the dashboard moves focus to the prompt and NVDA reads it. "nvda": the
+# add-on speaks the prompt with ui.message. "both" does both (expect double speech).
+ANNOUNCE_MODE = os.environ.get("A11Y_RECORDER_ANNOUNCE", "focus")
+if ANNOUNCE_MODE not in {"focus", "nvda", "both"}:
+    ANNOUNCE_MODE = "focus"
+# Short sentences: the laptop plays NVDA through speakers in a shared room.
+END_PROMPT = "과업이 끝났습니다. 결과를 입력해 주세요."
+PRACTICE_INSTRUCTION = "연습입니다. 연습 화면에서 '재료 보기' 버튼을 눌러, 첫 번째 재료를 알려 주세요."
+# Appended to the repeated instruction so the way to end can be heard again during a task.
+END_HINT = "끝낼 때는 NVDA, Ctrl, Shift, E를 함께 누르세요."
+MAX_SIGNALS = 50
+
+
+def _with_end_hint(text: str) -> str:
+    """The instruction followed by how to end the task (NVDA+Ctrl+Shift+T)."""
+    return "{} {}".format(text, END_HINT).strip()
+
+
+class SignalBoard:
+    """In-memory queue of accepted signals plus the practice-mode flag."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._signals: List[Dict[str, Any]] = []
+        self._seq = 0
+        self.practice = False
+
+    def decide(self, kind: str, source: str, session: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        """Return the add-on response and append the signal when it applies."""
+        if kind not in SIGNAL_KINDS or source not in SIGNAL_SOURCES:
+            return {"accepted": False, "reason": "invalid_signal", "speak": ""}
+        if self.practice:
+            speak = _with_end_hint(PRACTICE_INSTRUCTION) if kind == "repeat" else (END_PROMPT if kind == "end" and ANNOUNCE_MODE != "focus" else "")
+            return self._append(kind, source, None, speak, practice=True)
+        status = session.get("status") if session else None
+        if kind == "start" and status != "draft":
+            return {"accepted": False, "reason": "no_prepared_task" if status is None else "not_draft", "speak": ""}
+        if kind == "end" and status != "active":
+            return {"accepted": False, "reason": "not_recording", "speak": ""}
+        if kind == "repeat" and status not in {"draft", "active", "answering"}:
+            return {"accepted": False, "reason": "no_task", "speak": ""}
+        speak = ""
+        if kind == "repeat":
+            scenario = str(session.get("scenario") or "")
+            # While the result is being entered the task is already over; no end hint then.
+            speak = scenario if status == "answering" else _with_end_hint(scenario)
+        elif kind == "end" and ANNOUNCE_MODE != "focus":
+            speak = END_PROMPT
+        return self._append(kind, source, session["id"], speak, practice=False)
+
+    def _append(self, kind: str, source: str, session_id: Optional[str], speak: str, practice: bool) -> Dict[str, Any]:
+        with self._lock:
+            self._seq += 1
+            signal = {"seq": self._seq, "kind": kind, "source": source, "session_id": session_id,
+                      "at": utc_now(), "practice": practice}
+            self._signals.append(signal)
+            del self._signals[:-MAX_SIGNALS]
+        return {"accepted": True, "speak": speak, "seq": signal["seq"], "announce_mode": ANNOUNCE_MODE}
+
+    def since(self, after: int) -> Dict[str, Any]:
+        with self._lock:
+            return {"signals": [signal for signal in self._signals if signal["seq"] > after],
+                    "seq": self._seq, "practice": self.practice, "announce_mode": ANNOUNCE_MODE}

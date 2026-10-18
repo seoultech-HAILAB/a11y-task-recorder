@@ -5,7 +5,8 @@
   function inspect(message) {
     const assigned = new URL(message.targetUrl);
     const current = new URL(window.location.href);
-    if (assigned.protocol !== "https:" ||
+    const loopback = assigned.protocol === "http:" && ["127.0.0.1", "localhost"].includes(assigned.hostname);
+    if ((assigned.protocol !== "https:" && !loopback) ||
         !/^\/s\/[a-f0-9]{12}\/(?:index\.html|p\/[a-f0-9]{16}\.html)$/.test(assigned.pathname) ||
         (current.href !== assigned.href && current.href !== `${assigned.origin}/access`)) {
       return { ready: false, reason: "wrong_url" };

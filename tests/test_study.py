@@ -57,6 +57,12 @@ class StudyTests(unittest.TestCase):
             self.prepare()
         self.assertEqual(12, self.store.get_study()["testers"][0]["finished"])
 
+    def test_prepared_session_records_collection_ui_mode(self):
+        session = self.prepare()
+        self.assertEqual("single_window", session["study"]["ui_mode"])
+        exported = json.loads(self.store.export_json(self.finish(session)["id"]))
+        self.assertEqual("single_window", exported["study"]["ui_mode"])
+
     def test_duplicate_concurrent_prepare_and_active_conflict(self):
         with ThreadPoolExecutor(max_workers=6) as pool:
             sessions = list(pool.map(lambda _: self.prepare(), range(12)))
@@ -168,7 +174,9 @@ class StudyTests(unittest.TestCase):
         self.assertNotIn("step_outcomes_recorded", checks)
         self.assertFalse(exported["data_quality"]["collection_check_passed"])
         self.assertEqual([], exported["steps"])
-        self.assertEqual([], exported["events"])
+        # Only the dashboard's own answer receipt; no participant keys or speech were captured.
+        self.assertEqual(["answer_saved"], [event["type"] for event in exported["events"]])
+        self.assertTrue(all(event["source"] == "dashboard" for event in exported["events"]))
         self.assertEqual("NOT_SCORED", exported["study_evaluation"]["status"])
         self.assertFalse(any("step" in warning for warning in exported["data_quality"]["warnings"]))
         manual = self.store.create_session({"title": "Manual"})
