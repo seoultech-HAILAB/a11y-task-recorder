@@ -5,7 +5,9 @@ const RECORDER_CLIENT = "a11y-recorder-cft-v1";
 let activeCache = { checkedAt: 0, session: null };
 let previousSession = null;
 let environmentReportedSession = null;
-const tabHistories = new Map();
+const frameHistories = new Map();
+// Since 0.4.0 the study copy runs inside the dashboard tab's iframe. The owned
+// "tab" is the dashboard tab and the owned frame is that iframe.
 const STUDY_TAB_KEY = "a11yStudyOwnedTab";
 let studyCommands = Promise.resolve();
 
@@ -23,29 +25,68 @@ async function studyRequest(path, options = {}) {
   return body;
 }
 
+// Study copies are HTTPS; plain http is accepted only on loopback for local rehearsals.
+function studyOriginOk(target) {
+  return target.protocol === "https:" ||
+    (target.protocol === "http:" && ["127.0.0.1", "localhost"].includes(target.hostname));
+}
+function assignedUrlOk(value) {
+  try {
+    const target = new URL(value);
+    return studyOriginOk(target) && !target.username && !target.password && !target.search && !target.hash &&
+      /^\/s\/[a-f0-9]{12}\/(?:index\.html|p\/[a-f0-9]{16}\.html)$/.test(target.pathname);
+  } catch { return false; }
+}
+
+async function loadState() {
+  return (await chrome.storage.session.get(STUDY_TAB_KEY))[STUDY_TAB_KEY] || null;
+}
+async function saveState(state) {
+  if (state) await chrome.storage.session.set({ [STUDY_TAB_KEY]: state });
+  else await chrome.storage.session.remove(STUDY_TAB_KEY);
+}
+
+// Find the dashboard tab's sub-frame that shows the assigned copy (or its login page).
+async function findStudyFrame(tabId, targetUrl) {
+  let frames;
+  try { frames = await chrome.webNavigation.getAllFrames({ tabId }); } catch { return null; }
+  const origin = new URL(targetUrl).origin;
+  const children = (frames || []).filter(frame => frame.frameId !== 0 && frame.parentFrameId === 0);
+  const candidates = children.filter(frame =>
+    frame.url === targetUrl || frame.url === `${origin}/access` || frame.url.startsWith(`${origin}/`));
+  const frame = candidates.find(frame => frame.url === targetUrl) || candidates[0] || null;
+  if (frame) return frame;
+  // A single web frame on another origin is a wrong-URL situation, not "still loading".
+  const foreign = children.find(frame => /^https?:/.test(frame.url) && !frame.url.startsWith(`${COLLECTOR}/`) && frame.url !== "about:blank");
+  return foreign ? { frameId: foreign.frameId, url: foreign.url, foreign: true } : null;
+}
+
 async function studyReadiness(session, state) {
-  let tab;
-  try { tab = await chrome.tabs.get(state.tabId); }
+  try { await chrome.tabs.get(state.tabId); }
   catch { return studyFailure("tab_closed"); }
-  if (tab.status === "loading" || tab.pendingUrl) return { ok: true, ready: false, reason: "loading" };
-  const onAccessPage = tab.url === `${new URL(session.target_url).origin}/access`;
-  if (tab.url !== session.target_url && !onAccessPage) return studyFailure("wrong_url");
+  const frame = await findStudyFrame(state.tabId, session.target_url);
+  if (!frame) return { ok: true, ready: false, reason: "loading" };
+  if (frame.foreign) return studyFailure("wrong_url");
+  state.frameId = frame.frameId;
+  await saveState(state);
+  const onAccessPage = frame.url === `${new URL(session.target_url).origin}/access`;
+  if (frame.url !== session.target_url && !onAccessPage) return studyFailure("wrong_url");
   let result;
   try {
-    result = await chrome.tabs.sendMessage(tab.id, { kind: "a11y-study-page",
+    result = await chrome.tabs.sendMessage(state.tabId, { kind: "a11y-study-page",
       targetUrl: session.target_url, preparation: session.study.preparation || [],
       allowPreparation: session.status === "draft" && !state.prepared,
-    });
+    }, { frameId: frame.frameId });
   } catch { return { ok: true, ready: false, reason: "loading" }; }
   if (!result) return studyFailure("extension_unavailable");
-  if (result.reason === "login_required") await chrome.tabs.update(tab.id, { active: true });
   if (onAccessPage && result.reason !== "login_required") return studyFailure("wrong_url");
   if (result.ready) {
     state.prepared = true;
     state.setup = state.setup || result.setup;
-    await chrome.storage.session.set({ [STUDY_TAB_KEY]: state });
+    await saveState(state);
   }
-  return { ok: true, ...result, sessionId: session.id, tabId: tab.id, setup: state.setup || result.setup };
+  return { ok: true, ...result, sessionId: session.id, tabId: state.tabId, frameId: frame.frameId,
+    setup: state.setup || result.setup, frame_title: state.frameTitle || "" };
 }
 
 async function studyCommand(message, sender) {
@@ -55,78 +96,55 @@ async function studyCommand(message, sender) {
     }
   } catch { return studyFailure("untrusted_origin"); }
   if (!/^[A-Za-z0-9_-]{1,100}$/.test(message.sessionId || "") ||
-      !["prepare", "check", "start", "close"].includes(message.action)) return studyFailure("invalid_command");
+      !["prepare", "check", "start", "close", "status"].includes(message.action)) return studyFailure("invalid_command");
+  const dashboardTabId = sender.tab?.id;
+  if (!Number.isInteger(dashboardTabId)) return studyFailure("untrusted_origin");
   try {
     const { session } = await studyRequest(`/api/sessions/${message.sessionId}`);
     if (!session?.study) return studyFailure("not_assigned_task");
-    const target = new URL(session.target_url);
-    if (target.protocol !== "https:" || target.username || target.password || target.search || target.hash ||
-        !/^\/s\/[a-f0-9]{12}\/(?:index\.html|p\/[a-f0-9]{16}\.html)$/.test(target.pathname)) {
-      return studyFailure("invalid_assignment_url");
+    if (!assignedUrlOk(session.target_url)) return studyFailure("invalid_assignment_url");
+    let state = await loadState();
+    if (message.action === "status") {
+      return { ok: true, sessionId: session.id, status: session.status,
+        frame_title: state?.sessionId === session.id ? state.frameTitle || "" : "" };
     }
-    let state = (await chrome.storage.session.get(STUDY_TAB_KEY))[STUDY_TAB_KEY];
     const { session: active } = await studyRequest("/api/active-session");
     if (active && active.id !== session.id) return studyFailure("active_session_conflict");
     if (active && message.action !== "close") return studyFailure("already_started");
     if (message.action === "close") {
       if (!["completed", "abandoned"].includes(session.status)) return studyFailure("session_not_finished");
       if (state?.sessionId !== session.id) return { ok: true, closed: false };
-      try { await chrome.tabs.remove(state.tabId); } catch { /* Already closed. */ }
-      await chrome.storage.session.remove(STUDY_TAB_KEY);
+      await saveState(null);
       return { ok: true, closed: true, sessionId: session.id };
     }
     if (session.status !== "draft") return studyFailure(session.status === "active" ? "already_started" : "session_finished");
     if (message.action === "prepare") {
-      if (state?.sessionId !== session.id && state) {
+      if (state && state.sessionId !== session.id) {
         const { session: prior } = await studyRequest(`/api/sessions/${state.sessionId}`);
         if (prior?.status === "active") return studyFailure("active_session_conflict");
-        try { await chrome.tabs.remove(state.tabId); } catch { /* Already closed. */ }
         state = null;
-        await chrome.storage.session.remove(STUDY_TAB_KEY);
-      }
-      if (state) {
-        try { await chrome.tabs.get(state.tabId); }
-        catch { state = null; }
-      }
-      if (state) {
-        const readiness = await studyReadiness(session, state);
-        if (!["preparation_required", "preparation_failed", "wrong_url", "capture_missing"].includes(readiness.reason)) {
-          return readiness;
-        }
-        const { session: latest } = await studyRequest(`/api/sessions/${session.id}`);
-        const { session: recording } = await studyRequest("/api/active-session");
-        if (recording || latest.status !== "draft") return studyFailure("active_session_conflict");
-        try { await chrome.tabs.remove(state.tabId); } catch { /* Already closed. */ }
-        state = null;
-        await chrome.storage.session.remove(STUDY_TAB_KEY);
       }
       if (!state) {
-        let tab;
-        try { tab = await chrome.tabs.create({ url: session.target_url, active: false }); }
-        catch { return studyFailure("popup_blocked"); }
-        if (!Number.isInteger(tab?.id)) return studyFailure("popup_blocked");
-        state = { sessionId: session.id, tabId: tab.id, prepared: false };
-        await chrome.storage.session.set({ [STUDY_TAB_KEY]: state });
+        state = { sessionId: session.id, tabId: dashboardTabId, frameId: null, prepared: false, frameTitle: "" };
+        await saveState(state);
       }
     }
     if (state?.sessionId !== session.id) return studyFailure("not_prepared");
+    if (state.tabId !== dashboardTabId) return studyFailure("wrong_dashboard_tab");
     const ready = await studyReadiness(session, state);
     if (message.action !== "start" || !ready.ready) return ready;
-    const tab = await chrome.tabs.get(state.tabId);
-    if (tab.url !== session.target_url || tab.pendingUrl) return studyFailure("wrong_url");
+    const frame = await findStudyFrame(state.tabId, session.target_url);
+    if (!frame || frame.foreign || frame.url !== session.target_url) return studyFailure("wrong_url");
     await studyRequest(`/api/sessions/${session.id}/start`, {
       method: "POST", body: JSON.stringify({ study_ready: true, study_setup: state.setup }),
     });
     await getActiveSession(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    try { await chrome.tabs.update(state.tabId, { active: true }); }
-    catch { return { ...ready, started: true, reason: "task_focus_failed" }; }
     try {
-      const focusedTab = await chrome.tabs.get(state.tabId);
       await studyRequest("/api/events", { method: "POST", body: JSON.stringify({
         session_id: session.id, timestamp: new Date().toISOString(), source: "browser",
-        type: "page_ready", url: session.target_url, page_title: focusedTab.title || "",
-        payload: { kind: "study_recording_start", evidence_kind: "recorder_metadata" },
+        type: "page_ready", url: session.target_url, page_title: state.frameTitle || "",
+        payload: { kind: "study_recording_start", evidence_kind: "recorder_metadata",
+          ui_mode: "single_window", tab_id: state.tabId, frame_id: frame.frameId },
       }) });
     } catch { return { ...ready, started: true, reason: "start_metadata_failed" }; }
     return { ...ready, started: true };
@@ -204,13 +222,23 @@ async function updateBadge(session) {
   }
 }
 
-async function sendEvent(event) {
+// An assigned task records only its own frame inside the dashboard tab. Anything
+// else (other tabs, the dashboard document itself) is dropped (R6, 2026-10-11).
+async function allowedFrame(session, tabId, frameId) {
+  if (!session?.study) return true;
+  if (!Number.isInteger(tabId) || !Number.isInteger(frameId) || frameId === 0) return false;
+  const state = await loadState();
+  return Boolean(state && state.sessionId === session.id && state.tabId === tabId && state.frameId === frameId);
+}
+
+async function sendEvent(event, tabId = undefined, frameId = undefined) {
   const capturedAt = event.timestamp || new Date().toISOString();
   let session = await getActiveSession();
   if ((!session || Date.parse(capturedAt) < Date.parse(session.started_at)) && previousSession) {
     session = previousSession;
   }
   if (!session) return { recorded: false, reason: "no_active_session" };
+  if (!(await allowedFrame(session, tabId, frameId))) return { recorded: false, reason: "outside_task_frame" };
   if (session.id !== environmentReportedSession) {
     await reportBrowserEnvironment(session.id);
     environmentReportedSession = session.id;
@@ -220,6 +248,7 @@ async function sendEvent(event) {
     timestamp: capturedAt,
     source: "browser",
     ...event,
+    payload: { ...(event.payload || {}), tab_id: tabId, frame_id: frameId },
   };
   if (payload.url) payload.url = recordedUrl(payload.url);
   try {
@@ -240,9 +269,9 @@ async function sendEvent(event) {
   }
 }
 
-function inferHistoryDirection(tabId, url, qualifiers) {
+function inferHistoryDirection(key, url, qualifiers) {
   const cleanUrl = recordedUrl(url);
-  const history = tabHistories.get(tabId) || { entries: [], index: -1 };
+  const history = frameHistories.get(key) || { entries: [], index: -1 };
   const isHistory = qualifiers.includes("forward_back");
   let direction = "new";
 
@@ -273,22 +302,44 @@ function inferHistoryDirection(tabId, url, qualifiers) {
     history.index = history.entries.length - 1;
   }
 
-  tabHistories.set(tabId, history);
+  frameHistories.set(key, history);
   return direction;
+}
+
+async function rememberFrameTitle(sender, title, url) {
+  const state = await loadState();
+  if (!state || sender.tab?.id !== state.tabId) return { accepted: false };
+  if (state.frameId !== sender.frameId) {
+    // The frame id is resolved by the readiness check; accept the title early when
+    // it comes from a frame showing the assigned copy's origin.
+    let session = activeCache.session;
+    if (!session) { try { session = (await studyRequest(`/api/sessions/${state.sessionId}`)).session; } catch { return { accepted: false }; } }
+    try { if (new URL(url).origin !== new URL(session.target_url).origin) return { accepted: false }; } catch { return { accepted: false }; }
+  }
+  state.frameTitle = String(title || "").slice(0, 300);
+  await saveState(state);
+  return { accepted: true };
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.kind === "a11y-study-command") {
-    studyCommands = studyCommands.then(() => studyCommand(message, sender));
+    studyCommands = studyCommands
+      .catch(() => {})
+      .then(() => studyCommand(message, sender))
+      .catch(err => ({ ok: false, error: String(err?.message || err) }));
     studyCommands.then(sendResponse);
     return true;
   }
   if (message?.kind === "recorder-event") {
     const event = {
       ...message.event,
-      url: message.event?.url || sender.tab?.url || "",
+      url: message.event?.url || sender.url || "",
     };
-    sendEvent(event).then(sendResponse);
+    sendEvent(event, sender.tab?.id, sender.frameId).then(sendResponse);
+    return true;
+  }
+  if (message?.kind === "recorder-frame-title") {
+    rememberFrameTitle(sender, message.title, message.url).then(sendResponse);
     return true;
   }
   if (message?.kind === "recorder-status") {
@@ -305,9 +356,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 chrome.webNavigation.onCommitted.addListener((details) => {
-  if (details.frameId !== 0 || !/^https?:/.test(details.url)) return;
+  if (!/^https?:/.test(details.url)) return;
   const qualifiers = details.transitionQualifiers || [];
-  const direction = inferHistoryDirection(details.tabId, details.url, qualifiers);
+  const direction = inferHistoryDirection(`${details.tabId}:${details.frameId}`, details.url, qualifiers);
   sendEvent({
     type: "navigation",
     url: details.url,
@@ -316,11 +367,11 @@ chrome.webNavigation.onCommitted.addListener((details) => {
       transition_type: details.transitionType,
       transition_qualifiers: qualifiers,
     },
-  });
+  }, details.tabId, details.frameId);
 });
 
 chrome.webNavigation.onHistoryStateUpdated.addListener((details) => {
-  if (details.frameId !== 0 || !/^https?:/.test(details.url)) return;
+  if (!/^https?:/.test(details.url)) return;
   sendEvent({
     type: "history",
     url: details.url,
@@ -329,28 +380,24 @@ chrome.webNavigation.onHistoryStateUpdated.addListener((details) => {
       kind: "history_state_updated",
       transition_type: details.transitionType,
     },
-  });
+  }, details.tabId, details.frameId);
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
-  tabHistories.delete(tabId);
+  for (const key of frameHistories.keys()) if (key.startsWith(`${tabId}:`)) frameHistories.delete(key);
 });
 
-chrome.commands.onCommand.addListener((command) => {
-  if (command === "mark-issue") {
-    createMarker("Alt+Shift+M으로 불편 지점 표시");
-  }
-});
-
+// The Alt+Shift+M browser command was removed in 0.3.4 (Windows input-language toggle).
 async function createMarker(label) {
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
   const tab = tabs[0];
+  const state = await loadState();
   return sendEvent({
     type: "marker",
     url: tab?.url || "",
     page_title: tab?.title || "",
     payload: { label },
-  });
+  }, tab?.id, state?.frameId ?? undefined);
 }
 
 chrome.runtime.onInstalled.addListener(() => {

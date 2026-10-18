@@ -86,7 +86,7 @@ class StudyCatalogTests(unittest.TestCase):
         self.assertEqual(len(tasks), 240)
         self.assertEqual(len({t["id"] for t in tasks}), 240)
         for actual, source in zip(tasks, self.rows):
-            self.assertEqual(set(actual), {"id", "task_id", "order", "block", "site_name", "instruction",
+            self.assertEqual(set(actual), {"id", "task_id", "order", "block", "site_name", "instruction", "requires_answer",
                                            "start_url", "time_limit_seconds", "preparation"})
             self.assertEqual(actual["instruction"], source["instruction"])
             self.assertEqual(actual["task_id"], source["hosted_task_id"])
