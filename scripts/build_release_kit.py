@@ -12,8 +12,10 @@ Testing에서는 계속 지원되므로 개발자 모드나 스토어 등록 없
 
     py -3 scripts\\build_release_kit.py [--access-code-file PATH]
 
---access-code-file를 주면 사이트 접속 코드를 키트(app/study_access.txt)에 넣어
-참가자·진행자가 코드를 입력하지 않게 한다. 코드 값은 어디에도 출력하지 않는다.
+--access-code-file로 사이트 접속 코드를 키트(app/study_access.txt)에 넣는다.
+기록기가 사이트 자동 로그인과 결과 전송에 쓰고, 참가자·담당자는 코드를 보거나
+입력하지 않는다(2026-10-20 결정). 빼고 만든 키트는 사이트에 접속하지 못한다.
+코드 값은 어디에도 출력하지 않는다. 코드가 든 키트는 공개 Releases에 올리지 않는다.
 """
 import argparse
 import json
@@ -170,7 +172,7 @@ table { border-collapse: collapse; } th, td { border-bottom: 1px solid #ccc; pad
 <h2>한눈에 보기</h2>
 <ol>
 <li><strong>처음 한 번</strong>: 노트북에 NVDA를 설치합니다.</li>
-<li><strong>세션 준비 (담당자, 약 3분)</strong>: 키트를 실행하고 테스터 번호를 고른 뒤, 첫 과업의 접속 코드를 입력합니다.</li>
+<li><strong>세션 준비 (담당자, 약 3분)</strong>: 키트를 실행하고 테스터 번호를 고릅니다.</li>
 <li><strong>과업 진행 (참가자 혼자, 약 110분)</strong>: 연습 1개, 과업 12개, 4개마다 휴식.</li>
 <li><strong>마무리 (담당자, 약 2분)</strong>: 결과 ZIP을 만들어 연구진에게 보냅니다.</li>
 </ol>
@@ -189,7 +191,6 @@ table { border-collapse: collapse; } th, td { border-bottom: 1px solid #ccc; pad
 <li>잠시 기다리면 NVDA가 다시 켜지고, 검은색 <strong>서버 창</strong>과 기록 화면이 열립니다. 서버 창은 끝날 때까지 <strong>닫지 마세요</strong>. 닫으면 기록이 멈춥니다.</li>
 <li>기록 화면 위쪽에 <strong>NVDA 연결됨</strong>이 보이는지 확인합니다.</li>
 <li>참가자의 <strong>테스터 번호(T01~T20)</strong>를 고르고 <strong>배정 확인</strong>을 누릅니다. 이후 번호 칸은 숨겨집니다.</li>
-<li>첫 과업에서 가운데 사이트 칸에 <strong>연구 참여 접속</strong> 화면이 나오면, 연구진에게 받은 <strong>접속 코드</strong>를 입력합니다. 한 번 넣으면 다음 과업부터는 묻지 않습니다.</li>
 <li>화면에 "사이트가 준비되었습니다"가 나오면 참가자에게 자리를 넘깁니다.</li>
 </ol>
 
@@ -220,7 +221,7 @@ table { border-collapse: collapse; } th, td { border-bottom: 1px solid #ccc; pad
 <ol>
 <li>12개 과업이 끝나면 "배정된 과업을 모두 마쳤습니다" 화면이 나옵니다.</li>
 <li>그 화면의 <strong>결과 패키지 만들기 (담당자용)</strong>를 누릅니다. <strong>결과</strong> 폴더가 열리고 ZIP 파일 하나가 생깁니다.</li>
-<li>그 ZIP 파일을 연구진에게 보냅니다(이메일 또는 안내받은 업로드 링크). <strong>결과가 연구진에게 가는 길은 이 ZIP 하나뿐입니다.</strong></li>
+<li>그 ZIP 파일을 연구진에게 보냅니다(이메일 또는 안내받은 업로드 링크). 과업 기록은 연구 서버로도 자동 전송되지만, <strong>ZIP은 꼭 보내 주세요.</strong></li>
 <li>기록 화면(브라우저)과 서버 창을 닫습니다.</li>
 </ol>
 <p>세션을 중간에 끝내야 하면 기록 화면 주소 끝에 <code>?change-tester=1</code>을 붙여 다시 열고(<code>http://127.0.0.1:8765/?change-tester=1</code>), 나타나는 <strong>기록 관리</strong>에서 결과 패키지를 만듭니다.</p>
@@ -229,7 +230,7 @@ table { border-collapse: collapse; } th, td { border-bottom: 1px solid #ccc; pad
 <ul>
 <li><strong>기록 화면이 안 열려요</strong>: 서버 창이 열려 있는지 확인하고, 평가용 브라우저에서 <code>http://127.0.0.1:8765</code>를 다시 엽니다.</li>
 <li><strong>"NVDA 연결됨"이 안 보여요</strong>: 기록 화면과 서버 창을 닫고 <strong>평가시작.bat</strong>을 다시 실행해 보세요. 그래도 안 되면 연구진에게 알려 주세요.</li>
-<li><strong>"사이트에 접속할 수 없습니다"가 나와요</strong>: 인터넷 연결과 접속 코드를 확인하고, 그래도 안 되면 연구진에게 알려 주세요.</li>
+<li><strong>"사이트에 접속할 수 없습니다"가 나와요</strong>: 인터넷 연결을 확인하고, 그래도 안 되면 연구진에게 알려 주세요.</li>
 <li><strong>단축키를 누르면 낮은 음만 나요</strong>: 지금 그 단축키를 쓸 수 없는 단계입니다(예: 과업 시작 전에 끝내기). 서버 창이 닫히지 않았는지도 확인합니다.</li>
 <li><strong>테스터 번호를 잘못 골랐어요</strong>: <code>http://127.0.0.1:8765/?change-tester=1</code>로 다시 열어 고릅니다. 이미 기록 중인 과업이 있으면 바꿀 수 없습니다.</li>
 <li><strong>_연구진용 폴더</strong>: 연구진이 설치를 점검할 때 쓰는 파일입니다. 담당자는 열거나 실행하지 마세요.</li>
@@ -248,7 +249,7 @@ table { border-collapse: collapse; } th, td { border-bottom: 1px solid #ccc; pad
 <div class="note">
 <p>입력한 글자와 주소의 검색어도 가리지 않고 저장합니다. 과업에 넣는 값은 연구진이 준 가상 값입니다.
 <strong>저장하지 않는 것</strong>: 목소리 녹음, 화면 녹화, 화면에 바뀐 내용 자체.
-모든 기록은 이 노트북의 <strong>data</strong> 폴더에만 저장되고, 결과 패키지 ZIP으로만 밖으로 나갑니다.</p>
+모든 기록은 이 노트북의 <strong>data</strong> 폴더에 저장되고, 과업이 끝날 때마다 그 과업의 기록이 연구 서버(과업 사이트 서버)로 전송됩니다. 결과 패키지 ZIP도 따로 연구진에게 보냅니다.</p>
 </div>
 
 <h2>문의</h2>
@@ -399,7 +400,7 @@ def build_kit(python_version: str, chrome_version: str, access_code_file: Option
         (app / "study_access.txt").write_text(access_code + "\n", encoding="utf-8", newline="\n")
         log("사이트 접속 코드: 키트에 내장함")
     else:
-        log("사이트 접속 코드: 내장하지 않음 (사이트 칸에서 입력)")
+        log("사이트 접속 코드: 내장하지 않음 (이 키트로는 사이트에 접속할 수 없음, 배포 금지)")
     (staging / "평가시작.bat").write_text(
         LAUNCHER_BAT.replace("@@EXTENSION_VERSION@@", extension_version),
         encoding="utf-8",

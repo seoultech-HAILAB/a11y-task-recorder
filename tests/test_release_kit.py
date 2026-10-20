@@ -90,6 +90,9 @@ class ReleaseDownloadTests(unittest.TestCase):
                                  bundle.read(prefix + "_연구진용/verify_live_pipeline.ps1"))
                 self.assertIn(prefix + "_연구진용/windows-release-validation.md", bundle.namelist())
                 self.assertNotIn(prefix + "app/study_access.txt", bundle.namelist())
+                # 10/20: nobody types the access code, so the kit guides never ask for one.
+                for guide in ("설치안내.html", "진행안내.md"):
+                    self.assertNotIn("접속 코드", bundle.read(prefix + guide).decode("utf-8"), guide)
             # --access-code-file embeds the code (fake value, 16+ characters) as app/study_access.txt.
             code_file = root / "access.json"
             code_file.write_text(json.dumps({"code": "fake-kit-code-for-tests-0001", "note": "x"}), encoding="utf-8")

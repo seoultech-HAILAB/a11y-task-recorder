@@ -1,8 +1,8 @@
 // Linux rehearsal of the 0.4.0 participant-only single-window flow with a real Chromium
 // extension, the real recorder server, and the real hosted-copy server on temporary ports.
 // The main run has the access code "built in" through A11Y_RECORDER_ACCESS_CODE (the
-// kit path app/study_access.txt); a second run restarts the recorder without a code
-// (the shipped kit) and types the code into the site frame. NVDA is a synthetic
+// kit path app/study_access.txt); a second run restarts the recorder without a code and
+// checks that nobody is ever asked for one (site error instead). NVDA is a synthetic
 // heartbeat only; nothing here is human data or an NVDA verification.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -407,8 +407,9 @@ function a11yState() {
     assert.equal(await dashboard.locator('#study-tester-form').isHidden(), true);
     check('tester picker: hidden after reload, shown with ?change-tester=1, ?tester=T01 reopens locked');
 
-    // Shipped kit: no built-in code. Same port (the copy's CSP lists it), fresh DB, cookies cleared;
-    // the code is typed into the site frame, and uploads stop as not configured (ZIP only).
+    // Kit built without a code (not for distribution): nobody is ever asked for one. Same port
+    // (the copy's CSP lists it), fresh DB, cookies cleared: preparation stops with the site error,
+    // the frame and its login page stay hidden, and nothing is uploaded.
     await stopRecorder();
     await context.clearCookies();
     const noCodeEnv = { ...process.env, A11Y_RECORDER_UPLOAD_URL: `${hostedOrigin}/upload/session`, PYTHONUNBUFFERED: '1' };
@@ -422,35 +423,29 @@ function a11yState() {
     assert.equal((await api('/api/study/access')).code, null);
     await dashboard.goto(recorderBase);
     try {
-      await dashboard.waitForFunction(() => /접속 코드를 입력해/.test(document.querySelector('#study-message').textContent), null, { timeout: 40000 });
+      await dashboard.waitForFunction(() => /사이트에 접속할 수 없습니다/.test(document.querySelector('#study-message').textContent), null, { timeout: 40000 });
     } catch (error) {
       console.error('debug message:', await dashboard.locator('#study-message').textContent());
       throw error;
     }
-    state = await a11y();
-    assert.deepEqual([state['study-frame'].shown, state['study-frame'].tabbable, state['study-start'].shown, state['study-tester'].shown], [true, true, false, false]);
-    const loginFrame = dashboard.frameLocator('#study-frame');
-    await dashboard.screenshot({ path: path.join(output, 'no-code-login.png') });
-    // Typed as an NVDA user would: focus the field, type, Enter.
-    await loginFrame.locator('#code').fill(ACCESS_CODE);
-    await loginFrame.locator('#code').press('Enter');
-    await waitFocus('study-instruction', 40000);
-    assert.equal((await a11y())['study-start'].tabbable, true);
-    check('kit without a code: site frame shows the access form; code typed there -> task ready, focus on instruction');
-    await dashboard.locator('#study-start').click();
-    await waitPhase('active');
-    assert.equal((await api('/api/signals', 'POST', { kind: 'end', source: 'nvda_addon' })).accepted, true);
-    await waitPhase('answering');
-    await dashboard.locator('input[name="study-done"][value="completed"]').check();
-    await dashboard.locator('#study-submit').click();
-    await waitPhase('ended');
+    const noCodeState = async () => {
+      const s = await a11y();
+      assert.deepEqual([s['study-frame'].shown, s['study-start'].shown, s['study-tester'].shown], [false, false, false]);
+      assert.equal(await dashboard.locator('#study-message').evaluate(n => n.classList.contains('error')), true);
+      assert.equal(await dashboard.evaluate(() => document.querySelector('#study-view').innerText.includes('접속 코드')), false);
+    };
+    await noCodeState();
+    // The background check keeps the error up instead of ever offering the login page.
+    await sleep(5000);
+    await noCodeState();
+    await dashboard.screenshot({ path: path.join(output, 'no-code-error.png') });
+    check('kit without a code: no code prompt anywhere; frame (login page) stays hidden; "사이트에 접속할 수 없습니다" error stays up');
     const noCodeUploads = (await api('/api/uploads')).uploads;
-    assert.deepEqual([noCodeUploads.configured, noCodeUploads.code_source, noCodeUploads.sent, noCodeUploads.pending], [false, '', 0, 1]);
-    assert.equal(noCodeUploads.items[0].attempts, 0);
+    assert.deepEqual([noCodeUploads.configured, noCodeUploads.code_source], [false, '']);
     assert.equal((await api('/api/uploads/flush', 'POST', {})).result.skipped, 'not_configured');
     assert.equal(lineCount(), 4);
     assert.match(noCodeOut, /사이트 접속 코드: 내장되지 않음/);
-    check('kit without a code: the saved task stays queued (configured false, 0 attempts, flush skipped not_configured); nothing reaches the server');
+    check('kit without a code: uploads not configured, nothing reaches the server; server window says the code is not built in');
     assert.deepEqual(errors, []);
     const result = { status: 'PASS', actual_windows_nvda: 'NOT_RUN', human_data: false,
       evidence: 'real Chromium extension + real recorder + real hosted server (temp ports); synthetic NVDA heartbeat; participant-only flow', checks };

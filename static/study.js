@@ -14,7 +14,7 @@ window.Study = (() => {
   const PRACTICE_INSTRUCTION = `연습입니다. 연습 화면에서 '재료 보기' 버튼을 눌러, 첫 번째 재료를 알려 주세요. ${SHORTCUT_INTRO}`;
   const SITE_UNREACHABLE = "사이트에 접속할 수 없습니다. 연구진에게 알려 주세요.";
   const view = { tester: null, plan: null, session: null, ready: false, busy: false, timer: null, opened: false,
-    pending: new Map(), lastPoll: 0, checking: false, signalSeq: 0, practice: null, loginNeeded: false,
+    pending: new Map(), lastPoll: 0, checking: false, signalSeq: 0, practice: null,
     pauses: 0, timeLimitHandled: null, lastTitlePoll: 0, frameTitle: "", editing: false, siteError: false,
     confirmEnd: false, changeTester: new URLSearchParams(location.search).has("change-tester") };
   const labels = { completed: "마쳤습니다", blocked: "마치지 못했습니다", timeout: "제한 시간 종료", technical: "기술 문제" };
@@ -112,17 +112,17 @@ window.Study = (() => {
     const frame = el("study-frame");
     const active = current === "active";
     shelve(el("study-top"), active);
-    const showFrame = active || current === "answering" || current === "ended" || (current === "ready" && view.loginNeeded);
+    // The frame stays hidden while a task is prepared: the kit logs it in, nobody types a code.
+    const showFrame = active || current === "answering" || current === "ended";
     el("study-stage").hidden = !(showFrame || current === "ready");
     requestAnimationFrame(() => { fitFrame(); if (active && !view.stageShown) { view.stageShown = true; el("study-stage").scrollIntoView({ block: "start" }); } if (!active) view.stageShown = false; });
     frame.hidden = !showFrame;
-    // Locked only while the result is being entered; during preparation the access code
-    // may have to be typed inside the frame when the kit has none built in.
+    // Locked while the result is being entered.
     const parked = current === "answering" || current === "ended";
     frame.toggleAttribute("inert", parked);
     frame.setAttribute("aria-hidden", parked ? "true" : "false");
     frame.tabIndex = parked ? -1 : 0;
-    el("study-stage-note").textContent = current === "ready" && !view.loginNeeded
+    el("study-stage-note").textContent = current === "ready"
       ? "사이트는 과업 시작과 함께 표시됩니다." : parked ? "결과를 입력하는 동안 사이트 화면은 잠겨 있습니다." : "";
     el("study-result").hidden = !(current === "answering" || current === "ended");
     document.title = active && view.frameTitle ? view.frameTitle : RECORDER_TITLE;
@@ -209,7 +209,6 @@ window.Study = (() => {
     view.session = null;
     view.ready = false;
     view.opened = false;
-    view.loginNeeded = false;
     remember(tester);
     history.replaceState({}, "", `/?tester=${tester}`);
     resetForms();
@@ -391,7 +390,6 @@ window.Study = (() => {
     const data = await api(endpoint, "POST", retry ? { session_id: view.session.id } : {});
     view.session = data.session;
     view.ready = false;
-    view.loginNeeded = false;
     view.siteError = false;
     view.pauses = 0;
     resetForms();
@@ -405,15 +403,8 @@ window.Study = (() => {
     view.opened = true;
     await loaded;
     let result = await waitForSite(sessionId);
-    if (result?.reason === "login_required") {
-      const loggedIn = await autoLogin(sessionId);
-      if (!loggedIn) {
-        // No code in this kit: keep the old fallback of typing it inside the site frame.
-        applyPreparation(result);
-        return el("study-frame");
-      }
-      result = loggedIn;
-    }
+    // No code in the kit leaves the login page up: that is a site error, never a prompt for the participant.
+    if (result?.reason === "login_required") result = (await autoLogin(sessionId)) || result;
     if (!result || view.session?.id !== sessionId) return null;
     view.siteError = !result.ready;
     applyPreparation(result);
@@ -423,13 +414,11 @@ window.Study = (() => {
   function applyPreparation(result) {
     const wasReady = view.ready;
     view.ready = Boolean(result.ready);
-    view.loginNeeded = result.reason === "login_required";
     if (result.frame_title) view.frameTitle = result.frame_title;
     if (view.ready) view.siteError = false;
-    // After a failed automatic login the error stays up; the frame remains usable as a fallback.
-    if (!view.ready && view.siteError) message(SITE_UNREACHABLE, true);
+    // A login page means the kit's code is missing or refused; the participant is never asked for it.
+    if (!view.ready && (view.siteError || result.reason === "login_required")) message(SITE_UNREACHABLE, true);
     else message(result.ready ? "사이트가 준비되었습니다. 지시문을 들은 뒤 과업 시작을 누르세요."
-      : view.loginNeeded ? "아래 사이트 칸에 접속 코드를 입력해 주세요. 접속되면 과업 시작 버튼이 나타납니다."
       : "사이트 준비를 확인하고 있습니다.");
     renderControls();
     return !wasReady && view.ready;
@@ -438,7 +427,7 @@ window.Study = (() => {
     const sessionId = view.session.id;
     const result = await bridge("check");
     if (view.session?.id !== sessionId || view.session.status !== "draft") return;
-    // Became ready in the background (code typed into the frame): read the instruction once.
+    // Became ready in the background (e.g. the site came back): read the instruction once.
     if (applyPreparation(result)) presentInstruction().focus();
   }
   // Focus the instruction so NVDA reads it (announce mode "focus"); "과업 시작" follows on Tab.
