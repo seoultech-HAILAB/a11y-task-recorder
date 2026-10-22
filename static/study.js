@@ -365,8 +365,9 @@ window.Study = (() => {
   // Log the iframe in with the kit's access code: a hidden form posts to <copy>/access into the frame.
   async function autoLogin(sessionId) {
     const access = await api("/study/access").catch(() => ({ code: null }));
-    if (!access.code) return null;
     const target = new URL(view.session.target_url);
+    // Never post the code to a site we do not host (tasks on a partner's copies).
+    if (!access.code || target.origin !== access.origin) return null;
     const form = document.createElement("form");
     form.method = "post";
     form.action = `${target.origin}/access`;

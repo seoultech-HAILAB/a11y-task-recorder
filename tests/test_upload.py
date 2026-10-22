@@ -11,6 +11,7 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from recorder.server import RecorderHTTPServer, RecorderStore
+from recorder.study import load_catalog
 from recorder.upload import UploadManager, builtin_access_code, parse_access_code
 
 FAKE_KIT_CODE = "fake-kit-code-for-tests-0001"
@@ -101,6 +102,24 @@ class UploadTests(unittest.TestCase):
         manager.configure({"code": "secret-code-value"})
         self.assertNotIn("secret-code-value", json.dumps(manager.status()))
         self.assertTrue(manager.status()["configured"])
+
+    def test_catalog_upload_url_overrides_the_task_site_origin(self):
+        data = catalog()
+        data["upload_url"] = "https://ours.example.test/upload/session"
+        for task in data["testers"][0]["tasks"]:
+            task["start_url"] = "http://partner.example.test/site/"
+        self.store.study_catalog_path.write_text(json.dumps(data), encoding="utf-8")
+        manager = self.manager(url="", builtin_code=FAKE_KIT_CODE)
+        self.assertEqual("https://ours.example.test/upload/session", manager.settings()["url"])
+        # The access code is only ever offered for our own server, never the partner's task site.
+        self.assertEqual("https://ours.example.test", manager.access()["origin"])
+
+    def test_invalid_catalog_upload_url_is_rejected(self):
+        data = catalog()
+        data["upload_url"] = "ftp://ours.example.test/upload"
+        self.store.study_catalog_path.write_text(json.dumps(data), encoding="utf-8")
+        with self.assertRaises(ValueError):
+            load_catalog(self.store.study_catalog_path)
 
     def test_unreachable_server_leaves_session_queued_and_task_flow_intact(self):
         manager = self.manager(url="http://127.0.0.1:9/upload/session")
