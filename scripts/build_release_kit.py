@@ -167,13 +167,13 @@ table { border-collapse: collapse; } th, td { border-bottom: 1px solid #ccc; pad
 <body>
 <h1>A11y Task Recorder 평가 키트 안내</h1>
 <p>화면낭독기(NVDA)로 웹 과업을 수행하는 동안 누른 키와 들은 안내를 기록하는 도구입니다.
-이 문서는 <strong>노트북을 준비하는 담당자</strong>가 읽습니다. 참가자는 화면 안내와 연습 과업으로 사용법을 익히고, 과업은 혼자 진행합니다.</p>
+이 문서는 <strong>평가용 컴퓨터를 준비하는 담당자</strong>가 읽습니다. 참가자는 화면 안내와 연습 과업으로 사용법을 익힌 뒤 혼자 진행합니다.</p>
 
 <h2>한눈에 보기</h2>
 <ol>
-<li><strong>처음 한 번</strong>: 노트북에 NVDA를 설치합니다.</li>
+<li><strong>처음 한 번</strong>: 평가용 컴퓨터에 NVDA를 설치합니다.</li>
 <li><strong>세션 준비 (담당자, 약 3분)</strong>: 키트를 실행하고 테스터 번호를 고릅니다.</li>
-<li><strong>과업 진행 (참가자 혼자, 약 110분)</strong>: 연습 1개, 과업 12개, 4개마다 휴식.</li>
+<li><strong>과업 진행 (참가자 혼자)</strong>: 연습 1개를 한 뒤 배정된 과업을 합니다. 과업 하나는 최대 10분이고, 4개마다 쉴 수 있습니다.</li>
 <li><strong>마무리 (담당자, 약 2분)</strong>: 결과 ZIP을 만들어 연구진에게 보냅니다.</li>
 </ol>
 
@@ -190,36 +190,37 @@ table { border-collapse: collapse; } th, td { border-bottom: 1px solid #ccc; pad
 <li>키트 폴더의 <strong>평가시작.bat</strong>을 더블클릭합니다. 처음에 Windows 보안 창이 나오면 <strong>추가 정보</strong>, <strong>실행</strong>을 차례로 누릅니다. 연구진에게 받은 키트일 때만 실행하세요.</li>
 <li>잠시 기다리면 NVDA가 다시 켜지고, 검은색 <strong>서버 창</strong>과 기록 화면이 열립니다. 서버 창은 끝날 때까지 <strong>닫지 마세요</strong>. 닫으면 기록이 멈춥니다.</li>
 <li>기록 화면 위쪽에 <strong>NVDA 연결됨</strong>이 보이는지 확인합니다.</li>
-<li>참가자의 <strong>테스터 번호(T01~T20)</strong>를 고르고 <strong>배정 확인</strong>을 누릅니다. 이후 번호 칸은 숨겨집니다.</li>
+<li>참가자의 <strong>테스터 번호</strong>(예: T01)를 고르고 <strong>배정 확인</strong>을 누릅니다. 그러면 번호 칸이 사라집니다.</li>
 <li>화면에 "사이트가 준비되었습니다"가 나오면 참가자에게 자리를 넘깁니다.</li>
 </ol>
 
 <h2>3. 과업 진행 (참가자)</h2>
-<p>참가자는 아래 순서를 연습 과업에서 한 번 해 보고 시작합니다. 담당자는 기술 문제가 생길 때만 돕습니다.</p>
+<p>참가자는 연습 과업에서 아래 순서를 한 번 해 본 뒤 본 과업을 합니다. 담당자는 기술 문제가 생겼을 때만 돕습니다.</p>
 <ol>
-<li><strong>연습</strong>: 처음에는 <strong>연습 시작</strong>을 누릅니다. 연습 지시문이 단축키부터 알려 줍니다. 연습은 기록하지 않습니다.</li>
+<li><strong>연습</strong>: 처음에는 <strong>연습 시작</strong>을 누릅니다. 연습 지시문 뒤에 단축키 안내가 나옵니다. 연습은 기록하지 않습니다.</li>
 <li><strong>듣기</strong>: 지시문으로 초점이 가면 NVDA가 읽어 줍니다.</li>
-<li><strong>시작</strong>: 바로 아래 <strong>과업 시작</strong>을 누르거나 <kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>를 누르면 사이트로 초점이 가고 기록이 시작됩니다.</li>
+<li><strong>시작</strong>: 지시문 바로 아래 <strong>과업 시작</strong> 버튼을 누릅니다. 사이트가 열리고 기록이 시작됩니다.</li>
 <li><strong>수행</strong>: 평소처럼 키보드와 NVDA로 과업을 합니다.</li>
-<li><strong>끝내기</strong>: 다 했거나 더 진행할 수 없으면 <kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>를 누릅니다. 10분이 되면 자동으로 끝납니다.</li>
+<li><strong>끝내기</strong>: 다 했거나 더 진행할 수 없으면 <kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>E</kbd>를 누릅니다. 10분이 지나면 저절로 끝납니다.</li>
 <li><strong>결과</strong>: <strong>마쳤습니다</strong> 또는 <strong>마치지 못했습니다</strong>를 고르고, 답을 적고 <strong>저장</strong>합니다.</li>
 <li><strong>다음</strong>: <strong>다음 과업</strong>을 누르면 2번으로 돌아갑니다. 4개 과업마다 원하는 만큼 쉬어도 됩니다.</li>
 </ol>
-<p>사이트 아래에도 <strong>과업 끝내기</strong> 버튼이 있지만 Tab으로는 가지 않습니다. 마우스나 NVDA 브라우즈 모드로 누르면 "과업을 끝낼까요?"가 나오고, <strong>끝내기</strong>를 눌러야 끝납니다(<strong>계속하기</strong>는 사이트로 돌아감).</p>
+<p>과업 중에 지시문이 기억나지 않으면 <kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>H</kbd>를 누릅니다. 지시문과 끝내는 방법을 다시 읽어 주고, 초점은 사이트에 그대로 있습니다.</p>
+<p>사이트 아래에도 <strong>과업 끝내기</strong> 버튼이 있습니다. 실수로 누르지 않도록 Tab으로는 가지 않고, 마우스나 NVDA 브라우즈 모드(아래 화살표)로만 닿습니다. 누르면 "과업을 끝낼까요?"라고 묻습니다. <strong>끝내기</strong>를 누르면 끝나고, <strong>계속하기</strong>를 누르면 사이트로 돌아갑니다.</p>
 
 <h2>평가 중 단축키</h2>
 <table>
 <tr><th>단축키</th><th>하는 일</th></tr>
-<tr><td><kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></td><td>과업 시작</td></tr>
-<tr><td><kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd></td><td>과업 끝내기 (확인 없이 바로)</td></tr>
-<tr><td><kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd></td><td>지시문 다시 듣기 (끝내는 단축키도 함께 알려 줌)</td></tr>
-<tr><td><kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>L</kbd></td><td>기록 상태 확인 (상승음 두 번: 기록 중, 낮은 음: 대기 중)</td></tr>
+<tr><td><kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>E</kbd></td><td>과업 끝내기 (묻지 않고 바로 끝남)</td></tr>
+<tr><td><kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>H</kbd></td><td>지시문 다시 듣기 (끝내는 단축키도 함께 알려 줌)</td></tr>
+<tr><td><kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>L</kbd></td><td>기록 상태 확인 (높아지는 음 두 번: 기록 중, 낮은 음: 대기 중). 담당자용</td></tr>
 </table>
-<p>단축키를 누르면 확인음이 납니다. 시작과 다시 듣기는 높은 음, 끝내기는 한 단계 낮은 음입니다. 지금 쓸 수 없는 단축키는 낮은 경고음이 납니다. 참가자에게 단축키를 말로 알려 줄 때는 "NVDA, Ctrl, Shift, E를 함께"처럼 쉼표로 끊어 말합니다.</p>
+<p>단축키를 누르면 짧은 확인음이 나고, 지금 쓸 수 없는 단축키는 낮은 경고음이 납니다. 과업 시작은 버튼으로 합니다. 참가자에게 단축키를 말로 알려 줄 때는 "NVDA, Ctrl, E를 함께"처럼 쉼표로 끊어 말해 주세요.</p>
+<p>노트북 배열에서 CapsLock을 NVDA 키로 쓰려면 NVDA 설정의 <strong>키보드</strong>에서 <strong>CapsLock을 NVDA 키로 사용</strong>을 켜야 합니다. 켜지 않으면 CapsLock 단축키가 동작하지 않고 대문자 잠금만 켜집니다.</p>
 
 <h2>4. 마무리 (담당자)</h2>
 <ol>
-<li>12개 과업이 끝나면 "배정된 과업을 모두 마쳤습니다" 화면이 나옵니다.</li>
+<li>배정된 과업이 모두 끝나면 "배정된 과업을 모두 마쳤습니다" 화면이 나옵니다.</li>
 <li>그 화면의 <strong>결과 패키지 만들기 (담당자용)</strong>를 누릅니다. <strong>결과</strong> 폴더가 열리고 ZIP 파일 하나가 생깁니다.</li>
 <li>그 ZIP 파일을 연구진에게 보냅니다(이메일 또는 안내받은 업로드 링크). 과업 기록은 연구 서버로도 자동 전송되지만, <strong>ZIP은 꼭 보내 주세요.</strong></li>
 <li>기록 화면(브라우저)과 서버 창을 닫습니다.</li>
@@ -229,9 +230,10 @@ table { border-collapse: collapse; } th, td { border-bottom: 1px solid #ccc; pad
 <h2>문제 해결</h2>
 <ul>
 <li><strong>기록 화면이 안 열려요</strong>: 서버 창이 열려 있는지 확인하고, 평가용 브라우저에서 <code>http://127.0.0.1:8765</code>를 다시 엽니다.</li>
+<li><strong>배정 확인 뒤 "기록 프로그램에 연결할 수 없습니다"가 나와요</strong>: 평가용 브라우저를 막 연 직후에 생길 수 있습니다. <kbd>F5</kbd>로 기록 화면을 새로 고친 뒤 다시 배정 확인을 누르세요.</li>
 <li><strong>"NVDA 연결됨"이 안 보여요</strong>: 기록 화면과 서버 창을 닫고 <strong>평가시작.bat</strong>을 다시 실행해 보세요. 그래도 안 되면 연구진에게 알려 주세요.</li>
 <li><strong>"사이트에 접속할 수 없습니다"가 나와요</strong>: 인터넷 연결을 확인하고, 그래도 안 되면 연구진에게 알려 주세요.</li>
-<li><strong>단축키를 누르면 낮은 음만 나요</strong>: 지금 그 단축키를 쓸 수 없는 단계입니다(예: 과업 시작 전에 끝내기). 서버 창이 닫히지 않았는지도 확인합니다.</li>
+<li><strong>단축키를 누르면 낮은 음만 나요</strong>: 지금은 그 단축키를 쓸 수 없는 단계입니다(예: 과업 시작 전에 끝내기). 서버 창이 열려 있는지도 확인하세요.</li>
 <li><strong>테스터 번호를 잘못 골랐어요</strong>: <code>http://127.0.0.1:8765/?change-tester=1</code>로 다시 열어 고릅니다. 이미 기록 중인 과업이 있으면 바꿀 수 없습니다.</li>
 <li><strong>_연구진용 폴더</strong>: 연구진이 설치를 점검할 때 쓰는 파일입니다. 담당자는 열거나 실행하지 마세요.</li>
 <li><strong>새 키트로 바꿔야 해요</strong>: 서버 창과 평가용 브라우저를 닫고, 새 ZIP을 다른 폴더에 풉니다. 기존 기록을 이어가려면 이전 키트의 <code>data</code> 폴더 전체를 새 키트로 복사하고, 이전 폴더는 지우지 말고 보관합니다.</li>
@@ -249,7 +251,7 @@ table { border-collapse: collapse; } th, td { border-bottom: 1px solid #ccc; pad
 <div class="note">
 <p>입력한 글자와 주소의 검색어도 가리지 않고 저장합니다. 과업에 넣는 값은 연구진이 준 가상 값입니다.
 <strong>저장하지 않는 것</strong>: 목소리 녹음, 화면 녹화, 화면에 바뀐 내용 자체.
-모든 기록은 이 노트북의 <strong>data</strong> 폴더에 저장되고, 과업이 끝날 때마다 그 과업의 기록이 연구 서버(과업 사이트 서버)로 전송됩니다. 결과 패키지 ZIP도 따로 연구진에게 보냅니다.</p>
+모든 기록은 이 컴퓨터의 <strong>data</strong> 폴더에 저장되고, 과업이 끝날 때마다 그 과업의 기록이 연구진 서버로 전송됩니다. 결과 패키지 ZIP도 따로 연구진에게 보냅니다.</p>
 </div>
 
 <h2>문의</h2>

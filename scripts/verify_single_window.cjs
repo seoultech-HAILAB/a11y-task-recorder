@@ -154,7 +154,7 @@ function a11yState() {
     await waitFocus('study-practice', 3000);
     assert.equal(state['study-shortcuts'].shown, true);
     assert.equal(await dashboard.locator('#study-shortcuts').textContent(),
-      '단축키: 시작 NVDA+Ctrl+Shift+S, 끝내기 NVDA+Ctrl+Shift+E, 지시문 다시 듣기 NVDA+Ctrl+Shift+T');
+      '단축키: 끝내기는 NVDA, Ctrl, E. 지시문 다시 듣기는 NVDA, Ctrl, H.');
     await dashboard.locator('#study-instruction').focus();
     await dashboard.screenshot({ path: path.join(shots, '1-ready.png') });
     check('배정 확인 -> automatic prepare + hidden-form login (no code typed); focus on instruction; tester picker hidden; Tab order = 과업 시작, 연습 시작; shortcut line shown');
@@ -163,9 +163,9 @@ function a11yState() {
     await dashboard.locator('#study-practice').click();
     await waitFocus('study-instruction');
     assert.match(await dashboard.locator('#study-instruction').textContent(),
-      /^연습입니다\. 연습 화면에서 '재료 보기' 버튼을 눌러, 첫 번째 재료를 알려 주세요\. 과업을 할 때 버튼과 단축키를 함께 쓸 수 있습니다\. 과업 시작은 NVDA, Ctrl, Shift, S를 함께, .*끝내기는 한 단계 낮은 확인음/);
+      /^연습입니다\. 연습 화면에서 '재료 보기' 버튼을 눌러, 첫 번째 재료를 알려 주세요\. 과업은 지시문 아래 '과업 시작' 버튼으로 시작합니다\. 끝낼 때는 NVDA, Ctrl, E를 함께 누르세요\. 지시문을 다시 듣고 싶으면 NVDA, Ctrl, H를 누르세요\./);
     const practiceRepeat = (await api('/api/signals', 'POST', { kind: 'repeat', source: 'nvda_addon' })).speak;
-    assert.ok(practiceRepeat.includes('연습') && practiceRepeat.endsWith('끝낼 때는 NVDA, Ctrl, Shift, E를 함께 누르세요.'), practiceRepeat);
+    assert.ok(practiceRepeat.includes('연습') && practiceRepeat.endsWith('끝낼 때는 NVDA, Ctrl, E를 함께 누르세요.'), practiceRepeat);
     await dashboard.locator('#study-start').click();
     await waitPhase('active');
     await waitFocus('study-frame');
@@ -367,7 +367,7 @@ function a11yState() {
     await dashboard.locator('#study-start').click();
     await waitPhase('active');
     const taskRepeat = (await api('/api/signals', 'POST', { kind: 'repeat', source: 'nvda_addon' })).speak;
-    assert.equal(taskRepeat, '3번 과업: 화면에서 안내 문구를 찾아 주세요. 끝낼 때는 NVDA, Ctrl, Shift, E를 함께 누르세요.');
+    assert.equal(taskRepeat, '3번 과업: 화면에서 안내 문구를 찾아 주세요. 끝낼 때는 NVDA, Ctrl, E를 함께 누르세요.');
     assert.equal((await api('/api/signals', 'POST', { kind: 'end', source: 'nvda_addon' })).accepted, true);
     await waitPhase('answering');
     assert.equal(await dashboard.locator('#study-end-confirm').isHidden(), true);

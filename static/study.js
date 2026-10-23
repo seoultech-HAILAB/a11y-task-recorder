@@ -8,8 +8,9 @@
 window.Study = (() => {
   const RECORDER_TITLE = "A11y Task Recorder";
   // Signal tones (add-on): accepted 880 Hz (end 660 Hz), refused 220 Hz.
-  // Read aloud by NVDA: keys are joined with commas, not "+", which NVDA reads as "더하기".
-  const SHORTCUT_INTRO = "과업을 할 때 버튼과 단축키를 함께 쓸 수 있습니다. 과업 시작은 NVDA, Ctrl, Shift, S를 함께, 과업 끝내기는 NVDA, Ctrl, Shift, E를 함께, 지시문 다시 듣기는 NVDA, Ctrl, Shift, T를 함께 누릅니다. 시작과 다시 듣기는 높은 확인음, 끝내기는 한 단계 낮은 확인음이 나고, 지금 쓸 수 없는 단축키는 낮은 경고음이 납니다.";
+  // Read aloud by NVDA: keys are joined with commas, not "+", which Korean NVDA reads as "플러스".
+  // 0.4.2: two announced gestures (end NVDA+Ctrl+E, repeat NVDA+Ctrl+H); start is the button.
+  const SHORTCUT_INTRO = "과업은 지시문 아래 '과업 시작' 버튼으로 시작합니다. 끝낼 때는 NVDA, Ctrl, E를 함께 누르세요. 지시문을 다시 듣고 싶으면 NVDA, Ctrl, H를 누르세요. 단축키를 누르면 짧은 확인음이 나고, 지금 쓸 수 없으면 낮은 경고음이 납니다.";
   // The task comes first so a participant who stops listening early still hears it.
   const PRACTICE_INSTRUCTION = `연습입니다. 연습 화면에서 '재료 보기' 버튼을 눌러, 첫 번째 재료를 알려 주세요. ${SHORTCUT_INTRO}`;
   const SITE_UNREACHABLE = "사이트에 접속할 수 없습니다. 연구진에게 알려 주세요.";
@@ -521,7 +522,7 @@ window.Study = (() => {
     el("study-frame").src = "/practice.html";
     view.frameTitle = "";
     renderPractice();
-    message("연습입니다. 지시문을 들은 뒤 과업 시작을 누르세요. 기록하지 않습니다.");
+    message("연습입니다. 연습은 기록하지 않습니다. 지시문을 들은 뒤 과업 시작을 누르세요.");
     return el("study-instruction");
   }
   // 연습 끝내기: leave practice and prepare the first real task.

@@ -22,12 +22,16 @@ if ANNOUNCE_MODE not in {"focus", "nvda", "both"}:
 END_PROMPT = "과업이 끝났습니다. 결과를 입력해 주세요."
 PRACTICE_INSTRUCTION = "연습입니다. 연습 화면에서 '재료 보기' 버튼을 눌러, 첫 번째 재료를 알려 주세요."
 # Appended to the repeated instruction so the way to end can be heard again during a task.
-END_HINT = "끝낼 때는 NVDA, Ctrl, Shift, E를 함께 누르세요."
+END_HINT = "끝낼 때는 NVDA, Ctrl, E를 함께 누르세요."
 MAX_SIGNALS = 50
 
 
 def _with_end_hint(text: str) -> str:
-    """The instruction followed by how to end the task (NVDA+Ctrl+Shift+T)."""
+    """The instruction followed by how to end the task (NVDA+Ctrl+H, end hint NVDA+Ctrl+E)."""
+    text = text.strip()
+    # A task sentence without a final period ran into the hint as one sentence (Windows check, 10/20).
+    if text and text[-1] not in ".?!。":
+        text += "."
     return "{} {}".format(text, END_HINT).strip()
 
 

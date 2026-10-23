@@ -393,6 +393,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         )
         tones.beep(880, 90)
 
+    # 0.4.2: 안내하는 단축키는 끝내기 NVDA+Ctrl+E, 다시 듣기 NVDA+Ctrl+H 두 개다(NVDA 기본 명령에 없는 조합).
+    # 시작은 "과업 시작" 버튼으로 안내하고, 0.4.1까지의 NVDA+Ctrl+Shift+S/E/T는 호환 별칭으로 남긴다.
     @script(
         description="배정된 과업을 시작합니다 (단일 창 기록기).",
         gestures=("kb:NVDA+control+shift+s",),
@@ -403,7 +405,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
     @script(
         description="진행 중인 과업을 끝내고 결과 입력으로 넘어갑니다.",
-        gestures=("kb:NVDA+control+shift+e",),
+        gestures=("kb:NVDA+control+e", "kb:NVDA+control+shift+e"),
         category=scriptCategory,
     )
     def script_endTask(self, gesture):
@@ -411,7 +413,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
     @script(
         description="현재 과업의 지시문을 다시 읽어 줍니다.",
-        gestures=("kb:NVDA+control+shift+t",),
+        gestures=("kb:NVDA+control+h", "kb:NVDA+control+shift+t"),
         category=scriptCategory,
     )
     def script_repeatInstruction(self, gesture):
