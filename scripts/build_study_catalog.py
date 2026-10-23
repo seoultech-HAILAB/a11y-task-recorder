@@ -25,6 +25,9 @@ CART_PREPARATION = (
     "기록 시작 전에 일반 화면 조작으로 팬트리 수납 바구니 1호 3개를 담고 장바구니를 연다. "
     "준비 조작은 참여자 수행에 포함하지 않는다."
 )
+# The repository is public: the packaged catalog names this placeholder origin, and
+# build_release_kit.py writes the real copy origin into the kit only.
+PUBLIC_ORIGIN = "https://study-copy.invalid"
 HOSTED_PATH = re.compile(r"/s/[0-9a-f]{12}/(?:index\.html|p/[0-9a-f]{16}\.html)")
 
 
@@ -137,7 +140,8 @@ def build_catalog(assignments_path=DEFAULT_ASSIGNMENTS, operator_catalog_path=DE
         assignment_ids.add(assignment_id)
         tester["tasks"].append({
             "id": assignment_id, "task_id": task["id"], "order": order, "block": block,
-            "site_name": task["siteName"], "instruction": task["goal"], "start_url": task["startUrl"],
+            "site_name": task["siteName"], "instruction": task["goal"],
+            "start_url": PUBLIC_ORIGIN + urlsplit(task["startUrl"]).path,
             # State tasks ("…이 화면에 표시됨 (진행자 확인)") have no spoken answer; the flag leaks no answer text.
             "requires_answer": "진행자 확인" not in task["scoring"],
             "time_limit_seconds": 600, "preparation": task["operatorPreparation"],

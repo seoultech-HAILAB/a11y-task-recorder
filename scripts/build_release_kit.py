@@ -27,6 +27,7 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlsplit
 from urllib.request import urlopen
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -338,8 +339,32 @@ def read_access_code(path: Path) -> str:
     return code
 
 
-def build_kit(python_version: str, chrome_version: str, access_code_file: Optional[Path] = None) -> Path:
+# The packaged catalog names this placeholder (scripts/build_study_catalog.py, public repository);
+# the kit gets the real copy origin from a private file.
+PUBLIC_ORIGIN = "https://study-copy.invalid"
+
+
+def read_site_origin(path: Path) -> str:
+    """Origin file (bare origin, or JSON with `origin` such as the lab operator catalog) -> origin. Never printed."""
+    try:
+        text = path.read_text(encoding="utf-8-sig").strip()
+    except OSError as error:
+        raise SystemExit("사본 주소 파일을 읽지 못했습니다: {} ({})".format(path, error.strerror))
+    try:
+        value = json.loads(text).get("origin", "") if text.startswith("{") else text
+    except ValueError:
+        value = ""
+    parts = urlsplit(value) if isinstance(value, str) else None
+    if not parts or parts.scheme != "https" or not parts.hostname or parts.path not in ("", "/") \
+            or parts.query or parts.fragment or parts.username or parts.password:
+        raise SystemExit("사본 주소 파일에서 HTTPS 주소를 찾지 못했습니다: {}".format(path))
+    return "https://" + parts.netloc
+
+
+def build_kit(python_version: str, chrome_version: str, access_code_file: Optional[Path] = None,
+              site_origin_file: Optional[Path] = None) -> Path:
     access_code = read_access_code(access_code_file) if access_code_file else ""
+    site_origin = read_site_origin(site_origin_file) if site_origin_file else ""
     addon_version = read_manifest_version(ROOT / "nvda-addon" / "manifest.ini")
     extension_version = json.loads(
         (ROOT / "browser-extension" / "manifest.json").read_text(encoding="utf-8")
@@ -378,6 +403,13 @@ def build_kit(python_version: str, chrome_version: str, access_code_file: Option
     shutil.copytree(ROOT / "recorder", app / "recorder",
                     ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     shutil.copytree(ROOT / "static", app / "static")
+    catalog_file = app / "recorder" / "study_catalog.json"
+    if site_origin:
+        catalog_file.write_text(catalog_file.read_text(encoding="utf-8").replace(PUBLIC_ORIGIN, site_origin),
+                                encoding="utf-8", newline="\n")
+        log("사본 주소: 키트 배정표에 넣음")
+    else:
+        log("사본 주소: 넣지 않음 (이 키트로는 사이트에 접속할 수 없음, 배포 금지)")
     shutil.copytree(ROOT / "browser-extension", app / "browser-extension")
     shutil.copy2(ROOT / "run.py", app / "run.py")
     shutil.copy2(addon_file, staging / addon_file.name)
@@ -422,6 +454,7 @@ def build_kit(python_version: str, chrome_version: str, access_code_file: Option
                 "Chrome for Testing: {}".format(cft["version"]),
                 "임베디드 Python: {}".format(python_version),
                 "사이트 접속 코드: {}".format("키트에 내장" if access_code else "내장하지 않음"),
+                "사본 주소: {}".format("배정표에 넣음" if site_origin else "넣지 않음"),
                 "",
                 "연구 보고 시 브라우저는 'Chrome for Testing {}(동일 버전 Chrome과 같은 엔진)'으로 기재하세요.".format(cft["version"]),
                 "",
@@ -457,8 +490,14 @@ def main() -> None:
         default=None,
         help="사이트 접속 코드 파일(코드 문자열, 또는 JSON의 code/accessCode). 주면 키트 app/study_access.txt에 넣습니다.",
     )
+    parser.add_argument(
+        "--site-origin-file",
+        type=Path,
+        default=None,
+        help="사본 주소 파일(주소 문자열, 또는 JSON의 origin, 예: lab의 operator-catalog.private.json). 주면 키트 배정표의 자리표시를 바꿉니다.",
+    )
     args = parser.parse_args()
-    build_kit(args.python_version, args.chrome_version, args.access_code_file)
+    build_kit(args.python_version, args.chrome_version, args.access_code_file, args.site_origin_file)
 
 
 if __name__ == "__main__":

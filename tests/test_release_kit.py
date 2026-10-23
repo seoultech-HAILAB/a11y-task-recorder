@@ -90,6 +90,7 @@ class ReleaseDownloadTests(unittest.TestCase):
                                  bundle.read(prefix + "_연구진용/verify_live_pipeline.ps1"))
                 self.assertIn(prefix + "_연구진용/windows-release-validation.md", bundle.namelist())
                 self.assertNotIn(prefix + "app/study_access.txt", bundle.namelist())
+                self.assertIn("https://study-copy.invalid/s/", bundle.read(prefix + "app/recorder/study_catalog.json").decode("utf-8"))
                 # 10/20: nobody types the access code, so the kit guides never ask for one.
                 for guide in ("설치안내.html", "진행안내.md"):
                     self.assertNotIn("접속 코드", bundle.read(prefix + guide).decode("utf-8"), guide)
@@ -100,8 +101,16 @@ class ReleaseDownloadTests(unittest.TestCase):
                 build_release_kit, "BUILD_DIR", root / "dist/kit-build"
             ), patch.object(build_release_kit, "download", side_effect=[chrome, python]), \
                     patch("sys.stdout", io.StringIO()) as printed:
-                artifact = build_release_kit.build_kit("3.12.9", "151.0.7922.71", code_file)
+                origin_file = root / "operator-catalog.private.json"
+                origin_file.write_text(json.dumps({"origin": "https://copies.fixture.test", "tasks": []}), encoding="utf-8")
+                artifact = build_release_kit.build_kit("3.12.9", "151.0.7922.71", code_file, origin_file)
             self.assertNotIn("fake-kit-code-for-tests-0001", printed.getvalue())
+            self.assertNotIn("copies.fixture.test", printed.getvalue())
+            with zipfile.ZipFile(artifact) as bundle:
+                # --site-origin-file swaps the public placeholder for the copy origin in the kit only.
+                catalog = bundle.read(artifact.stem + "/app/recorder/study_catalog.json").decode("utf-8")
+                self.assertNotIn("study-copy.invalid", catalog)
+                self.assertIn('"https://copies.fixture.test/s/', catalog)
             with zipfile.ZipFile(artifact) as bundle:
                 self.assertEqual("fake-kit-code-for-tests-0001\n",
                                  bundle.read(prefix + "app/study_access.txt").decode("utf-8"))
@@ -117,6 +126,18 @@ class ReleaseDownloadTests(unittest.TestCase):
                 build_release_kit.read_access_code(path)
             with self.assertRaises(SystemExit):
                 build_release_kit.read_access_code(Path(directory) / "missing.txt")
+
+    def test_site_origin_file_accepts_bare_or_json_and_rejects_non_origins(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "origin.txt"
+            path.write_text("\ufeff https://copies.fixture.test \n", encoding="utf-8")
+            self.assertEqual("https://copies.fixture.test", build_release_kit.read_site_origin(path))
+            path.write_text('{"origin": "https://copies.fixture.test/"}', encoding="utf-8")
+            self.assertEqual("https://copies.fixture.test", build_release_kit.read_site_origin(path))
+            for bad in ('{"origin": ""}', "http://copies.fixture.test", "https://copies.fixture.test/s/x", "not json {"):
+                path.write_text(bad, encoding="utf-8")
+                with self.assertRaises(SystemExit, msg=bad):
+                    build_release_kit.read_site_origin(path)
 
     def test_chrome_argument_templates_preserve_paths_with_spaces(self):
         script = (Path(__file__).resolve().parents[1] / "scripts/verify_live_pipeline.ps1").read_text(encoding="utf-8")
