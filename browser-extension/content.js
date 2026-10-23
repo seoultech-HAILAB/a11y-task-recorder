@@ -31,6 +31,18 @@
     return;
   }
 
+  // 0.4.2: when a task starts the dashboard asks its study frame to focus the site's first
+  // control, so NVDA's cursor starts in the site (Windows check F3, 10/20). Same rule as study.js.
+  if (!isTop) {
+    window.addEventListener("message", (event) => {
+      if (event.source !== window.parent || event.origin !== "http://127.0.0.1:8765" ||
+          event.data?.kind !== "a11y-study-focus-site") return;
+      const selector = 'a[href], button, input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])';
+      [...document.querySelectorAll(selector)].find((node) => !node.disabled &&
+        node.getClientRects().length > 0 && !node.closest("[inert], [aria-hidden='true']"))?.focus();
+    });
+  }
+
   const mutationBuffer = {
     added: 0,
     removed: 0,

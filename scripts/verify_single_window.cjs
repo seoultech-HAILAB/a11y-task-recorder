@@ -69,7 +69,7 @@ function a11yState() {
   const stopRecorder = async () => { if (recorder && recorder.exitCode === null) { recorder.kill('SIGTERM'); await new Promise(r => recorder.once('exit', r)); } };
   const stopHosted = async proc => { if (!proc || proc.exitCode !== null) return; try { process.kill(-proc.pid, 'SIGTERM'); } catch { proc.kill('SIGTERM'); } await new Promise(r => proc.once('exit', r)); };
   try {
-    copyMount(path.join(LAB, 'runs/hosted-benchmark-v3-perfe-20261009/public/s', MOUNT), path.join(temp, 'public/s', MOUNT));
+    copyMount(path.join(LAB, 'runs/hosted-benchmark-v4b-inframe-20261023/public/s', MOUNT), path.join(temp, 'public/s', MOUNT));
     fs.writeFileSync(path.join(temp, 'creds.json'), JSON.stringify({ accessCode: ACCESS_CODE, signingKey: 'e2e-signing-key-not-a-secret-0123456789' }));
     hosted = spawnHosted();
     await waitFor(async () => (await fetch(`${hostedOrigin}/healthz`)).ok, 'hosted server');
@@ -169,6 +169,9 @@ function a11yState() {
     await dashboard.locator('#study-start').click();
     await waitPhase('active');
     await waitFocus('study-frame');
+    // F3: focus moves to the practice page's first control (same-origin path).
+    const practiceFrame = await (await dashboard.$('#study-frame')).contentFrame();
+    await practiceFrame.waitForFunction(() => document.activeElement && document.activeElement !== document.body, null, { timeout: 3000 });
     await dashboard.frameLocator('#study-frame').locator('#show').click();
     await api('/api/signals', 'POST', { kind: 'end', source: 'nvda_addon' });
     await waitPhase('answering');
@@ -188,6 +191,18 @@ function a11yState() {
     assert.equal((await api('/api/signals', 'POST', { kind: 'start', source: 'nvda_addon' })).accepted, true);
     await waitPhase('active');
     await waitFocus('study-frame');
+    // F3: the copy's first control gets focus through the content script, as on a newly opened page.
+    const copyFrame = await (await dashboard.$('#study-frame')).contentFrame();
+    await copyFrame.waitForFunction(() => document.activeElement && document.activeElement !== document.body, null, { timeout: 5000 });
+    const firstFocus = await copyFrame.evaluate(() => document.activeElement.outerHTML.slice(0, 60));
+    // F2: header, skip link and footer are inert; Shift+Tab from the first control never reaches the home link.
+    for (const selector of ['.skip-link', '.app-header', 'body > footer']) assert.equal(await dashboard.locator(selector).getAttribute('inert'), '', selector);
+    await dashboard.keyboard.press('Shift+Tab');
+    await sleep(300);
+    const beforeFrame = await dashboard.evaluate(() => document.activeElement?.closest('.app-header, .skip-link, footer') ? 'header' : document.activeElement?.id || document.activeElement?.tagName);
+    assert.notEqual(beforeFrame, 'header');
+    await copyFrame.evaluate(() => document.activeElement.blur());
+    await dashboard.locator('#study-frame').focus();
     state = await a11y();
     assert.equal(await dashboard.locator('#study-top').getAttribute('aria-hidden'), 'true');
     assert.equal(await dashboard.locator('#study-start').getAttribute('tabindex'), '-1');
@@ -211,6 +226,7 @@ function a11yState() {
     assert.ok(endBox.y + endBox.height <= 900, `end button inside the viewport (${Math.round(endBox.y)})`);
     await dashboard.waitForFunction(() => document.title !== 'A11y Task Recorder', null, { timeout: 10000 });
     const mirrored = await dashboard.title();
+    check(`active: first site control focused (${firstFocus}); header/skip link/footer inert, Shift+Tab went to ${beforeFrame}`);
     check(`active: top shelved; Tab order in view = frame only (과업 끝내기 visible, not aria-hidden, tabindex -1; Tab after the site went to ${afterFrame}); title mirrors copy: ${mirrored}`);
 
     // The button asks first; focus lands on 계속하기, and only then are 끝내기/계속하기 tabbable.

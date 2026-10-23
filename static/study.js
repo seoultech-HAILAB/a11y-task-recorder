@@ -113,6 +113,9 @@ window.Study = (() => {
     const frame = el("study-frame");
     const active = current === "active";
     shelve(el("study-top"), active);
+    // During a task Shift+Tab and browse mode stay in the site: the recorder header (home link
+    // reloaded the copy) and footer are locked (Windows check F2, 10/20).
+    for (const region of document.querySelectorAll(".skip-link, .app-header, body > footer")) region.toggleAttribute("inert", active);
     // The frame stays hidden while a task is prepared: the kit logs it in, nobody types a code.
     const showFrame = active || current === "answering" || current === "ended";
     el("study-stage").hidden = !(showFrame || current === "ready");
@@ -450,7 +453,22 @@ window.Study = (() => {
     await refreshPlan();
     render();
     message("기록 중입니다.");
+    requestAnimationFrame(focusSite);
     return el("study-frame");
+  }
+  // After busy() focuses the frame, move focus to the site's first control as on a newly opened
+  // page, so NVDA's cursor starts inside the site (Windows check F3, 10/20). The practice page is
+  // same-origin; a copy is asked through the extension's content script in the frame.
+  function focusSite() {
+    const frame = el("study-frame");
+    if (phase() !== "active" || document.activeElement !== frame) return;
+    const doc = frame.contentDocument;
+    if (doc) firstControl(doc)?.focus();
+    else frame.contentWindow?.postMessage({ kind: "a11y-study-focus-site" }, "*");
+  }
+  function firstControl(doc) {
+    const selector = 'a[href], button, input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])';
+    return [...doc.querySelectorAll(selector)].find(node => !node.disabled && node.getClientRects().length > 0 && !node.closest("[inert], [aria-hidden='true']"));
   }
   async function endTask(reason) {
     const data = await api(`/sessions/${view.session.id}/end-task`, "POST", { reason });
@@ -556,7 +574,7 @@ window.Study = (() => {
     if (signal.kind === "start" && view.practice.phase === "ready") practiceStart().focus();
     else if (signal.kind === "end" && view.practice.phase === "active") practiceEnd().focus();
   }
-  function practiceStart() { view.practice.phase = "active"; renderPractice(); message("연습 중입니다."); return el("study-frame"); }
+  function practiceStart() { view.practice.phase = "active"; renderPractice(); message("연습 중입니다."); requestAnimationFrame(focusSite); return el("study-frame"); }
   function practiceEnd() { view.practice.phase = "answering"; renderPractice(); message("연습 과업이 끝났습니다. 결과를 입력해 주세요."); return el("study-result-heading"); }
   function practiceSubmit() {
     const outcome = document.querySelector('input[name="study-done"]:checked')?.value;
