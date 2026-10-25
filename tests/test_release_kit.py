@@ -115,6 +115,22 @@ class ReleaseDownloadTests(unittest.TestCase):
                 self.assertEqual("fake-kit-code-for-tests-0001\n",
                                  bundle.read(prefix + "app/study_access.txt").decode("utf-8"))
                 self.assertNotIn("fake-kit-code-for-tests-0001", bundle.read(prefix + "_연구진용/KIT-INFO.txt").decode("utf-8"))
+            # --catalog swaps the assignment table, names the kit after it, and .omc never ships.
+            (root / "browser-extension/.omc").mkdir(exist_ok=True)
+            (root / "browser-extension/.omc/state.json").write_text("{}", encoding="utf-8")
+            peer = root / "peer-check.catalog.json"
+            peer.write_text(json.dumps({"id": "peer", "upload_url": "https://study-copy.invalid/upload/session"}),
+                            encoding="utf-8")
+            with patch.object(build_release_kit, "ROOT", root), patch.object(
+                build_release_kit, "BUILD_DIR", root / "dist/kit-build"
+            ), patch.object(build_release_kit, "download", side_effect=[chrome, python]), \
+                    patch("sys.stdout", io.StringIO()):
+                artifact = build_release_kit.build_kit("3.12.9", "151.0.7922.71", code_file, origin_file, peer)
+            self.assertTrue(artifact.stem.endswith("-peer-check"))
+            with zipfile.ZipFile(artifact) as bundle:
+                self.assertEqual({"id": "peer", "upload_url": "https://copies.fixture.test/upload/session"},
+                                 json.loads(bundle.read(artifact.stem + "/app/recorder/study_catalog.json")))
+                self.assertFalse([name for name in bundle.namelist() if "/.omc/" in name])
 
     def test_access_code_file_accepts_bare_or_json_and_rejects_empty(self):
         with tempfile.TemporaryDirectory() as directory:

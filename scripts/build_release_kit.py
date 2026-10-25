@@ -362,7 +362,7 @@ def read_site_origin(path: Path) -> str:
 
 
 def build_kit(python_version: str, chrome_version: str, access_code_file: Optional[Path] = None,
-              site_origin_file: Optional[Path] = None) -> Path:
+              site_origin_file: Optional[Path] = None, catalog_file: Optional[Path] = None) -> Path:
     access_code = read_access_code(access_code_file) if access_code_file else ""
     site_origin = read_site_origin(site_origin_file) if site_origin_file else ""
     addon_version = read_manifest_version(ROOT / "nvda-addon" / "manifest.ini")
@@ -393,6 +393,9 @@ def build_kit(python_version: str, chrome_version: str, access_code_file: Option
     )
 
     kit_name = "A11yTaskRecorder-{}-chrome{}".format(addon_version, cft["version"])
+    if catalog_file:
+        # A kit with its own assignment table (e.g. a peer check) must not overwrite the main kit.
+        kit_name += "-" + catalog_file.stem.split(".")[0]
     staging = BUILD_DIR / kit_name
     if staging.exists():
         remove_tree(staging)
@@ -400,17 +403,21 @@ def build_kit(python_version: str, chrome_version: str, access_code_file: Option
     app.mkdir(parents=True)
 
     log("구성 요소 복사 중...")
-    shutil.copytree(ROOT / "recorder", app / "recorder",
-                    ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
-    shutil.copytree(ROOT / "static", app / "static")
-    catalog_file = app / "recorder" / "study_catalog.json"
+    # .omc is the coding agent's local state, never part of the kit.
+    skip = shutil.ignore_patterns("__pycache__", "*.pyc", ".omc")
+    shutil.copytree(ROOT / "recorder", app / "recorder", ignore=skip)
+    shutil.copytree(ROOT / "static", app / "static", ignore=skip)
+    kit_catalog = app / "recorder" / "study_catalog.json"
+    if catalog_file:
+        shutil.copy2(catalog_file, kit_catalog)
+        log("배정표: {}".format(catalog_file.name))
     if site_origin:
-        catalog_file.write_text(catalog_file.read_text(encoding="utf-8").replace(PUBLIC_ORIGIN, site_origin),
-                                encoding="utf-8", newline="\n")
+        kit_catalog.write_text(kit_catalog.read_text(encoding="utf-8").replace(PUBLIC_ORIGIN, site_origin),
+                               encoding="utf-8", newline="\n")
         log("사본 주소: 키트 배정표에 넣음")
     else:
         log("사본 주소: 넣지 않음 (이 키트로는 사이트에 접속할 수 없음, 배포 금지)")
-    shutil.copytree(ROOT / "browser-extension", app / "browser-extension")
+    shutil.copytree(ROOT / "browser-extension", app / "browser-extension", ignore=skip)
     shutil.copy2(ROOT / "run.py", app / "run.py")
     shutil.copy2(addon_file, staging / addon_file.name)
     research = staging / "_연구진용"  # 설치 점검 도구: 담당자가 실수로 실행하지 않게 최상위에서 뺀다
@@ -455,6 +462,7 @@ def build_kit(python_version: str, chrome_version: str, access_code_file: Option
                 "임베디드 Python: {}".format(python_version),
                 "사이트 접속 코드: {}".format("키트에 내장" if access_code else "내장하지 않음"),
                 "사본 주소: {}".format("배정표에 넣음" if site_origin else "넣지 않음"),
+                "배정표: {}".format(catalog_file.name if catalog_file else "기본(recorder/study_catalog.json)"),
                 "",
                 "연구 보고 시 브라우저는 'Chrome for Testing {}(동일 버전 Chrome과 같은 엔진)'으로 기재하세요.".format(cft["version"]),
                 "",
@@ -496,8 +504,15 @@ def main() -> None:
         default=None,
         help="사본 주소 파일(주소 문자열, 또는 JSON의 origin, 예: lab의 operator-catalog.private.json). 주면 키트 배정표의 자리표시를 바꿉니다.",
     )
+    parser.add_argument(
+        "--catalog",
+        type=Path,
+        default=None,
+        help="기본 배정표(recorder/study_catalog.json) 대신 넣을 배정표. 파일 이름 첫 부분이 키트 이름 끝에 붙습니다.",
+    )
     args = parser.parse_args()
-    build_kit(args.python_version, args.chrome_version, args.access_code_file, args.site_origin_file)
+    build_kit(args.python_version, args.chrome_version, args.access_code_file, args.site_origin_file,
+              args.catalog)
 
 
 if __name__ == "__main__":
