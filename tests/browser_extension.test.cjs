@@ -60,3 +60,28 @@ test('continuous mutations flush within the first 450 ms with the full page URL'
   // DOM changes are still summarized as counts, not raw paths or text.
   assert.ok(!JSON.stringify(event).includes('DOM-ID'));
 });
+
+test('a study frame re-sends an unchanged title until the background accepts it', async () => {
+  const messages = [];
+  const replies = [{ accepted: false }, { accepted: true }];
+  let tick;
+  const window = { location: new URL('http://partner.example/koref/web/user/'), addEventListener() {} };
+  window.top = {};
+  vm.runInNewContext(fs.readFileSync('browser-extension/content.js', 'utf8'), {
+    URL, Date, Set, Element: class {}, Node: { ELEMENT_NODE: 1 }, window,
+    document: { title: '한국에너지재단', readyState: 'complete', documentElement: { lang: 'ko' } },
+    chrome: { runtime: { sendMessage: (message) => { messages.push(message); return Promise.resolve(message.kind === 'recorder-frame-title' ? replies.shift() : undefined); } } },
+    MutationObserver: class { observe() {} },
+    setTimeout: () => 0, clearTimeout: () => {}, setInterval: (callback) => { tick = callback; return 1; },
+  });
+  const titles = () => messages.filter(m => m.kind === 'recorder-frame-title').length;
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(titles(), 1);
+  tick();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(titles(), 2, 'sent again after a refused report');
+  tick();
+  tick();
+  assert.equal(titles(), 2, 'not sent again once accepted and unchanged');
+  assert.equal(messages.find(m => m.kind === 'recorder-frame-title').title, '한국에너지재단');
+});

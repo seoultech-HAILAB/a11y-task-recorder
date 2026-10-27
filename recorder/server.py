@@ -218,6 +218,19 @@ class RecorderStore(StudyFlowMixin):
             "SELECT catalog FROM study_catalog WHERE singleton = 1"
         ).fetchone()["catalog"])
 
+    def study_frame_origins(self) -> List[str]:
+        """Plain-http task origins the dashboard CSP must allow as frames: a partner's test
+        copies (SNC, 0.4.2). Our copies are https and loopback rehearsals are always allowed."""
+        with self.connect() as connection:
+            catalog = self._study_catalog(connection)
+        origins = set()
+        for tester in catalog.get("testers", []):
+            for task in tester.get("tasks", []):
+                parts = urlparse(str(task.get("start_url", "")))
+                if parts.scheme == "http" and parts.netloc and parts.hostname not in ("127.0.0.1", "localhost"):
+                    origins.add("http://{}".format(parts.netloc))
+        return sorted(origins)
+
     def _study_progress(self, connection: sqlite3.Connection, catalog: Dict[str, Any], tester: str) -> Dict[str, Any]:
         assigned = next((entry for entry in catalog["testers"] if entry["id"] == tester), None)
         if assigned is None:
@@ -2113,8 +2126,14 @@ class RecorderHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", content_type)
         self.send_header("X-Content-Type-Options", "nosniff")
         # frame-src: the single-window dashboard embeds the HTTPS study copy (0.4.0); loopback http is for rehearsals.
+        # A partner's test copy served over plain http (SNC, 0.4.2) is allowed by its catalog origin only.
+        frame_src = "'self' https: http://127.0.0.1:* http://localhost:*"
+        try:
+            frame_src = " ".join([frame_src, *self.server.store.study_frame_origins()])
+        except Exception:
+            pass
         self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self';"
-                         " frame-src 'self' https: http://127.0.0.1:* http://localhost:*")
+                         " frame-src {}".format(frame_src))
         if download_name:
             self.send_header(
                 "Content-Disposition", 'attachment; filename="{}"'.format(download_name)

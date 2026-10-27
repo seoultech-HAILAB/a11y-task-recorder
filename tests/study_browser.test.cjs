@@ -220,7 +220,7 @@ test('dashboard bridge ignores foreign window/origin and removes arbitrary paylo
   assert.equal(responses[0][1], window.location.origin);
 });
 
-function studyPage({ preparation = [], login = false, capture = true, url = target, allow = true } = {}) {
+function studyPage({ preparation = [], login = false, capture = true, url = target, allow = true, assigned = target } = {}) {
   let handler;
   const clicks = [];
   const quantity = { value: '0' };
@@ -246,10 +246,40 @@ function studyPage({ preparation = [], login = false, capture = true, url = targ
   return { clicks, quantity, name, dialog, decrease, feedback, elements,
     run(sender = { id: 'extension' }) {
       if (!handler) return Promise.resolve({ reason: 'unimplemented' });
-      return new Promise(resolve => handler({ kind: 'a11y-study-page', targetUrl: target,
+      return new Promise(resolve => handler({ kind: 'a11y-study-page', targetUrl: assigned,
         preparation, allowPreparation: allow }, sender, resolve));
     } };
 }
+
+// A partner's test copy (SNC, http only, no /s/<id>/ path, no capture meta) is ready once the
+// assigned URL has loaded; our own copies keep the https and capture-meta rules.
+test('a partner test copy over http is ready at its assigned URL without a capture meta', async () => {
+  const partner = 'http://partner.example/koref/web/user/';
+  const page = studyPage({ url: partner, assigned: partner, capture: false });
+  const result = await page.run();
+  assert.equal(result.ready, true);
+  assert.equal(result.setup.actions.length, 0);
+  assert.equal(result.setup.excluded_from_participant_recording, true);
+  assert.equal(page.clicks.length, 0);
+  assert.equal((await studyPage({ url: `${partner}other.do`, assigned: partner, capture: false }).run()).reason, 'wrong_url');
+  assert.equal((await studyPage({ url: partner, assigned: partner, capture: false, preparation: ['cart precondition'] }).run()).reason,
+    'preparation_scope_mismatch');
+  const plainCopy = 'http://study.example/s/0123456789ab/index.html';
+  assert.equal((await studyPage({ url: plainCopy, assigned: plainCopy }).run()).reason, 'wrong_url');
+});
+
+test('background accepts a partner test copy over http as the assigned URL, still not our copies over http', async () => {
+  const partner = 'http://partner.example/koref/web/user/';
+  const app = background({ frameUrl: partner });
+  app.sessions.one.target_url = partner;
+  const result = await app.command('prepare');
+  assert.equal(result.ready, true);
+  assert.equal(result.frameId, FRAME);
+  for (const bad of [`${partner}?x=1`, `${partner}#top`, 'http://user:pw@partner.example/koref/', 'http://study.example/s/0123456789ab/index.html', 'ftp://partner.example/']) {
+    app.sessions.two.target_url = bad;
+    assert.equal((await app.command('prepare', 'two')).reason, 'invalid_assignment_url', bad);
+  }
+});
 
 test('study page refuses login, missing capture, and a nonassigned URL before actions', async () => {
   for (const [options, reason] of [[{ login: true }, 'login_required'],

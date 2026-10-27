@@ -6,8 +6,12 @@
     const assigned = new URL(message.targetUrl);
     const current = new URL(window.location.href);
     const loopback = assigned.protocol === "http:" && ["127.0.0.1", "localhost"].includes(assigned.hostname);
-    if ((assigned.protocol !== "https:" && !loopback) ||
-        !/^\/s\/[a-f0-9]{12}\/(?:index\.html|p\/[a-f0-9]{16}\.html)$/.test(assigned.pathname) ||
+    // Our hosted copies live under /s/<id>/ over https (loopback http in rehearsals). Any other
+    // http(s) start URL is a partner's test copy (catalog upload_url, 0.4.2): it has no capture
+    // meta and no preparation steps, and the readiness check is the assigned URL having loaded.
+    const hostedCopy = /^\/s\/[a-f0-9]{12}\/(?:index\.html|p\/[a-f0-9]{16}\.html)$/.test(assigned.pathname);
+    if (!["http:", "https:"].includes(assigned.protocol) ||
+        (hostedCopy && assigned.protocol !== "https:" && !loopback) ||
         (current.href !== assigned.href && current.href !== `${assigned.origin}/access`)) {
       return { ready: false, reason: "wrong_url" };
     }
@@ -16,6 +20,14 @@
       return { ready: false, reason: "login_required" };
     }
     if (current.href !== assigned.href) return { ready: false, reason: "wrong_url" };
+    if (!hostedCopy) {
+      if (!Array.isArray(message.preparation)) return { ready: false, reason: "invalid_preparation" };
+      if (message.preparation.length) return { ready: false, reason: "preparation_scope_mismatch" };
+      return { ready: true, setup: {
+        method: "operator_automation", actions: [], checked_at: new Date().toISOString(),
+        excluded_from_participant_recording: true,
+      } };
+    }
     const meta = document.querySelector('meta[name="capture-source"]');
     if (!meta?.content) return { ready: false, reason: "capture_missing" };
     let source;

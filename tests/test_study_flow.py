@@ -184,6 +184,30 @@ class StudyFlowTests(unittest.TestCase):
         self.assertIn("연습", practice["speak"])
         self.assertTrue(practice["speak"].endswith("끝낼 때는 NVDA, Ctrl, E를 함께 누르세요."))
 
+    def test_dashboard_csp_allows_plain_http_partner_copies_from_the_catalog(self):
+        # Our copies are https (always allowed); a partner's test copy over plain http (SNC)
+        # is allowed by its exact catalog origin, and nothing else is added.
+        self.assertEqual([], self.store.study_frame_origins())
+        data = catalog()
+        data["testers"][0]["tasks"][0]["start_url"] = "http://partner.example.test/koref/web/user/"
+        data["testers"][0]["tasks"][1]["start_url"] = "http://partner.example.test:8080/cj/"
+        data["testers"][0]["tasks"][2]["start_url"] = "http://localhost:8765/practice.html"
+        path = Path(self.temp.name) / "partner.json"
+        path.write_text(json.dumps(data), encoding="utf-8")
+        store = RecorderStore(Path(self.temp.name) / "partner.sqlite3")
+        store.study_catalog_path = path
+        self.assertEqual(["http://partner.example.test", "http://partner.example.test:8080"], store.study_frame_origins())
+        server = RecorderHTTPServer(("127.0.0.1", 0), store)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            with urlopen(Request("http://127.0.0.1:%s/" % server.server_port, headers={"User-Agent": "test"})) as response:
+                csp = response.headers["Content-Security-Policy"]
+        finally:
+            server.shutdown()
+            server.server_close()
+        self.assertIn("frame-src 'self' https: http://127.0.0.1:* http://localhost:*"
+                      " http://partner.example.test http://partner.example.test:8080", csp)
+
     def test_http_flow_end_answer_signals(self):
         server = RecorderHTTPServer(("127.0.0.1", 0), self.store)
         threading.Thread(target=server.serve_forever, daemon=True).start()

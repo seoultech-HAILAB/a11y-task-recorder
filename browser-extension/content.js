@@ -165,12 +165,20 @@
 
   // Since 0.4.0 the study copy runs inside the dashboard's iframe. The dashboard
   // mirrors the copy's title into the window title (NVDA+T, help level 1), so the
-  // frame reports its title whenever it changes.
+  // frame reports its title whenever it changes. A report the background cannot accept yet
+  // (the frame loads before the readiness check creates the study state) is sent again at
+  // the next tick, so a site whose title never changes still reaches the window title.
   let reportedTitle = null;
   function reportTitle() {
     if (isTop || document.title === reportedTitle) return;
     reportedTitle = document.title;
-    post({ kind: "recorder-frame-title", title: document.title, url: currentUrl() });
+    try {
+      chrome.runtime.sendMessage({ kind: "recorder-frame-title", title: document.title, url: currentUrl() })
+        .then((reply) => { if (!reply?.accepted) reportedTitle = null; })
+        .catch(() => { reportedTitle = null; });
+    } catch {
+      reportedTitle = null;
+    }
   }
 
   function start() {

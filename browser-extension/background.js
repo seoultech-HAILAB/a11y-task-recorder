@@ -30,11 +30,14 @@ function studyOriginOk(target) {
   return target.protocol === "https:" ||
     (target.protocol === "http:" && ["127.0.0.1", "localhost"].includes(target.hostname));
 }
+// A partner's test copy (0.4.2, catalog upload_url) is any other plain http(s) URL without
+// credentials, query or fragment; the frame must then show exactly that URL (study-page.js).
 function assignedUrlOk(value) {
   try {
     const target = new URL(value);
-    return studyOriginOk(target) && !target.username && !target.password && !target.search && !target.hash &&
-      /^\/s\/[a-f0-9]{12}\/(?:index\.html|p\/[a-f0-9]{16}\.html)$/.test(target.pathname);
+    if (!["http:", "https:"].includes(target.protocol) || target.username || target.password || target.search || target.hash) return false;
+    const hostedCopy = /^\/s\/[a-f0-9]{12}\/(?:index\.html|p\/[a-f0-9]{16}\.html)$/.test(target.pathname);
+    return !hostedCopy || studyOriginOk(target);
   } catch { return false; }
 }
 
