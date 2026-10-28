@@ -37,7 +37,8 @@ function background({ frameUrl = target } = {}) {
         sendMessage: async (id, msg, options) => { calls.push(['page', id, msg, options]); return page; } },
       action: { setBadgeText: async () => {}, setBadgeBackgroundColor: async () => {}, setTitle: async () => {} },
       webNavigation: { getAllFrames: async ({ tabId }) => tabId === DASHBOARD ? frames : [],
-        onCommitted: { addListener: fn => navigation.committed = fn }, onHistoryStateUpdated: { addListener: fn => navigation.history = fn } } },
+        onCommitted: { addListener: fn => navigation.committed = fn }, onHistoryStateUpdated: { addListener: fn => navigation.history = fn },
+        onErrorOccurred: { addListener: fn => navigation.error = fn } } },
     fetch: async (url, options = {}) => {
       calls.push(['fetch', url, options]);
       if (url.endsWith('/api/active-session')) return { ok: true, json: async () => ({ session: active }) };
@@ -322,4 +323,87 @@ test('cart preparation is restricted to the captured Daiso catalog page', async 
   page.elements['meta[name="capture-source"]'].content = 'http://ai.testatoz.com/cj/';
   assert.equal((await page.run()).reason, 'preparation_scope_mismatch');
   assert.equal(page.clicks.length, 0);
+});
+
+// Windows pilot 10/28: Alt+Left / Alt+Home in the study frame go through the recorder, and
+// back never goes past the history entry the task started on.
+// Objects made inside the vm context have another Object prototype.
+const plain = value => JSON.parse(JSON.stringify(value));
+function studyFrame({ ancestor = 'http://127.0.0.1:8765', entries = ['s0', 'k1', 'k2'], current = 2 } = {}) {
+  const handlers = {};
+  const posted = [];
+  const backs = [];
+  const focused = [];
+  const parent = { postMessage: (data, origin) => posted.push([data, origin]) };
+  const location = new URL(target);
+  location.ancestorOrigins = [ancestor];
+  const nav = { entries: () => entries.map((key, index) => ({ key, index })),
+    get currentEntry() { return { key: entries[current], index: current }; },
+    back() { backs.push(current); return { committed: Promise.resolve(), finished: Promise.resolve() }; } };
+  const window = { location, parent, top: parent, navigation: nav,
+    addEventListener: (name, fn) => { (handlers[name] ||= []).push(fn); } };
+  const link = { disabled: false, getClientRects: () => [{}], closest: () => null, focus: () => focused.push('link') };
+  const document = { readyState: 'complete', title: '사본', documentElement: { lang: 'ko' }, addEventListener() {},
+    querySelectorAll: () => [link] };
+  vm.runInNewContext(fs.readFileSync('browser-extension/content.js', 'utf8'), {
+    URL, Date, Set, Element: class {}, Node: { ELEMENT_NODE: 1 }, window, document,
+    MutationObserver: class { observe() {} }, setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0,
+    chrome: { runtime: { sendMessage: async () => ({ accepted: true }) } } });
+  const key = (init) => { let prevented = false;
+    for (const fn of handlers.keydown || []) fn({ ctrlKey: false, metaKey: false, shiftKey: false, altKey: false, ...init, preventDefault: () => { prevented = true; } });
+    return prevented; };
+  const message = data => { for (const fn of handlers.message || []) fn({ source: parent, origin: 'http://127.0.0.1:8765', data }); };
+  return { posted, backs, focused, key, message, setCurrent: value => { current = value; } };
+}
+
+test('study frame sends Alt+Left and Alt+Home to the recorder instead of the browser', () => {
+  const frame = studyFrame();
+  assert.equal(frame.key({ altKey: true, key: 'ArrowLeft' }), true);
+  assert.equal(frame.key({ altKey: true, key: 'Home' }), true);
+  assert.equal(frame.key({ key: 'BrowserBack' }), true);
+  assert.equal(frame.key({ key: 'ArrowLeft' }), false, 'plain arrows stay with the site and NVDA');
+  assert.equal(frame.key({ altKey: true, shiftKey: true, key: 'ArrowLeft' }), false);
+  assert.deepEqual(frame.posted.map(([data, origin]) => [data.action, origin]),
+    [['back', 'http://127.0.0.1:8765'], ['start', 'http://127.0.0.1:8765'], ['back', 'http://127.0.0.1:8765']]);
+  const other = studyFrame({ ancestor: 'https://news.example' });
+  assert.equal(other.key({ altKey: true, key: 'ArrowLeft' }), false, 'frames outside the recorder keep the browser key');
+  assert.equal(other.posted.length, 0);
+});
+
+test('recorder back goes back inside the frame but never past the task start entry', () => {
+  const frame = studyFrame({ entries: ['login', 's0', 'k1'], current: 2 });
+  frame.message({ kind: 'a11y-study-site-back', startKey: 's0' });
+  assert.deepEqual(frame.backs, [2]);
+  assert.deepEqual(plain(frame.posted.at(-1)[0]), { kind: 'a11y-study-site-back', moved: true });
+  frame.setCurrent(1);
+  frame.message({ kind: 'a11y-study-site-back', startKey: 's0' });
+  assert.deepEqual(plain(frame.posted.at(-1)[0]), { kind: 'a11y-study-site-back', moved: false });
+  frame.setCurrent(2);
+  frame.message({ kind: 'a11y-study-site-back', startKey: 'missing' });
+  assert.deepEqual(plain(frame.posted.at(-1)[0]), { kind: 'a11y-study-site-back', moved: false });
+  assert.deepEqual(frame.backs, [2], 'only the first request moved');
+});
+
+test('focus request reports the start entry and focuses only when asked', () => {
+  const frame = studyFrame({ current: 0 });
+  frame.message({ kind: 'a11y-study-focus-site', focus: false });
+  assert.deepEqual(frame.focused, []);
+  assert.deepEqual(plain(frame.posted.at(-1)[0]), { kind: 'a11y-study-site-entry', key: 's0' });
+  frame.message({ kind: 'a11y-study-focus-site' });
+  assert.deepEqual(frame.focused, ['link']);
+});
+
+test('a frame Chrome refused reports the net error instead of loading forever', async () => {
+  const app = background({ frameUrl: 'chrome-error://chromewebdata/' });
+  assert.equal((await app.command('prepare')).reason, 'loading');
+  app.navigation.error({ tabId: DASHBOARD, frameId: FRAME, parentFrameId: 0, url: target, error: 'net::ERR_BLOCKED_BY_CSP' });
+  const blocked = await app.command('check');
+  assert.deepEqual([blocked.ok, blocked.ready, blocked.reason, blocked.net_error], [true, false, 'frame_error', 'net::ERR_BLOCKED_BY_CSP']);
+  // An embed inside the copy (a video frame, parent = the copy frame) does not replace it.
+  app.navigation.error({ tabId: DASHBOARD, frameId: 99, parentFrameId: FRAME, url: 'https://video.example/embed', error: 'net::ERR_NAME_NOT_RESOLVED' });
+  assert.equal((await app.command('check')).net_error, 'net::ERR_BLOCKED_BY_CSP');
+  app.navigation.committed({ tabId: DASHBOARD, frameId: FRAME, parentFrameId: 0, url: target, transitionQualifiers: [] });
+  await flush();
+  app.frames[1].url = target;
+  assert.equal((await app.command('check')).ready, true, 'a later successful load clears the error');
 });

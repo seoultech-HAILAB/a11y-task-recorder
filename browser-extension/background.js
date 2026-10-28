@@ -10,6 +10,10 @@ const frameHistories = new Map();
 // "tab" is the dashboard tab and the owned frame is that iframe.
 const STUDY_TAB_KEY = "a11yStudyOwnedTab";
 let studyCommands = Promise.resolve();
+// Last sub-frame load error per tab ("net::ERR_BLOCKED_BY_CSP", "net::ERR_NAME_NOT_RESOLVED", ...):
+// a frame Chrome refused shows chrome-error://, which the readiness check would otherwise
+// only see as "still loading" until the dashboard gives up (Windows pilot, 10/28).
+const frameErrors = new Map();
 
 function studyFailure(reason, error) {
   return { ok: false, ready: false, reason, ...(error ? { error } : {}) };
@@ -41,6 +45,10 @@ function assignedUrlOk(value) {
   } catch { return false; }
 }
 
+function sameOrigin(a, b) {
+  try { return new URL(a).origin === new URL(b).origin; } catch { return false; }
+}
+
 async function loadState() {
   return (await chrome.storage.session.get(STUDY_TAB_KEY))[STUDY_TAB_KEY] || null;
 }
@@ -64,11 +72,18 @@ async function findStudyFrame(tabId, targetUrl) {
   return foreign ? { frameId: foreign.frameId, url: foreign.url, foreign: true } : null;
 }
 
+// The copy's frame failed to load (an error page has no content script to answer).
+function frameFailure(state, session) {
+  const failed = frameErrors.get(state.tabId);
+  if (!failed || !sameOrigin(failed.url, session.target_url)) return null;
+  return { ok: true, ready: false, reason: "frame_error", net_error: failed.error };
+}
+
 async function studyReadiness(session, state) {
   try { await chrome.tabs.get(state.tabId); }
   catch { return studyFailure("tab_closed"); }
   const frame = await findStudyFrame(state.tabId, session.target_url);
-  if (!frame) return { ok: true, ready: false, reason: "loading" };
+  if (!frame) return frameFailure(state, session) || { ok: true, ready: false, reason: "loading", stage: "frame" };
   if (frame.foreign) return studyFailure("wrong_url");
   state.frameId = frame.frameId;
   await saveState(state);
@@ -80,7 +95,7 @@ async function studyReadiness(session, state) {
       targetUrl: session.target_url, preparation: session.study.preparation || [],
       allowPreparation: session.status === "draft" && !state.prepared,
     }, { frameId: frame.frameId });
-  } catch { return { ok: true, ready: false, reason: "loading" }; }
+  } catch { return frameFailure(state, session) || { ok: true, ready: false, reason: "loading", stage: "content" }; }
   if (!result) return studyFailure("extension_unavailable");
   if (onAccessPage && result.reason !== "login_required") return studyFailure("wrong_url");
   if (result.ready) {
@@ -358,7 +373,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return false;
 });
 
+// Only the dashboard's own sub-frame counts; an embed inside the copy has its own parent.
+const studyFrameEvent = (details) => details.frameId !== 0 && (details.parentFrameId ?? 0) === 0 && /^https?:/.test(details.url);
+chrome.webNavigation.onErrorOccurred.addListener((details) => {
+  if (studyFrameEvent(details)) frameErrors.set(details.tabId, { url: details.url, error: details.error });
+});
+
 chrome.webNavigation.onCommitted.addListener((details) => {
+  if (studyFrameEvent(details)) frameErrors.delete(details.tabId);
   if (!/^https?:/.test(details.url)) return;
   const qualifiers = details.transitionQualifiers || [];
   const direction = inferHistoryDirection(`${details.tabId}:${details.frameId}`, details.url, qualifiers);
@@ -387,6 +409,7 @@ chrome.webNavigation.onHistoryStateUpdated.addListener((details) => {
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
+  frameErrors.delete(tabId);
   for (const key of frameHistories.keys()) if (key.startsWith(`${tabId}:`)) frameHistories.delete(key);
 });
 

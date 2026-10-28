@@ -10,14 +10,26 @@ window.Study = (() => {
   // Signal tones (add-on): accepted 880 Hz (end 660 Hz), refused 220 Hz.
   // Read aloud by NVDA: keys are joined with commas, not "+", which Korean NVDA reads as "플러스".
   // 0.4.2: two announced gestures (end NVDA+Ctrl+E, repeat NVDA+Ctrl+H); start is the button.
-  const SHORTCUT_INTRO = "과업은 지시문 아래 '과업 시작' 버튼으로 시작합니다. 끝낼 때는 NVDA, Ctrl, E를 함께 누르세요. 지시문을 다시 듣고 싶으면 NVDA, Ctrl, H를 누르세요. 단축키를 누르면 짧은 확인음이 나고, 지금 쓸 수 없으면 낮은 경고음이 납니다.";
+  // Windows pilot 10/28: participants who had their answer kept looking around instead of
+  // ending, so every instruction says to end right there with the gesture (signals.END_HINT).
+  const END_HINT = "답을 찾았거나 더 진행할 수 없다고 판단되면, 그 자리에서 NVDA, Ctrl, E를 함께 눌러 과업을 끝내세요.";
+  const SHORTCUT_INTRO = `과업은 지시문 아래 '과업 시작' 버튼으로 시작합니다. ${END_HINT} 지시문을 다시 듣고 싶으면 NVDA, Ctrl, H를 누르세요. 단축키를 누르면 짧은 확인음이 나고, 지금 쓸 수 없으면 낮은 경고음이 납니다. 사이트에서 이전 페이지는 Alt, 왼쪽 화살표, 과업 처음 화면은 Alt, Home입니다.`;
   // The task comes first so a participant who stops listening early still hears it.
-  const PRACTICE_INSTRUCTION = `연습입니다. 연습 화면에서 '재료 보기' 버튼을 눌러, 첫 번째 재료를 알려 주세요. ${SHORTCUT_INTRO}`;
+  const PRACTICE_INSTRUCTION = `연습입니다. 연습 화면에서 '재료 보기' 버튼을 눌러 첫 번째 재료를 확인해 주세요. 끝낸 뒤 결과 칸에 그 재료를 적습니다. ${SHORTCUT_INTRO}`;
   const SITE_UNREACHABLE = "사이트에 접속할 수 없습니다. 연구진에게 알려 주세요.";
+  // The participant hears the short message with the cause label; the researcher gets the
+  // extension's reason in the site_preparation event (server window, result package).
+  const siteUnreachable = label => label ? `사이트에 접속할 수 없습니다(${label}). 연구진에게 알려 주세요.` : SITE_UNREACHABLE;
+  // A task sentence without a final period would run into the hint (same rule as signals.py).
+  const withEndHint = text => { const t = String(text || "").trim(); return `${t && !/[.?!。]$/.test(t) ? `${t}.` : t} ${END_HINT}`.trim(); };
+  const FRAME_TITLE = "과업 사이트";
+  // Read by NVDA as the frame's name when focus enters the site at the start of a task.
+  const ACTIVE_FRAME_TITLE = "과업 사이트, 끝내기는 NVDA, Ctrl, E";
   const view = { tester: null, plan: null, session: null, ready: false, busy: false, timer: null, opened: false,
     pending: new Map(), lastPoll: 0, checking: false, signalSeq: 0, practice: null,
     pauses: 0, timeLimitHandled: null, lastTitlePoll: 0, frameTitle: "", editing: false, siteError: false,
-    confirmEnd: false, changeTester: new URLSearchParams(location.search).has("change-tester") };
+    confirmEnd: false, changeTester: new URLSearchParams(location.search).has("change-tester"),
+    siteStartKey: null, pendingBack: null, refocusUntil: 0, siteCause: "", prepBegan: 0 };
   const labels = { completed: "마쳤습니다", blocked: "마치지 못했습니다", timeout: "제한 시간 종료", technical: "기술 문제" };
   const el = id => document.getElementById(id);
   const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -26,6 +38,10 @@ window.Study = (() => {
     el("study-message").classList.toggle("error", error);
   };
   const api = (path, method = "GET", body) => request(path, { method, ...(body ? { body } : {}) });
+  // The 1 s poll re-renders; unchanged text and attributes are left alone so NVDA's buffer is
+  // not refreshed under the participant's cursor every few seconds.
+  const setText = (id, text) => { const node = el(id); if (node.textContent !== text) node.textContent = text; };
+  const setAttr = (node, name, value) => { if (node.getAttribute(name) !== value) node.setAttribute(name, value); };
   // Scale the desktop-size iframe to the stage width and the remaining window height.
   function fitFrame() {
     const stage = el("study-stage");
@@ -49,7 +65,7 @@ window.Study = (() => {
       const requestId = crypto.randomUUID();
       const timeout = setTimeout(() => {
         view.pending.delete(requestId);
-        reject(new Error("기록 프로그램에 연결할 수 없습니다. 연구진에게 알려 주세요."));
+        reject(Object.assign(new Error("기록 프로그램에 연결할 수 없습니다. 연구진에게 알려 주세요."), { reason: "bridge_timeout" }));
       }, 15000);
       view.pending.set(requestId, { resolve, reject, timeout });
       window.postMessage({ kind: "a11y-study-command", requestId, action, sessionId }, location.origin);
@@ -62,7 +78,7 @@ window.Study = (() => {
     clearTimeout(pending.timeout);
     view.pending.delete(event.data.requestId);
     const result = event.data.result;
-    if (!result?.ok) pending.reject(new Error(result?.error || SITE_UNREACHABLE));
+    if (!result?.ok) pending.reject(Object.assign(new Error(result?.error || SITE_UNREACHABLE), { reason: result?.reason || "unknown" }));
     else pending.resolve(result);
   });
 
@@ -95,11 +111,11 @@ window.Study = (() => {
   }
   // Keep a region visible but out of NVDA's virtual buffer and the Tab order.
   function shelve(region, shelved) {
-    region.setAttribute("aria-hidden", shelved ? "true" : "false");
+    setAttr(region, "aria-hidden", shelved ? "true" : "false");
     for (const node of region.querySelectorAll("button, input, select, textarea, a, summary, [tabindex]")) {
       if (shelved) {
         if (!node.dataset.shelvedTabindex) node.dataset.shelvedTabindex = node.getAttribute("tabindex") ?? "none";
-        node.setAttribute("tabindex", "-1");
+        setAttr(node, "tabindex", "-1");
       } else if (node.dataset.shelvedTabindex !== undefined) {
         if (node.dataset.shelvedTabindex === "none") node.removeAttribute("tabindex");
         else node.setAttribute("tabindex", node.dataset.shelvedTabindex);
@@ -123,13 +139,15 @@ window.Study = (() => {
     frame.hidden = !showFrame;
     // Locked while the result is being entered.
     const parked = current === "answering" || current === "ended";
-    frame.toggleAttribute("inert", parked);
-    frame.setAttribute("aria-hidden", parked ? "true" : "false");
-    frame.tabIndex = parked ? -1 : 0;
-    el("study-stage-note").textContent = current === "ready"
-      ? "사이트는 과업 시작과 함께 표시됩니다." : parked ? "결과를 입력하는 동안 사이트 화면은 잠겨 있습니다." : "";
+    if (frame.hasAttribute("inert") !== parked) frame.toggleAttribute("inert", parked);
+    setAttr(frame, "aria-hidden", parked ? "true" : "false");
+    setAttr(frame, "tabindex", parked ? "-1" : "0");
+    setAttr(frame, "title", active ? ACTIVE_FRAME_TITLE : FRAME_TITLE);
+    setText("study-stage-note", current === "ready"
+      ? "사이트는 과업 시작과 함께 표시됩니다." : parked ? "결과를 입력하는 동안 사이트 화면은 잠겨 있습니다." : "");
     el("study-result").hidden = !(current === "answering" || current === "ended");
-    document.title = active && view.frameTitle ? view.frameTitle : RECORDER_TITLE;
+    const title = active && view.frameTitle ? view.frameTitle : RECORDER_TITLE;
+    if (document.title !== title) document.title = title;
   }
 
   // ---- polling ------------------------------------------------------------------
@@ -267,6 +285,7 @@ window.Study = (() => {
     el("study-practice").hidden = practice || current !== "ready" || !firstTask();
     if (current !== "active") view.confirmEnd = false;
     el("study-end").hidden = current !== "active" || view.confirmEnd;
+    el("study-site-nav").hidden = current !== "active" || view.confirmEnd;
     el("study-end-confirm").hidden = current !== "active" || !view.confirmEnd;
     el("study-shortcuts").hidden = current !== "ready";
     // Once a tester is confirmed the picker leaves the page; researchers reopen with ?change-tester=1 or ?tester=.
@@ -277,7 +296,7 @@ window.Study = (() => {
     el("study-practice-stop").hidden = !(practice && ended);
     el("study-tester").disabled = current === "active" || current === "answering" || view.busy || practice;
     el("study-select").disabled = el("study-tester").disabled;
-    el("study-view").querySelectorAll(".study-actions button, #study-submit, #study-end, #study-end-confirm button").forEach(b => { b.disabled = view.busy; });
+    el("study-view").querySelectorAll(".study-actions button, #study-submit, #study-end, #study-end-confirm button, #study-site-nav button").forEach(b => { b.disabled = view.busy; });
     applyPhase();
   }
   function render() {
@@ -288,11 +307,11 @@ window.Study = (() => {
     el("study-goal").hidden = complete;
     el("study-complete").hidden = !complete;
     const task = currentTask() || plan.tasks[plan.tasks.length - 1];
-    el("study-order").textContent = `${view.tester} · 과업 ${task.order} / ${plan.total}`;
-    el("study-site").textContent = task.site_name;
-    el("study-instruction").textContent = task.instruction;
-    el("study-answer-hint").textContent = task.requires_answer === false
-      ? "답이 없는 과업입니다. 비워 두셔도 됩니다." : "들은 내용이나 화면에 나온 답을 적어 주세요.";
+    setText("study-order", `${view.tester} · 과업 ${task.order} / ${plan.total}`);
+    setText("study-site", task.site_name);
+    setText("study-instruction", withEndHint(task.instruction));
+    setText("study-answer-hint", task.requires_answer === false
+      ? "답이 없는 과업입니다. 비워 두셔도 됩니다." : "들은 내용이나 화면에 나온 답을 적어 주세요.");
     const option = [...el("study-tester").options].find(o => o.value === view.tester);
     if (option) option.textContent = `${view.tester} (${plan.finished}/${plan.total})`;
     const current = phase();
@@ -302,16 +321,16 @@ window.Study = (() => {
     el("study-next").setAttribute("aria-describedby", blockBreak ? "study-saved study-break" : "study-saved");
     if (current === "ended") {
       const outcome = view.session.study_outcome;
-      el("study-result-heading").textContent = view.editing ? "결과를 고친 뒤 저장해 주세요."
-        : timeLimit ? "제한 시간이 되어 과업을 마쳤습니다." : "결과를 저장했습니다.";
-      el("study-saved").textContent = `저장했습니다. ${labels[outcome] || "종료"}${view.session.study_answer ? ` · 답: ${view.session.study_answer}` : ""}`;
+      setText("study-result-heading", view.editing ? "결과를 고친 뒤 저장해 주세요."
+        : timeLimit ? "제한 시간이 되어 과업을 마쳤습니다." : "결과를 저장했습니다.");
+      setText("study-saved", `저장했습니다. ${labels[outcome] || "종료"}${view.session.study_answer ? ` · 답: ${view.session.study_answer}` : ""}`);
       el("study-answer-form").hidden = !view.editing;
       el("study-saved-box").hidden = view.editing;
       el("study-edit").hidden = !["completed", "blocked"].includes(outcome);
     }
     if (current === "answering") {
-      el("study-result-heading").textContent = timeLimit
-        ? "제한 시간이 되어 과업을 마쳤습니다. 결과를 저장하고 있습니다." : "과업이 끝났습니다. 결과를 입력해 주세요.";
+      setText("study-result-heading", timeLimit
+        ? "제한 시간이 되어 과업을 마쳤습니다. 결과를 저장하고 있습니다." : "과업이 끝났습니다. 결과를 입력해 주세요.");
       el("study-answer-form").hidden = timeLimit;
       el("study-saved-box").hidden = true;
     }
@@ -332,9 +351,9 @@ window.Study = (() => {
     const limit = task.time_limit_seconds;
     const elapsed = active ? netElapsedSeconds() : 0;
     const timer = el("study-timer");
-    timer.textContent = active
+    setText("study-timer", active
       ? `경과 ${Math.floor(elapsed / 60)}분 ${elapsed % 60}초 · 제한 ${limit / 60}분${elapsed >= limit ? " · 제한 시간에 도달했습니다." : ""}`
-      : `제한 시간 ${limit / 60}분`;
+      : `제한 시간 ${limit / 60}분`);
     timer.classList.toggle("study-timer-over", active && elapsed >= limit);
     if (active && elapsed >= limit && !view.session.paused_at && view.timeLimitHandled !== view.session.id && !view.busy) {
       view.timeLimitHandled = view.session.id;
@@ -367,11 +386,13 @@ window.Study = (() => {
     return result;
   }
   // Log the iframe in with the kit's access code: a hidden form posts to <copy>/access into the frame.
-  async function autoLogin(sessionId) {
+  // `diagnosis.login` tells the researcher which step failed (no code, other server, refused).
+  async function autoLogin(sessionId, diagnosis) {
     const access = await api("/study/access").catch(() => ({ code: null }));
     const target = new URL(view.session.target_url);
     // Never post the code to a site we do not host (tasks on a partner's copies).
-    if (!access.code || target.origin !== access.origin) return null;
+    diagnosis.login = !access.code ? "no_code" : target.origin !== access.origin ? "other_origin" : "submitted";
+    if (diagnosis.login !== "submitted") return null;
     const form = document.createElement("form");
     form.method = "post";
     form.action = `${target.origin}/access`;
@@ -402,19 +423,42 @@ window.Study = (() => {
     render();
     if (view.session.status !== "draft") return null;
     const sessionId = view.session.id;
+    const began = view.prepBegan = Date.now();
+    const diagnosis = { login: "" };
+    view.siteCause = "";
     message("배정된 사이트를 준비하고 있습니다. 잠시 기다려 주세요.");
     const loaded = frameLoaded();
     el("study-frame").src = view.session.target_url;
     view.opened = true;
     await loaded;
-    let result = await waitForSite(sessionId);
-    // No code in the kit leaves the login page up: that is a site error, never a prompt for the participant.
-    if (result?.reason === "login_required") result = (await autoLogin(sessionId)) || result;
+    let result;
+    try {
+      result = await waitForSite(sessionId);
+      // No code in the kit leaves the login page up: that is a site error, never a prompt for the participant.
+      if (result?.reason === "login_required") result = (await autoLogin(sessionId, diagnosis)) || result;
+    } catch (error) {
+      if (view.session?.id === sessionId) {
+        view.siteCause = await reportPreparation(sessionId, began, retry, { reason: error.reason || "unknown", ...diagnosis });
+        if (error.message === SITE_UNREACHABLE) error.message = siteUnreachable(view.siteCause);
+      }
+      throw error;
+    }
     if (!result || view.session?.id !== sessionId) return null;
     view.siteError = !result.ready;
+    view.siteCause = await reportPreparation(sessionId, began, retry, { ...diagnosis, ready: result.ready, reason: result.reason,
+      net_error: result.net_error, stage: result.stage });
     applyPreparation(result);
-    if (!result.ready) throw new Error(SITE_UNREACHABLE);
+    if (!result.ready) throw new Error(siteUnreachable(view.siteCause));
     return presentInstruction();
+  }
+  // One site_preparation event per preparation; the recorder files a failure under a cause
+  // (로그인 필요, 주소 허용 안 됨, 준비 시간 초과, 확장 응답 없음, ...) and returns its label.
+  async function reportPreparation(sessionId, began, retry, detail) {
+    const payload = { result: detail.ready ? "ready" : "failed", reason: detail.ready ? "" : detail.reason || "unknown",
+      login: detail.login || "", net_error: detail.net_error || "", stage: detail.stage || "",
+      elapsed_ms: Date.now() - began, retry: Boolean(retry) };
+    const response = await api(`/sessions/${sessionId}/study-events`, "POST", { type: "site_preparation", payload }).catch(() => null);
+    return response?.event?.payload?.cause_label || "";
   }
   function applyPreparation(result) {
     const wasReady = view.ready;
@@ -422,7 +466,7 @@ window.Study = (() => {
     if (result.frame_title) view.frameTitle = result.frame_title;
     if (view.ready) view.siteError = false;
     // A login page means the kit's code is missing or refused; the participant is never asked for it.
-    if (!view.ready && (view.siteError || result.reason === "login_required")) message(SITE_UNREACHABLE, true);
+    if (!view.ready && (view.siteError || result.reason === "login_required")) message(siteUnreachable(view.siteCause), true);
     else message(result.ready ? "사이트가 준비되었습니다. 지시문을 들은 뒤 과업 시작을 누르세요."
       : "사이트 준비를 확인하고 있습니다.");
     renderControls();
@@ -433,7 +477,11 @@ window.Study = (() => {
     const result = await bridge("check");
     if (view.session?.id !== sessionId || view.session.status !== "draft") return;
     // Became ready in the background (e.g. the site came back): read the instruction once.
-    if (applyPreparation(result)) presentInstruction().focus();
+    if (applyPreparation(result)) {
+      view.siteCause = "";
+      reportPreparation(sessionId, view.prepBegan || Date.now(), false, { ready: true, stage: "background_check" });
+      presentInstruction().focus();
+    }
   }
   // Focus the instruction so NVDA reads it (announce mode "focus"); "과업 시작" follows on Tab.
   function presentInstruction() {
@@ -450,6 +498,7 @@ window.Study = (() => {
     if (result.frame_title) view.frameTitle = result.frame_title;
     view.session = (await api(`/sessions/${view.session.id}`)).session;
     view.pauses = 0;
+    view.siteStartKey = null;
     await refreshPlan();
     render();
     message("기록 중입니다.");
@@ -459,17 +508,100 @@ window.Study = (() => {
   // After busy() focuses the frame, move focus to the site's first control as on a newly opened
   // page, so NVDA's cursor starts inside the site (Windows check F3, 10/20). The practice page is
   // same-origin; a copy is asked through the extension's content script in the frame.
+  // It also learns the history entry the task started on (back stops there); a copy replies
+  // with "a11y-study-site-entry".
   function focusSite() {
     const frame = el("study-frame");
-    if (phase() !== "active" || document.activeElement !== frame) return;
+    if (phase() !== "active") return;
+    const focus = document.activeElement === frame;
     const doc = frame.contentDocument;
-    if (doc) firstControl(doc)?.focus();
-    else frame.contentWindow?.postMessage({ kind: "a11y-study-focus-site" }, "*");
+    if (doc) {
+      view.siteStartKey ??= frame.contentWindow.navigation?.currentEntry?.key || null;
+      if (focus) firstControl(doc)?.focus();
+    } else frame.contentWindow?.postMessage({ kind: "a11y-study-focus-site", focus }, "*");
   }
   function firstControl(doc) {
     const selector = 'a[href], button, input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])';
     return [...doc.querySelectorAll(selector)].find(node => !node.disabled && node.getClientRects().length > 0 && !node.closest("[inert], [aria-hidden='true']"));
   }
+
+  // ---- 이전 페이지 / 과업 처음 화면 (Windows pilot 10/28) ---------------------------------
+  // The site runs in a frame, so the browser's Back walks the whole tab history (earlier
+  // tasks, the login page, the recorder) and Alt+Home replaces the recorder. Alt+Left and
+  // Alt+Home, wherever they land (the copy through the extension, the practice page, this
+  // page) and the two buttons below the site, go back inside the frame no further than the
+  // page the task started on, or reopen that page. Recorded as site_navigation events.
+  function siteKey(event) {
+    if (event.ctrlKey || event.metaKey || event.shiftKey) return "";
+    if ((event.altKey && event.key === "ArrowLeft") || event.key === "BrowserBack") return "back";
+    if ((event.altKey && event.key === "Home") || event.key === "BrowserHome") return "start";
+    return "";
+  }
+  function historyBack(nav, startKey) {
+    const start = nav?.entries().find(entry => entry.key === startKey);
+    if (!start || nav.currentEntry.index <= start.index) return false;
+    const { committed, finished } = nav.back();
+    committed.catch(() => {});
+    finished.catch(() => {});
+    return true;
+  }
+  function onSiteKey(event, trigger) {
+    const action = siteKey(event);
+    if (!action || el("study-view").hidden) return;
+    // Outside a task the keys do nothing: the browser's back or home page would leave the recorder.
+    event.preventDefault();
+    siteCommand(action, trigger);
+  }
+  function siteCommand(action, trigger) {
+    if (view.busy || phase() !== "active") return;
+    const frame = el("study-frame");
+    // After the page changes, focus goes to its first control as at the task start (F3).
+    view.refocusUntil = Date.now() + 5000;
+    frame.focus();
+    if (action === "start") {
+      frame.src = view.practice ? "/practice.html" : view.session.target_url;
+      siteCommandDone(action, trigger, true);
+    } else if (frame.contentDocument) siteCommandDone(action, trigger, historyBack(frame.contentWindow.navigation, view.siteStartKey));
+    else {
+      const pending = view.pendingBack = { trigger };
+      frame.contentWindow?.postMessage({ kind: "a11y-study-site-back", startKey: view.siteStartKey }, "*");
+      setTimeout(() => { if (view.pendingBack === pending) { view.pendingBack = null; siteCommandDone(action, trigger, false, "no_reply"); } }, 1500);
+    }
+  }
+  function siteCommandDone(action, trigger, moved, reason = "") {
+    if (!moved) {
+      view.refocusUntil = 0;
+      announce("과업 처음 화면입니다. 더 돌아갈 페이지가 없습니다.");
+    }
+    if (!view.practice) logStudyEvent("site_navigation", { action, trigger, moved, ...(reason ? { reason } : {}) });
+  }
+  // #study-site-status stays outside the shelved top, so NVDA hears it during a task. It is
+  // emptied again so browse mode does not meet the old sentence below the site.
+  function announce(text) {
+    const node = el("study-site-status");
+    node.textContent = "";
+    setTimeout(() => { node.textContent = text; }, 50);
+    setTimeout(() => { if (node.textContent === text) node.textContent = ""; }, 5000);
+  }
+  function onFrameMessage(event) {
+    const frame = el("study-frame");
+    if (!frame || event.source !== frame.contentWindow || typeof event.data?.kind !== "string") return;
+    const data = event.data;
+    if (data.kind === "a11y-study-site-key" && ["back", "start"].includes(data.action)) siteCommand(data.action, "site_key");
+    else if (data.kind === "a11y-study-site-entry" && phase() === "active") view.siteStartKey ??= (data.key || null);
+    else if (data.kind === "a11y-study-site-back" && view.pendingBack) {
+      const { trigger } = view.pendingBack;
+      view.pendingBack = null;
+      siteCommandDone("back", trigger, data.moved === true);
+    }
+  }
+  function onFrameLoad() {
+    const frame = el("study-frame");
+    // The practice page shares this origin and has no content script: listen to its keys here.
+    try { frame.contentDocument?.addEventListener("keydown", event => onSiteKey(event, "site_key"), true); } catch { /* cross-origin */ }
+    if (Date.now() < view.refocusUntil) { view.refocusUntil = 0; requestAnimationFrame(focusSite); }
+  }
+
   async function endTask(reason) {
     const data = await api(`/sessions/${view.session.id}/end-task`, "POST", { reason });
     view.session = data.session;
@@ -557,12 +689,12 @@ window.Study = (() => {
     const current = view.practice.phase;
     el("study-goal").hidden = false;
     el("study-complete").hidden = true;
-    el("study-order").textContent = "연습 (기록하지 않음)";
-    el("study-site").textContent = "연습 화면: 오늘의 요리";
-    el("study-instruction").textContent = PRACTICE_INSTRUCTION;
-    el("study-timer").textContent = "연습에는 제한 시간이 없습니다.";
-    el("study-answer-hint").textContent = "연습입니다. 첫 번째 재료를 적어 보세요.";
-    el("study-result-heading").textContent = current === "ended" ? "연습이 끝났습니다." : "과업이 끝났습니다. 결과를 입력해 주세요.";
+    setText("study-order", "연습 (기록하지 않음)");
+    setText("study-site", "연습 화면: 오늘의 요리");
+    setText("study-instruction", PRACTICE_INSTRUCTION);
+    setText("study-timer", "연습에는 제한 시간이 없습니다.");
+    setText("study-answer-hint", "연습입니다. 첫 번째 재료를 적어 보세요.");
+    setText("study-result-heading", current === "ended" ? "연습이 끝났습니다." : "과업이 끝났습니다. 결과를 입력해 주세요.");
     el("study-answer-form").hidden = current !== "answering";
     el("study-saved-box").hidden = current !== "ended";
     el("study-edit").hidden = true;
@@ -574,7 +706,7 @@ window.Study = (() => {
     if (signal.kind === "start" && view.practice.phase === "ready") practiceStart().focus();
     else if (signal.kind === "end" && view.practice.phase === "active") practiceEnd().focus();
   }
-  function practiceStart() { view.practice.phase = "active"; renderPractice(); message("연습 중입니다."); requestAnimationFrame(focusSite); return el("study-frame"); }
+  function practiceStart() { view.practice.phase = "active"; view.siteStartKey = null; renderPractice(); message("연습 중입니다."); requestAnimationFrame(focusSite); return el("study-frame"); }
   function practiceEnd() { view.practice.phase = "answering"; renderPractice(); message("연습 과업이 끝났습니다. 결과를 입력해 주세요."); return el("study-result-heading"); }
   function practiceSubmit() {
     const outcome = document.querySelector('input[name="study-done"]:checked')?.value;
@@ -598,6 +730,11 @@ window.Study = (() => {
     on("study-edit", "click", () => busy(editAnswer));
     on("study-practice", "click", () => busy(startPractice));
     on("study-practice-stop", "click", () => busy(stopPractice));
+    on("study-site-back", "click", () => siteCommand("back", "button"));
+    on("study-site-start", "click", () => siteCommand("start", "button"));
+    on("study-frame", "load", onFrameLoad);
+    document.addEventListener("keydown", event => onSiteKey(event, "recorder_key"), true);
+    window.addEventListener("message", onFrameMessage);
   });
   return { home, pausePolling };
 })();

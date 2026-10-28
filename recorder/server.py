@@ -25,6 +25,7 @@ from recorder import __version__
 from recorder.common import ApiError, json_load, parse_capture_instant, parse_timestamp, utc_now
 from recorder.signals import ANNOUNCE_MODE, SignalBoard
 from recorder.study import ADVANCING_OUTCOMES, STUDY_OUTCOMES, load_catalog, validate_setup
+from recorder.site_check import failure_count, failure_line, preparation_csv
 from recorder.study_flow import StudyFlowMixin
 from recorder.upload import UploadManager
 
@@ -1663,6 +1664,10 @@ class RecorderStore(StudyFlowMixin):
         finished = [row for row in rows if row["status"] in {"completed", "abandoned"}]
         active_count = sum(1 for row in rows if row["status"] == "active")
 
+        with self.connect() as connection:
+            preparations = preparation_csv(connection)
+            site_failures = failure_count(connection)
+
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         zip_path = package_dir / "\uacb0\uacfc\ud328\ud0a4\uc9c0_{}.zip".format(stamp)
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as bundle:
@@ -1687,6 +1692,7 @@ class RecorderStore(StudyFlowMixin):
                 ) as target:
                     source.backup(target)
                 bundle.write(backup_path, "recorder.sqlite3")
+            bundle.writestr("site_preparation.csv", preparations)
             kit_info = root / "KIT-INFO.txt"
             if kit_info.exists():
                 bundle.writestr("KIT-INFO.txt", kit_info.read_bytes())
@@ -1700,6 +1706,8 @@ class RecorderStore(StudyFlowMixin):
                         "\uc9c4\ud589 \uc911\uc774\ub77c \uc81c\uc678\ub41c \uc138\uc158 \uc218: {}".format(active_count),
                         "sessions/ \ud3f4\ub354: \uc138\uc158\ubcc4 JSON\u00b7CSV \ub0b4\ubcf4\ub0b4\uae30",
                         "recorder.sqlite3: \ubcf5\uad6c\uc6a9 \uc804\uccb4 \uae30\ub85d \ubc31\uc5c5(SQLite)",
+                        "site_preparation.csv: 과업별 사이트 준비 결과와 실패 원인(로그인 필요, 주소 허용 안 됨, 준비 시간 초과, 확장 응답 없음 등)",
+                        "사이트 준비 실패 기록: {}건".format(site_failures),
                         "",
                     ]
                 ),
@@ -1943,8 +1951,11 @@ class RecorderHandler(BaseHTTPRequestHandler):
             elif action == "resume":
                 session = store.resume_pause(session_id)
             else:
-                self._json({"event": store.log_study_event(session_id, str(data.get("type", "")), data.get("payload"))},
-                           HTTPStatus.CREATED)
+                event = store.log_study_event(session_id, str(data.get("type", "")), data.get("payload"))
+                if event["type"] == "site_preparation" and event["payload"].get("result") == "failed":
+                    print("[{}] {}".format(self.log_date_time_string(),
+                                           failure_line(event["payload"], store.get_session(session_id).get("study"))))
+                self._json({"event": event}, HTTPStatus.CREATED)
                 return
             self._json({"session": session})
             return

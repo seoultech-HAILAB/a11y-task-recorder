@@ -202,7 +202,7 @@ table { border-collapse: collapse; } th, td { border-bottom: 1px solid #ccc; pad
 <li><strong>듣기</strong>: 지시문으로 초점이 가면 NVDA가 읽어 줍니다.</li>
 <li><strong>시작</strong>: 지시문 바로 아래 <strong>과업 시작</strong> 버튼을 누릅니다. 사이트가 열리고 기록이 시작됩니다.</li>
 <li><strong>수행</strong>: 평소처럼 키보드와 NVDA로 과업을 합니다.</li>
-<li><strong>끝내기</strong>: 다 했거나 더 진행할 수 없으면 <kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>E</kbd>를 누릅니다. 10분이 지나면 저절로 끝납니다.</li>
+<li><strong>끝내기</strong>: 답을 찾았거나 더 진행할 수 없다고 판단되면, 다른 곳을 더 둘러보지 말고 그 자리에서 <kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>E</kbd>를 누릅니다. 10분이 지나면 저절로 끝납니다.</li>
 <li><strong>결과</strong>: <strong>마쳤습니다</strong> 또는 <strong>마치지 못했습니다</strong>를 고르고, 답을 적고 <strong>저장</strong>합니다.</li>
 <li><strong>다음</strong>: <strong>다음 과업</strong>을 누르면 2번으로 돌아갑니다. 4개 과업마다 원하는 만큼 쉬어도 됩니다.</li>
 </ol>
@@ -215,6 +215,8 @@ table { border-collapse: collapse; } th, td { border-bottom: 1px solid #ccc; pad
 <tr><td><kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>E</kbd></td><td>과업 끝내기 (묻지 않고 바로 끝남)</td></tr>
 <tr><td><kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>H</kbd></td><td>지시문 다시 듣기 (끝내는 단축키도 함께 알려 줌)</td></tr>
 <tr><td><kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>L</kbd></td><td>기록 상태 확인 (높아지는 음 두 번: 기록 중, 낮은 음: 대기 중). 담당자용</td></tr>
+<tr><td><kbd>Alt</kbd>+<kbd>왼쪽 화살표</kbd></td><td>사이트의 이전 페이지 (과업을 시작한 페이지보다 앞으로는 가지 않음)</td></tr>
+<tr><td><kbd>Alt</kbd>+<kbd>Home</kbd></td><td>과업 처음 화면 (과업을 시작한 페이지를 다시 엶)</td></tr>
 </table>
 <p>단축키를 누르면 짧은 확인음이 나고, 지금 쓸 수 없는 단축키는 낮은 경고음이 납니다. 과업 시작은 버튼으로 합니다. 참가자에게 단축키를 말로 알려 줄 때는 "NVDA, Ctrl, E를 함께"처럼 쉼표로 끊어 말해 주세요.</p>
 <p>노트북 배열에서 CapsLock을 NVDA 키로 쓰려면 NVDA 설정의 <strong>키보드</strong>에서 <strong>CapsLock을 NVDA 키로 사용</strong>을 켜야 합니다. 켜지 않으면 CapsLock 단축키가 동작하지 않고 대문자 잠금만 켜집니다.</p>

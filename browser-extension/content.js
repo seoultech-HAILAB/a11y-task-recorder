@@ -33,14 +33,46 @@
 
   // 0.4.2: when a task starts the dashboard asks its study frame to focus the site's first
   // control, so NVDA's cursor starts in the site (Windows check F3, 10/20). Same rule as study.js.
+  // The reply names the history entry the task started on; the recorder's back command
+  // (Windows pilot, 10/28) never goes past it, so earlier tasks and the login page stay behind.
   if (!isTop) {
+    const toRecorder = (data) => window.parent.postMessage(data, "http://127.0.0.1:8765");
     window.addEventListener("message", (event) => {
-      if (event.source !== window.parent || event.origin !== "http://127.0.0.1:8765" ||
-          event.data?.kind !== "a11y-study-focus-site") return;
-      const selector = 'a[href], button, input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])';
-      [...document.querySelectorAll(selector)].find((node) => !node.disabled &&
-        node.getClientRects().length > 0 && !node.closest("[inert], [aria-hidden='true']"))?.focus();
+      if (event.source !== window.parent || event.origin !== "http://127.0.0.1:8765") return;
+      if (event.data?.kind === "a11y-study-focus-site") {
+        const selector = 'a[href], button, input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])';
+        if (event.data.focus !== false) [...document.querySelectorAll(selector)].find((node) => !node.disabled &&
+          node.getClientRects().length > 0 && !node.closest("[inert], [aria-hidden='true']"))?.focus();
+        toRecorder({ kind: "a11y-study-site-entry", key: window.navigation?.currentEntry?.key || "" });
+      } else if (event.data?.kind === "a11y-study-site-back") {
+        toRecorder({ kind: "a11y-study-site-back", moved: historyBack(window.navigation, event.data.startKey) });
+      }
     });
+    // In the recorder's study frame, Alt+Left and Alt+Home go to the recorder: the browser's own
+    // back walks the whole tab history (earlier tasks, the recorder page) and its home page
+    // replaces the recorder. Pages outside the recorder keep the browser keys.
+    window.addEventListener("keydown", (event) => {
+      const action = siteKey(event);
+      if (!action || window.parent !== window.top ||
+          window.location.ancestorOrigins?.[0] !== "http://127.0.0.1:8765") return;
+      event.preventDefault();
+      toRecorder({ kind: "a11y-study-site-key", action });
+    }, true);
+  }
+  // Same rules as study.js (the practice page and the recorder page itself).
+  function siteKey(event) {
+    if (event.ctrlKey || event.metaKey || event.shiftKey) return "";
+    if ((event.altKey && event.key === "ArrowLeft") || event.key === "BrowserBack") return "back";
+    if ((event.altKey && event.key === "Home") || event.key === "BrowserHome") return "start";
+    return "";
+  }
+  function historyBack(nav, startKey) {
+    const start = nav?.entries().find((entry) => entry.key === startKey);
+    if (!start || nav.currentEntry.index <= start.index) return false;
+    const { committed, finished } = nav.back();
+    committed.catch(() => {});
+    finished.catch(() => {});
+    return true;
   }
 
   const mutationBuffer = {

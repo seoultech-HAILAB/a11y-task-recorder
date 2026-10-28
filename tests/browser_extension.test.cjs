@@ -12,7 +12,7 @@ test('delayed pre-stop browser event retains the original session after switchin
     chrome: { runtime: { onMessage: listener, onInstalled: listener,
       getManifest: () => ({ version: '0.2.4' }) },
       action: { setBadgeText: async () => {}, setBadgeBackgroundColor: async () => {}, setTitle: async () => {} },
-      webNavigation: { onCommitted: listener, onHistoryStateUpdated: listener },
+      webNavigation: { onCommitted: listener, onHistoryStateUpdated: listener, onErrorOccurred: listener },
       tabs: { onRemoved: listener }, commands: { onCommand: listener } },
     fetch: async (url, options) => {
       if (url.endsWith('/api/active-session')) return { ok: true, json: async () => ({ session: current }) };

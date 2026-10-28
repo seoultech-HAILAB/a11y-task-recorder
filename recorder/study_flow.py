@@ -11,6 +11,7 @@ from http import HTTPStatus
 from typing import Any, Dict, List, Optional
 
 from recorder.common import ApiError, json_load, parse_timestamp, utc_now
+from recorder.site_check import classify
 from recorder.study import STUDY_OUTCOMES
 
 END_REASONS = frozenset({
@@ -21,9 +22,11 @@ END_REASONS = frozenset({
 ENTERED_BY = frozenset({"participant", "facilitator", "system"})
 PAUSE_REASONS = frozenset({"break", "technical_support", "other"})
 # Dashboard-only study events. They carry no participant speech or keys.
+# site_preparation: how the assigned site became ready or why not; site_navigation: the
+# recorder's own back / task start page commands inside the frame (Windows pilot, 10/28).
 STUDY_EVENT_TYPES = frozenset({
     "signal", "instruction_presented", "instruction_repeat", "time_limit_reached", "help_level_1",
-    "task_end", "task_resume", "pause", "resume", "answer_saved", "phase",
+    "task_end", "task_resume", "pause", "resume", "answer_saved", "phase", "site_preparation", "site_navigation",
 })
 # Outcomes the participant form may choose; timeout/technical stay facilitator-only.
 PARTICIPANT_OUTCOMES = frozenset({"completed", "blocked"})
@@ -59,6 +62,8 @@ class StudyFlowMixin:
         if event_type not in STUDY_EVENT_TYPES:
             raise ApiError(HTTPStatus.BAD_REQUEST, "허용되지 않은 과업 이벤트 종류입니다.")
         clean = dict(payload) if isinstance(payload, dict) else {}
+        if event_type == "site_preparation":
+            clean = classify(clean)
         if len(json.dumps(clean, ensure_ascii=False)) > 4000:
             raise ApiError(HTTPStatus.BAD_REQUEST, "과업 이벤트가 너무 큽니다.")
         with self.connect() as connection:

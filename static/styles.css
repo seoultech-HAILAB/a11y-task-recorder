@@ -43,7 +43,14 @@
 .study-stage iframe[hidden] { display: none; }
 .study-stage iframe:focus { outline: 3px solid var(--focus); }
 .study-stage iframe[inert] { opacity: 0.85; }
-.study-end { margin-top: 12px; min-height: 48px; font-size: 18px; }
+.study-stage-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+.study-end { min-height: 48px; font-size: 18px; }
+.study-site-nav { display: flex; flex-wrap: wrap; gap: 8px; }
+.study-site-nav[hidden] { display: none; }
+.study-stage-actions:not(:has(> :not([hidden]))) { display: none; }
+.study-site-nav .button { min-height: 48px; }
+/* During a task the header (inert) scrolls away, so it no longer covers the top of the site. */
+body:has(#study-view[data-phase="active"]) .app-header { position: static; }
 .study-end-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; }
 .study-end-confirm p { margin: 0; font-size: 18px; font-weight: 700; }
 .study-end-confirm .button { min-height: 48px; font-size: 18px; }

@@ -16,6 +16,7 @@ const LAB = process.env.A11Y_LAB_DIR || path.resolve('..', 'a11y-user-context-la
 const MOUNT = '16a50b10a80c';
 const PAGES = ['p/413127f760b3356b.html', 'p/15fd75c5d2246d23.html'];
 const ACCESS_CODE = 'e2e-access-code-not-a-secret';
+const END_HINT = '답을 찾았거나 더 진행할 수 없다고 판단되면, 그 자리에서 NVDA, Ctrl, E를 함께 눌러 과업을 끝내세요.';
 const freePort = () => new Promise(resolve => { const s = net.createServer(); s.listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => resolve(p)); }); });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function waitFor(fn, label, timeout = 20000) {
@@ -154,18 +155,23 @@ function a11yState() {
     await waitFocus('study-practice', 3000);
     assert.equal(state['study-shortcuts'].shown, true);
     assert.equal(await dashboard.locator('#study-shortcuts').textContent(),
-      '단축키: 끝내기는 NVDA, Ctrl, E. 지시문 다시 듣기는 NVDA, Ctrl, H.');
+      '단축키: 끝내기는 NVDA, Ctrl, E. 지시문 다시 듣기는 NVDA, Ctrl, H. 사이트에서 이전 페이지는 Alt, 왼쪽 화살표. 과업 처음 화면은 Alt, Home.');
+    // Windows pilot 10/28: the instruction itself says to end right there with the gesture.
+    assert.equal(await dashboard.locator('#study-instruction').textContent(),
+      `1번 과업: 화면에서 안내 문구를 찾아 주세요. ${END_HINT}`);
     await dashboard.locator('#study-instruction').focus();
     await dashboard.screenshot({ path: path.join(shots, '1-ready.png') });
-    check('배정 확인 -> automatic prepare + hidden-form login (no code typed); focus on instruction; tester picker hidden; Tab order = 과업 시작, 연습 시작; shortcut line shown');
+    const prepared = (await api(`/api/sessions/${(await api('/api/study/T01')).tasks[0].session_id}/events`)).events.filter(e => e.type === 'site_preparation');
+    assert.deepEqual(prepared.map(e => [e.payload.result, e.payload.login]), [['ready', 'submitted']]);
+    check('배정 확인 -> automatic prepare + hidden-form login (no code typed); focus on instruction; tester picker hidden; Tab order = 과업 시작, 연습 시작; shortcut line shown; site_preparation ready');
 
     // Practice with the same participant buttons; 연습 끝내기 prepares the real task again.
     await dashboard.locator('#study-practice').click();
     await waitFocus('study-instruction');
     assert.match(await dashboard.locator('#study-instruction').textContent(),
-      /^연습입니다\. 연습 화면에서 '재료 보기' 버튼을 눌러, 첫 번째 재료를 알려 주세요\. 과업은 지시문 아래 '과업 시작' 버튼으로 시작합니다\. 끝낼 때는 NVDA, Ctrl, E를 함께 누르세요\. 지시문을 다시 듣고 싶으면 NVDA, Ctrl, H를 누르세요\./);
+      /^연습입니다\. 연습 화면에서 '재료 보기' 버튼을 눌러 첫 번째 재료를 확인해 주세요\. 끝낸 뒤 결과 칸에 그 재료를 적습니다\. 과업은 지시문 아래 '과업 시작' 버튼으로 시작합니다\. 답을 찾았거나 더 진행할 수 없다고 판단되면, 그 자리에서 NVDA, Ctrl, E를 함께 눌러 과업을 끝내세요\. 지시문을 다시 듣고 싶으면 NVDA, Ctrl, H를 누르세요\./);
     const practiceRepeat = (await api('/api/signals', 'POST', { kind: 'repeat', source: 'nvda_addon' })).speak;
-    assert.ok(practiceRepeat.includes('연습') && practiceRepeat.endsWith('끝낼 때는 NVDA, Ctrl, E를 함께 누르세요.'), practiceRepeat);
+    assert.ok(practiceRepeat.includes('연습') && practiceRepeat.endsWith(END_HINT), practiceRepeat);
     await dashboard.locator('#study-start').click();
     await waitPhase('active');
     await waitFocus('study-frame');
@@ -276,6 +282,27 @@ function a11yState() {
     assert.ok(browser.filter(e => e.type !== 'page_ready' || e.payload.kind !== 'study_recording_start').every(e => Number.isInteger(e.payload.frame_id) && e.payload.frame_id !== 0));
     check(`browser events only from the copy frame (${browser.length} events, frame ids tagged)`);
 
+    // Windows pilot 10/28: Alt+Home reopens the task's first page and Alt+Left goes back inside
+    // the frame, never past that page and never out of the recorder.
+    const copyUrl = () => dashboard.frames().find(f => f.parentFrame() === dashboard.mainFrame())?.url();
+    await frame.locator('body').press('Alt+Home');
+    await waitFor(async () => copyUrl() === session.target_url && (await api(`/api/sessions/${session.id}/events`)).events.some(e => e.type === 'site_navigation'), 'Alt+Home');
+    let backs = 0;
+    for (; backs < 6; backs++) {
+      await dashboard.frameLocator('#study-frame').locator('body').press('Alt+ArrowLeft');
+      await sleep(700);
+      if (/더 돌아갈 페이지가 없습니다/.test(await dashboard.locator('#study-site-status').textContent())) break;
+    }
+    assert.ok(backs < 6, 'back stops at the task start page');
+    assert.equal(copyUrl(), session.target_url);
+    assert.equal(new URL(dashboard.url()).origin, recorderBase);
+    assert.equal(await phase(), 'active');
+    const navigationLog = (await api(`/api/sessions/${session.id}/events`)).events.filter(e => e.type === 'site_navigation').map(e => e.payload);
+    assert.deepEqual(navigationLog.at(0), { action: 'start', trigger: 'site_key', moved: true });
+    assert.deepEqual(navigationLog.at(-1), { action: 'back', trigger: 'site_key', moved: false });
+    assert.equal(await dashboard.locator('#study-site-back').isVisible(), true);
+    check(`Alt+Home -> task start page; Alt+Left went back ${backs} time(s) then stopped at the start page (announced); recorder stays; site_navigation logged`);
+
     // 과업 끝내기 button -> 끝내기 -> result form.
     await dashboard.locator('#study-end').click();
     await waitFocus('study-end-no', 3000);
@@ -383,7 +410,7 @@ function a11yState() {
     await dashboard.locator('#study-start').click();
     await waitPhase('active');
     const taskRepeat = (await api('/api/signals', 'POST', { kind: 'repeat', source: 'nvda_addon' })).speak;
-    assert.equal(taskRepeat, '3번 과업: 화면에서 안내 문구를 찾아 주세요. 끝낼 때는 NVDA, Ctrl, E를 함께 누르세요.');
+    assert.equal(taskRepeat, `3번 과업: 화면에서 안내 문구를 찾아 주세요. ${END_HINT}`);
     assert.equal((await api('/api/signals', 'POST', { kind: 'end', source: 'nvda_addon' })).accepted, true);
     await waitPhase('answering');
     assert.equal(await dashboard.locator('#study-end-confirm').isHidden(), true);
@@ -451,11 +478,16 @@ function a11yState() {
       assert.equal(await dashboard.evaluate(() => document.querySelector('#study-view').innerText.includes('접속 코드')), false);
     };
     await noCodeState();
+    assert.match(await dashboard.locator('#study-message').textContent(), /사이트에 접속할 수 없습니다\(로그인 필요\)/);
+    const noCodeDraft = (await api('/api/study/T01')).tasks[0].session_id;
+    const noCodePrep = (await api(`/api/sessions/${noCodeDraft}/events`)).events.filter(e => e.type === 'site_preparation').map(e => e.payload);
+    assert.deepEqual(noCodePrep.map(p => [p.result, p.cause_label, p.reason, p.login]), [['failed', '로그인 필요', 'login_required', 'no_code']]);
+    assert.match(noCodeOut, /사이트 준비 실패: 테스터 T01 과업 1 · 로그인 필요 \(login_required, no_code\)/);
     // The background check keeps the error up instead of ever offering the login page.
     await sleep(5000);
     await noCodeState();
     await dashboard.screenshot({ path: path.join(output, 'no-code-error.png') });
-    check('kit without a code: no code prompt anywhere; frame (login page) stays hidden; "사이트에 접속할 수 없습니다" error stays up');
+    check('kit without a code: no code prompt anywhere; frame (login page) stays hidden; "사이트에 접속할 수 없습니다(로그인 필요)" stays up; site_preparation cause 로그인 필요 (no_code) and one server-window line');
     const noCodeUploads = (await api('/api/uploads')).uploads;
     assert.deepEqual([noCodeUploads.configured, noCodeUploads.code_source], [false, '']);
     assert.equal((await api('/api/uploads/flush', 'POST', {})).result.skipped, 'not_configured');

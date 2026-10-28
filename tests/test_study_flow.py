@@ -167,7 +167,7 @@ class StudyFlowTests(unittest.TestCase):
         self.assertTrue(board.decide("start", "nvda_addon", draft)["accepted"])
         self.assertFalse(board.decide("end", "nvda_addon", draft)["accepted"])
         repeat = board.decide("repeat", "nvda_addon", draft)
-        self.assertEqual("Find item 1. 끝낼 때는 NVDA, Ctrl, E를 함께 누르세요.", repeat["speak"])
+        self.assertEqual("Find item 1. 답을 찾았거나 더 진행할 수 없다고 판단되면, 그 자리에서 NVDA, Ctrl, E를 함께 눌러 과업을 끝내세요.", repeat["speak"])
         answering = board.decide("repeat", "nvda_addon", {"id": draft["id"], "status": "answering", "scenario": "Find item 1"})
         self.assertEqual("Find item 1", answering["speak"])  # task already over: no end hint
         active = self.store.start_session(draft["id"], study_ready=True)
@@ -182,7 +182,7 @@ class StudyFlowTests(unittest.TestCase):
         practice = board.decide("repeat", "nvda_addon", None)
         self.assertTrue(practice["accepted"])
         self.assertIn("연습", practice["speak"])
-        self.assertTrue(practice["speak"].endswith("끝낼 때는 NVDA, Ctrl, E를 함께 누르세요."))
+        self.assertTrue(practice["speak"].endswith("답을 찾았거나 더 진행할 수 없다고 판단되면, 그 자리에서 NVDA, Ctrl, E를 함께 눌러 과업을 끝내세요."))
 
     def test_dashboard_csp_allows_plain_http_partner_copies_from_the_catalog(self):
         # Our copies are https (always allowed); a partner's test copy over plain http (SNC)
@@ -230,7 +230,7 @@ class StudyFlowTests(unittest.TestCase):
             path = "/api/sessions/" + session["id"]
             status, body = request("/api/signals", {"kind": "repeat"})
             self.assertTrue(body["accepted"])
-            self.assertEqual("Find item 1. 끝낼 때는 NVDA, Ctrl, E를 함께 누르세요.", body["speak"])
+            self.assertEqual("Find item 1. 답을 찾았거나 더 진행할 수 없다고 판단되면, 그 자리에서 NVDA, Ctrl, E를 함께 눌러 과업을 끝내세요.", body["speak"])
             pending = request("/api/signals?after=0")[1]
             self.assertEqual(["repeat"], [signal["kind"] for signal in pending["signals"]])
             self.store.start_session(session["id"], study_ready=True)

@@ -20,9 +20,11 @@ if ANNOUNCE_MODE not in {"focus", "nvda", "both"}:
     ANNOUNCE_MODE = "focus"
 # Short sentences: the laptop plays NVDA through speakers in a shared room.
 END_PROMPT = "과업이 끝났습니다. 결과를 입력해 주세요."
-PRACTICE_INSTRUCTION = "연습입니다. 연습 화면에서 '재료 보기' 버튼을 눌러, 첫 번째 재료를 알려 주세요."
+PRACTICE_INSTRUCTION = "연습입니다. 연습 화면에서 '재료 보기' 버튼을 눌러 첫 번째 재료를 확인해 주세요."
 # Appended to the repeated instruction so the way to end can be heard again during a task.
-END_HINT = "끝낼 때는 NVDA, Ctrl, E를 함께 누르세요."
+# Windows pilot 10/28: participants who had the answer kept doing other things instead of
+# ending, so the hint says to end right there (same text as study.js END_HINT).
+END_HINT = "답을 찾았거나 더 진행할 수 없다고 판단되면, 그 자리에서 NVDA, Ctrl, E를 함께 눌러 과업을 끝내세요."
 MAX_SIGNALS = 50
 
 
