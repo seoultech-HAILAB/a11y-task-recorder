@@ -1858,11 +1858,6 @@ class RecorderHandler(BaseHTTPRequestHandler):
         if path == "/api/uploads":
             self._json({"uploads": self.server.uploads.status()})
             return
-        if path == "/api/study/access":
-            # Must precede /api/study/<tester>. Only the dashboard on this machine may read the code.
-            self._require_local_dashboard()
-            self._json(self.server.uploads.access())
-            return
         if path == "/api/signals":
             after = int((query.get("after") or ["0"])[0] or 0)
             self._json(self.server.signals.since(after))
@@ -2233,7 +2228,6 @@ def main() -> None:
     url = "http://{}:{}".format(args.host, server.server_address[1])
     print("A11y Task Recorder: {}".format(url))
     print("데이터베이스: {}".format(args.db.resolve()))
-    print("사이트 접속 코드: {}".format("키트에 내장됨" if server.uploads.builtin_code else "내장되지 않음(사이트에 접속할 수 없음)"))
     print("종료하려면 Ctrl+C를 누르세요.")
     if not args.no_browser:
         threading.Timer(0.5, lambda: webbrowser.open(url)).start()

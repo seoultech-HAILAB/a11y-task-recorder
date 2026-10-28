@@ -326,6 +326,23 @@ def extract_flat(archive: Path, destination: Path) -> None:
         remove_tree(staging)
 
 
+def check_catalog(path: Path) -> None:
+    """Stop the build when the recorder could not load the kit's assignment table.
+
+    10/28: a hand-built catalog without the source hashes shipped, and the kit showed no tester numbers.
+    The message names only the error type and a missing key, never catalog values (they hold site addresses).
+    """
+    repo = str(Path(__file__).resolve().parent.parent)
+    if repo not in sys.path:
+        sys.path.insert(0, repo)
+    from recorder.study import load_catalog
+    try:
+        load_catalog(path)
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        detail = "빠진 항목 {}".format(error) if isinstance(error, KeyError) else type(error).__name__
+        raise SystemExit("배정표를 기록기가 읽을 수 없습니다({}). 이대로면 테스터 번호가 나오지 않습니다.".format(detail))
+
+
 def read_access_code(path: Path) -> str:
     """Code file (bare code or JSON with `code`) -> code. The value is never printed."""
     repo = str(Path(__file__).resolve().parent.parent)
@@ -419,6 +436,7 @@ def build_kit(python_version: str, chrome_version: str, access_code_file: Option
         log("사본 주소: 키트 배정표에 넣음")
     else:
         log("사본 주소: 넣지 않음 (이 키트로는 사이트에 접속할 수 없음, 배포 금지)")
+    check_catalog(kit_catalog)
     shutil.copytree(ROOT / "browser-extension", app / "browser-extension", ignore=skip)
     shutil.copy2(ROOT / "run.py", app / "run.py")
     shutil.copy2(addon_file, staging / addon_file.name)

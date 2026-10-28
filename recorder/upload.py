@@ -128,19 +128,8 @@ class UploadManager:
             return ""
         return url if catalog.get("upload_url") else "{}://{}{}".format(parts.scheme, parts.netloc, UPLOAD_PATH)
 
-    def _catalog_origin(self, connection: Any) -> str:
-        """Origin of our own study server: the only place the access code may be posted."""
-        parts = urlsplit(self._catalog_upload_url(connection))
-        return "{}://{}".format(parts.scheme, parts.netloc) if parts.netloc else ""
-
     def _derived_url(self, connection: Any) -> str:
         return self._catalog_upload_url(connection)
-
-    def access(self) -> Dict[str, Any]:
-        """For the local dashboard's automatic iframe login only (GET /api/study/access)."""
-        with self.store.connect() as connection:
-            origin = self._catalog_origin(connection)
-        return {"origin": origin or None, "code": self.settings()["code"] or None}
 
     def configure(self, data: Dict[str, Any]) -> Dict[str, Any]:
         with self.store.connect() as connection:

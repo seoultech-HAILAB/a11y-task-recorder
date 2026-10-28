@@ -418,32 +418,6 @@ window.Study = (() => {
     if (failure) throw failure;
     return result;
   }
-  // Log the iframe in with the kit's access code: a hidden form posts to <copy>/access into the frame.
-  // `diagnosis.login` tells the researcher which step failed (no code, other server, refused).
-  async function autoLogin(sessionId, diagnosis) {
-    const access = await api("/study/access").catch(() => ({ code: null }));
-    const target = new URL(view.session.target_url);
-    // Never post the code to a site we do not host (tasks on a partner's copies).
-    diagnosis.login = !access.code ? "no_code" : target.origin !== access.origin ? "other_origin" : "submitted";
-    if (diagnosis.login !== "submitted") return null;
-    const form = document.createElement("form");
-    form.method = "post";
-    form.action = `${target.origin}/access`;
-    form.target = el("study-frame").name;
-    form.hidden = true;
-    for (const [name, value] of [["code", access.code], ["next", target.pathname]]) {
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = name;
-      input.value = value;
-      form.append(input);
-    }
-    document.body.append(form);
-    const loaded = frameLoaded();
-    try { form.submit(); } finally { form.remove(); }
-    await loaded;
-    return waitForSite(sessionId);
-  }
   async function prepare(retry = false) {
     const endpoint = retry ? `/study/${view.tester}/retry` : `/study/${view.tester}/prepare`;
     const data = await api(endpoint, "POST", retry ? { session_id: view.session.id } : {});
@@ -466,8 +440,7 @@ window.Study = (() => {
     let result;
     try {
       result = await waitForSite(sessionId);
-      // No code in the kit leaves the login page up: that is a site error, never a prompt for the participant.
-      if (result?.reason === "login_required") result = (await autoLogin(sessionId, diagnosis)) || result;
+      // Sites open without any access code (10/28). A login page is a site error, never a prompt.
     } catch (error) {
       if (view.session?.id === sessionId) {
         view.siteCause = await reportPreparation(sessionId, began, retry, { reason: error.reason || "unknown", ...diagnosis });
