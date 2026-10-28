@@ -187,7 +187,9 @@ window.Study = (() => {
     setAttr(frame, "tabindex", parked ? "-1" : "0");
     setAttr(frame, "title", FRAME_TITLE);
     for (const id of ["study-trap-start", "study-trap-end"]) setAttr(el(id), "tabindex", active ? "0" : "-1");
-    for (const id of ["study-page-start", "study-page-end"]) setAttr(el(id), "tabindex", active ? "-1" : "0");
+    // Out of the page during a task (0.5.6): left in place, the end trap was where NVDA's
+    // Ctrl+End landed, outside the site, as "프레임 끝, 영역 끝, 빈줄" (Windows 10/29, 13).
+    for (const id of ["study-page-start", "study-page-end"]) { const trap = el(id); if (trap.hidden !== active) trap.hidden = active; }
     el("study-result").hidden = !(current === "answering" || current === "ended");
     const title = active && view.frameTitle ? view.frameTitle : RECORDER_TITLE;
     if (document.title !== title) document.title = title;

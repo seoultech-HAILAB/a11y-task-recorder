@@ -175,3 +175,8 @@ test('returning to the task keeps the chosen result and the answer', () => {
   assert.doesNotMatch(body, /resetForms\(\)/);
 });
 
+test('during a task nothing of the recorder page follows the site for Ctrl+End to land on', () => {
+  assert.match(script, /for \(const id of \["study-page-start", "study-page-end"\]\) \{ const trap = el\(id\); if \(trap\.hidden !== active\) trap\.hidden = active; \}/);
+  assert.equal(attr(tagOf('study-view'), 'aria-labelledby'), undefined, '"과업 기록기 영역" is not a region around the site');
+});
+
