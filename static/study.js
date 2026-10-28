@@ -788,7 +788,8 @@ window.Study = (() => {
   async function returnToTask() {
     const data = await api(`/sessions/${view.session.id}/resume-task`, "POST", { by: "participant" });
     view.session = data.session;
-    resetForms();
+    // 0.5.5: the choice and answer stay. A participant who went back to check something and
+    // ended again found both emptied (Windows 10/29); they are cleared when the task is saved.
     await refreshPlan();
     render();
     // An alert left from the result form ("성공인지 실패인지 골라 주세요.") was read again with the

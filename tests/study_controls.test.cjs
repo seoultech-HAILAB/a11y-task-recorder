@@ -169,3 +169,9 @@ test('returning to the task clears an alert left on the result form', () => {
   assert.match(script, /message\(""\);\n    announce\("과업으로 돌아왔습니다\."\);/);
   assert.match(script, /function practiceReturn\(\) \{ message\(""\);/);
 });
+
+test('returning to the task keeps the chosen result and the answer', () => {
+  const body = script.match(/async function returnToTask\(\) \{[\s\S]*?\n  \}\n/)[0];
+  assert.doesNotMatch(body, /resetForms\(\)/);
+});
+
