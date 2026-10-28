@@ -6,16 +6,29 @@
     const assigned = new URL(message.targetUrl);
     const current = new URL(window.location.href);
     const loopback = assigned.protocol === "http:" && ["127.0.0.1", "localhost"].includes(assigned.hostname);
-    if ((assigned.protocol !== "https:" && !loopback) ||
-        !/^\/s\/[a-f0-9]{12}\/(?:index\.html|p\/[a-f0-9]{16}\.html)$/.test(assigned.pathname) ||
+    // Our hosted copies live under /s/<id>/ over https (loopback http in rehearsals). Any other
+    // http(s) start URL is a partner's test copy (catalog upload_url, 0.4.2): it has no capture
+    // meta and no preparation steps, and the readiness check is the assigned URL having loaded.
+    const hostedCopy = /^\/s\/[a-f0-9]{12}\/(?:index\.html|p\/[a-f0-9]{16}\.html)$/.test(assigned.pathname);
+    if (!["http:", "https:"].includes(assigned.protocol) ||
+        (hostedCopy && assigned.protocol !== "https:" && !loopback) ||
         (current.href !== assigned.href && current.href !== `${assigned.origin}/access`)) {
       return { ready: false, reason: "wrong_url" };
     }
-    if (document.readyState !== "complete") return { ready: false, reason: "loading" };
+    // `stage` tells the researcher where a preparation that timed out was stuck (10/28).
+    if (document.readyState !== "complete") return { ready: false, reason: "loading", stage: "page" };
     if (document.querySelector('form[action="/access"] input[type="password"]')) {
       return { ready: false, reason: "login_required" };
     }
     if (current.href !== assigned.href) return { ready: false, reason: "wrong_url" };
+    if (!hostedCopy) {
+      if (!Array.isArray(message.preparation)) return { ready: false, reason: "invalid_preparation" };
+      if (message.preparation.length) return { ready: false, reason: "preparation_scope_mismatch" };
+      return { ready: true, setup: {
+        method: "operator_automation", actions: [], checked_at: new Date().toISOString(),
+        excluded_from_participant_recording: true,
+      } };
+    }
     const meta = document.querySelector('meta[name="capture-source"]');
     if (!meta?.content) return { ready: false, reason: "capture_missing" };
     let source;
@@ -34,7 +47,7 @@
     const add = document.querySelector('.product-card[data-blux-item-id="1034450"] .button-item button');
     const open = document.querySelector("#catalog-cart-trigger");
     const increase = document.querySelector("#catalog-cart-increase");
-    if (!quantity || !name || !dialog || !add || !open || !increase) return { ready: false, reason: "loading" };
+    if (!quantity || !name || !dialog || !add || !open || !increase) return { ready: false, reason: "loading", stage: "cart_elements" };
     const prepared = () => quantity.value === "3" && name.textContent.trim() === "팬트리 수납 바구니 1호" && dialog.open;
     if (!prepared()) {
       if (!message.allowPreparation || preparationAttempted) return { ready: false, reason: "preparation_required" };

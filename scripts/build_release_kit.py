@@ -12,8 +12,10 @@ Testing에서는 계속 지원되므로 개발자 모드나 스토어 등록 없
 
     py -3 scripts\\build_release_kit.py [--access-code-file PATH]
 
---access-code-file를 주면 사이트 접속 코드를 키트(app/study_access.txt)에 넣어
-참가자·진행자가 코드를 입력하지 않게 한다. 코드 값은 어디에도 출력하지 않는다.
+--access-code-file로 사이트 접속 코드를 키트(app/study_access.txt)에 넣는다.
+기록기가 사이트 자동 로그인과 결과 전송에 쓰고, 참가자·담당자는 코드를 보거나
+입력하지 않는다(2026-10-20 결정). 빼고 만든 키트는 사이트에 접속하지 못한다.
+코드 값은 어디에도 출력하지 않는다. 코드가 든 키트는 공개 Releases에 올리지 않는다.
 """
 import argparse
 import json
@@ -25,6 +27,7 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlsplit
 from urllib.request import urlopen
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -113,7 +116,7 @@ if errorlevel 1 (
 echo NVDA 애드온 연결을 확인하는 중입니다...
 powershell -NoProfile -Command "$ok=$false; for($i=0;$i -lt 20;$i++){ try { if((Invoke-RestMethod 'http://127.0.0.1:8765/api/health' -TimeoutSec 1).nvda_connected){$ok=$true;break} } catch {}; Start-Sleep -Milliseconds 700 }; if($ok){ Write-Host 'NVDA 애드온 연결 확인됨.' } else { Write-Host '경고: NVDA 애드온이 연결되지 않았습니다. 기록 시작은 차단됩니다.' }"
 :resume_dashboard
-start "" "%KIT%app\\chrome\\chrome.exe" --load-extension="%KIT%app\\browser-extension" --user-data-dir="%KIT%app\\chrome-profile-@@EXTENSION_VERSION@@" --no-first-run --no-default-browser-check "http://127.0.0.1:8765"
+start "" "%KIT%app\\chrome\\chrome.exe" --load-extension="%KIT%app\\browser-extension" --user-data-dir="%KIT%app\\chrome-profile-@@EXTENSION_VERSION@@" --no-first-run --no-default-browser-check --start-maximized --app="http://127.0.0.1:8765"
 endlocal
 """
 
@@ -165,13 +168,13 @@ table { border-collapse: collapse; } th, td { border-bottom: 1px solid #ccc; pad
 <body>
 <h1>A11y Task Recorder 평가 키트 안내</h1>
 <p>화면낭독기(NVDA)로 웹 과업을 수행하는 동안 누른 키와 들은 안내를 기록하는 도구입니다.
-이 문서는 <strong>노트북을 준비하는 담당자</strong>가 읽습니다. 참가자는 화면 안내와 연습 과업으로 사용법을 익히고, 과업은 혼자 진행합니다.</p>
+이 문서는 <strong>평가용 컴퓨터를 준비하는 담당자</strong>가 읽습니다. 참가자는 화면 안내와 연습 과업으로 사용법을 익힌 뒤 혼자 진행합니다.</p>
 
 <h2>한눈에 보기</h2>
 <ol>
-<li><strong>처음 한 번</strong>: 노트북에 NVDA를 설치합니다.</li>
-<li><strong>세션 준비 (담당자, 약 3분)</strong>: 키트를 실행하고 테스터 번호를 고른 뒤, 첫 과업의 접속 코드를 입력합니다.</li>
-<li><strong>과업 진행 (참가자 혼자, 약 110분)</strong>: 연습 1개, 과업 12개, 4개마다 휴식.</li>
+<li><strong>처음 한 번</strong>: 평가용 컴퓨터에 NVDA를 설치합니다.</li>
+<li><strong>세션 준비 (담당자, 약 3분)</strong>: 키트를 실행하고 테스터 번호를 고릅니다.</li>
+<li><strong>과업 진행 (참가자 혼자)</strong>: 연습 1개를 한 뒤 배정된 과업을 합니다. 과업 하나는 최대 10분이고, 4개마다 쉴 수 있습니다.</li>
 <li><strong>마무리 (담당자, 약 2분)</strong>: 결과 ZIP을 만들어 연구진에게 보냅니다.</li>
 </ol>
 
@@ -188,50 +191,49 @@ table { border-collapse: collapse; } th, td { border-bottom: 1px solid #ccc; pad
 <li>키트 폴더의 <strong>평가시작.bat</strong>을 더블클릭합니다. 처음에 Windows 보안 창이 나오면 <strong>추가 정보</strong>, <strong>실행</strong>을 차례로 누릅니다. 연구진에게 받은 키트일 때만 실행하세요.</li>
 <li>잠시 기다리면 NVDA가 다시 켜지고, 검은색 <strong>서버 창</strong>과 기록 화면이 열립니다. 서버 창은 끝날 때까지 <strong>닫지 마세요</strong>. 닫으면 기록이 멈춥니다.</li>
 <li>기록 화면 위쪽에 <strong>NVDA 연결됨</strong>이 보이는지 확인합니다.</li>
-<li>참가자의 <strong>테스터 번호(T01~T20)</strong>를 고르고 <strong>배정 확인</strong>을 누릅니다. 이후 번호 칸은 숨겨집니다.</li>
-<li>첫 과업에서 가운데 사이트 칸에 <strong>연구 참여 접속</strong> 화면이 나오면, 연구진에게 받은 <strong>접속 코드</strong>를 입력합니다. 한 번 넣으면 다음 과업부터는 묻지 않습니다.</li>
-<li>화면에 "사이트가 준비되었습니다"가 나오면 참가자에게 자리를 넘깁니다.</li>
+<li>참가자에게 받은 <strong>테스터 번호</strong>(예: T01)를 입력하고 <strong>시작</strong>을 누릅니다. 번호 칸이 사라지고 연습 안내가 읽힙니다.</li>
+<li>여기서 참가자에게 자리를 넘깁니다.</li>
 </ol>
 
 <h2>3. 과업 진행 (참가자)</h2>
-<p>참가자는 아래 순서를 연습 과업에서 한 번 해 보고 시작합니다. 담당자는 기술 문제가 생길 때만 돕습니다.</p>
+<p>참가자 화면에는 지시문만 나옵니다. 단축키는 연습에서 한 번만 안내하고, 본 과업에서는 다시 말하지 않습니다. 담당자는 기술 문제가 생겼을 때만 돕습니다.</p>
 <ol>
-<li><strong>연습</strong>: 처음에는 <strong>연습 시작</strong>을 누릅니다. 연습 지시문이 단축키부터 알려 줍니다. 연습은 기록하지 않습니다.</li>
-<li><strong>듣기</strong>: 지시문으로 초점이 가면 NVDA가 읽어 줍니다.</li>
-<li><strong>시작</strong>: 바로 아래 <strong>과업 시작</strong>을 누르거나 <kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>를 누르면 사이트로 초점이 가고 기록이 시작됩니다.</li>
-<li><strong>수행</strong>: 평소처럼 키보드와 NVDA로 과업을 합니다.</li>
-<li><strong>끝내기</strong>: 다 했거나 더 진행할 수 없으면 <kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>를 누릅니다. 10분이 되면 자동으로 끝납니다.</li>
-<li><strong>결과</strong>: <strong>마쳤습니다</strong> 또는 <strong>마치지 못했습니다</strong>를 고르고, 답을 적고 <strong>저장</strong>합니다.</li>
-<li><strong>다음</strong>: <strong>다음 과업</strong>을 누르면 2번으로 돌아갑니다. 4개 과업마다 원하는 만큼 쉬어도 됩니다.</li>
+<li><strong>연습</strong>: 번호를 넣으면 연습이 저절로 열립니다. 단축키 안내와 연습 과업을 듣고, <kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>H</kbd>와 <kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>E</kbd>를 직접 써 봅니다. 연습은 기록하지 않습니다. 끝나면 두 키를 써 봤는지 알려 줍니다. 과업을 시작하기 전이면 <strong>연습 다시 하기</strong>로 언제든 다시 할 수 있습니다.</li>
+<li><strong>듣기</strong>: 과업 화면이 나오면 지시문으로 초점이 가고 NVDA가 지시문만 읽습니다.</li>
+<li><strong>시작</strong>: 지시문 바로 아래 <strong>과업 시작</strong>을 누릅니다. 사이트가 열리고 기록이 시작됩니다. 과업 중에는 초점이 사이트 밖으로 나가지 않습니다.</li>
+<li><strong>끝내기</strong>: 답을 찾았거나 더 할 수 없으면 그 자리에서 <kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>E</kbd>를 누릅니다. 10분이 지나면 저절로 끝납니다.</li>
+<li><strong>결과</strong>: <strong>성공</strong> 또는 <strong>실패</strong>를 고르고 답을 적어 <strong>저장</strong>합니다. 저장하면 바로 다음 과업의 지시문이 읽힙니다. 잘못 끝냈으면 저장하기 전에 <strong>과업으로 돌아가기</strong>나 <strong>과업 처음부터 다시 하기</strong>를 누릅니다.</li>
 </ol>
-<p>사이트 아래에도 <strong>과업 끝내기</strong> 버튼이 있지만 Tab으로는 가지 않습니다. 마우스나 NVDA 브라우즈 모드로 누르면 "과업을 끝낼까요?"가 나오고, <strong>끝내기</strong>를 눌러야 끝납니다(<strong>계속하기</strong>는 사이트로 돌아감).</p>
 
 <h2>평가 중 단축키</h2>
 <table>
 <tr><th>단축키</th><th>하는 일</th></tr>
-<tr><td><kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></td><td>과업 시작</td></tr>
-<tr><td><kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd></td><td>과업 끝내기 (확인 없이 바로)</td></tr>
-<tr><td><kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd></td><td>지시문 다시 듣기 (끝내는 단축키도 함께 알려 줌)</td></tr>
-<tr><td><kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>L</kbd></td><td>기록 상태 확인 (상승음 두 번: 기록 중, 낮은 음: 대기 중)</td></tr>
+<tr><td><kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>E</kbd></td><td>과업 끝내기 (묻지 않고 바로 끝남)</td></tr>
+<tr><td><kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>H</kbd></td><td>지시문 다시 듣기 (지시문만 읽음)</td></tr>
+<tr><td><kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>L</kbd></td><td>기록 상태 확인 (높아지는 음 두 번: 기록 중, 낮은 음: 대기 중). 담당자용</td></tr>
+<tr><td><kbd>Alt</kbd>+<kbd>왼쪽 화살표</kbd></td><td>사이트의 이전 페이지 (과업을 시작한 페이지보다 앞으로는 가지 않음)</td></tr>
+<tr><td><kbd>Alt</kbd>+<kbd>Home</kbd></td><td>과업 처음 화면 (과업을 시작한 페이지를 다시 엶)</td></tr>
 </table>
-<p>단축키를 누르면 확인음이 납니다. 시작과 다시 듣기는 높은 음, 끝내기는 한 단계 낮은 음입니다. 지금 쓸 수 없는 단축키는 낮은 경고음이 납니다. 참가자에게 단축키를 말로 알려 줄 때는 "NVDA, Ctrl, Shift, E를 함께"처럼 쉼표로 끊어 말합니다.</p>
+<p>단축키를 누르면 짧은 확인음이 나고, 지금 쓸 수 없는 단축키는 낮은 경고음이 납니다. 과업 시작은 버튼으로 합니다. 참가자에게 단축키를 말로 알려 줄 때는 "NVDA, Ctrl, E를 함께"처럼 쉼표로 끊어 말해 주세요.</p>
+<p>노트북 배열에서 CapsLock을 NVDA 키로 쓰려면 NVDA 설정의 <strong>키보드</strong>에서 <strong>CapsLock을 NVDA 키로 사용</strong>을 켜야 합니다. 켜지 않으면 CapsLock 단축키가 동작하지 않고 대문자 잠금만 켜집니다.</p>
 
 <h2>4. 마무리 (담당자)</h2>
 <ol>
-<li>12개 과업이 끝나면 "배정된 과업을 모두 마쳤습니다" 화면이 나옵니다.</li>
+<li>배정된 과업이 모두 끝나면 "모든 과업을 마쳤습니다" 화면이 나옵니다.</li>
 <li>그 화면의 <strong>결과 패키지 만들기 (담당자용)</strong>를 누릅니다. <strong>결과</strong> 폴더가 열리고 ZIP 파일 하나가 생깁니다.</li>
-<li>그 ZIP 파일을 연구진에게 보냅니다(이메일 또는 안내받은 업로드 링크). <strong>결과가 연구진에게 가는 길은 이 ZIP 하나뿐입니다.</strong></li>
+<li>그 ZIP 파일을 연구진에게 보냅니다(이메일 또는 안내받은 업로드 링크). <strong>ZIP은 꼭 보내 주세요.</strong></li>
 <li>기록 화면(브라우저)과 서버 창을 닫습니다.</li>
 </ol>
-<p>세션을 중간에 끝내야 하면 기록 화면 주소 끝에 <code>?change-tester=1</code>을 붙여 다시 열고(<code>http://127.0.0.1:8765/?change-tester=1</code>), 나타나는 <strong>기록 관리</strong>에서 결과 패키지를 만듭니다.</p>
+<p>세션을 중간에 끝내야 하면 과업 화면의 <strong>테스터 번호 바꾸기</strong>를 누르고, 나타나는 <strong>기록 관리</strong>에서 결과 패키지를 만듭니다.</p>
 
 <h2>문제 해결</h2>
 <ul>
 <li><strong>기록 화면이 안 열려요</strong>: 서버 창이 열려 있는지 확인하고, 평가용 브라우저에서 <code>http://127.0.0.1:8765</code>를 다시 엽니다.</li>
+<li><strong>시작 뒤 "기록 프로그램에 연결할 수 없습니다"가 나와요</strong>: 평가용 브라우저를 막 연 직후에 생길 수 있습니다. <kbd>F5</kbd>로 기록 화면을 새로 고치세요.</li>
 <li><strong>"NVDA 연결됨"이 안 보여요</strong>: 기록 화면과 서버 창을 닫고 <strong>평가시작.bat</strong>을 다시 실행해 보세요. 그래도 안 되면 연구진에게 알려 주세요.</li>
-<li><strong>"사이트에 접속할 수 없습니다"가 나와요</strong>: 인터넷 연결과 접속 코드를 확인하고, 그래도 안 되면 연구진에게 알려 주세요.</li>
-<li><strong>단축키를 누르면 낮은 음만 나요</strong>: 지금 그 단축키를 쓸 수 없는 단계입니다(예: 과업 시작 전에 끝내기). 서버 창이 닫히지 않았는지도 확인합니다.</li>
-<li><strong>테스터 번호를 잘못 골랐어요</strong>: <code>http://127.0.0.1:8765/?change-tester=1</code>로 다시 열어 고릅니다. 이미 기록 중인 과업이 있으면 바꿀 수 없습니다.</li>
+<li><strong>"사이트에 접속할 수 없습니다"가 나와요</strong>: 인터넷 연결을 확인하고, 그래도 안 되면 연구진에게 알려 주세요.</li>
+<li><strong>단축키를 누르면 낮은 음만 나요</strong>: 지금은 그 단축키를 쓸 수 없는 단계입니다(예: 과업 시작 전에 끝내기). 서버 창이 열려 있는지도 확인하세요.</li>
+<li><strong>테스터 번호를 잘못 넣었어요</strong>: 지시문 화면 아래 <strong>테스터 번호 바꾸기</strong>를 누르고 다시 입력합니다. 과업을 하는 중에는 바꿀 수 없습니다. 이미 저장한 결과는 지워지지 않습니다.</li>
 <li><strong>_연구진용 폴더</strong>: 연구진이 설치를 점검할 때 쓰는 파일입니다. 담당자는 열거나 실행하지 마세요.</li>
 <li><strong>새 키트로 바꿔야 해요</strong>: 서버 창과 평가용 브라우저를 닫고, 새 ZIP을 다른 폴더에 풉니다. 기존 기록을 이어가려면 이전 키트의 <code>data</code> 폴더 전체를 새 키트로 복사하고, 이전 폴더는 지우지 말고 보관합니다.</li>
 <li><strong>동영상이 재생되지 않아요</strong>: 평가용 브라우저에는 일부 상용 동영상 코덱이 없습니다. 과업에 문제가 되면 연구진에게 알려 주세요.</li>
@@ -248,7 +250,7 @@ table { border-collapse: collapse; } th, td { border-bottom: 1px solid #ccc; pad
 <div class="note">
 <p>입력한 글자와 주소의 검색어도 가리지 않고 저장합니다. 과업에 넣는 값은 연구진이 준 가상 값입니다.
 <strong>저장하지 않는 것</strong>: 목소리 녹음, 화면 녹화, 화면에 바뀐 내용 자체.
-모든 기록은 이 노트북의 <strong>data</strong> 폴더에만 저장되고, 결과 패키지 ZIP으로만 밖으로 나갑니다.</p>
+모든 기록은 이 컴퓨터의 <strong>data</strong> 폴더에 저장되고, 과업이 끝날 때마다 그 과업의 기록이 연구진 서버로 전송됩니다. 결과 패키지 ZIP도 따로 연구진에게 보냅니다.</p>
 </div>
 
 <h2>문의</h2>
@@ -320,6 +322,23 @@ def extract_flat(archive: Path, destination: Path) -> None:
         remove_tree(staging)
 
 
+def check_catalog(path: Path) -> None:
+    """Stop the build when the recorder could not load the kit's assignment table.
+
+    10/28: a hand-built catalog without the source hashes shipped, and the kit showed no tester numbers.
+    The message names only the error type and a missing key, never catalog values (they hold site addresses).
+    """
+    repo = str(Path(__file__).resolve().parent.parent)
+    if repo not in sys.path:
+        sys.path.insert(0, repo)
+    from recorder.study import load_catalog
+    try:
+        load_catalog(path)
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        detail = "빠진 항목 {}".format(error) if isinstance(error, KeyError) else type(error).__name__
+        raise SystemExit("배정표를 기록기가 읽을 수 없습니다({}). 이대로면 테스터 번호가 나오지 않습니다.".format(detail))
+
+
 def read_access_code(path: Path) -> str:
     """Code file (bare code or JSON with `code`) -> code. The value is never printed."""
     repo = str(Path(__file__).resolve().parent.parent)
@@ -335,8 +354,32 @@ def read_access_code(path: Path) -> str:
     return code
 
 
-def build_kit(python_version: str, chrome_version: str, access_code_file: Optional[Path] = None) -> Path:
+# The packaged catalog names this placeholder (scripts/build_study_catalog.py, public repository);
+# the kit gets the real copy origin from a private file.
+PUBLIC_ORIGIN = "https://study-copy.invalid"
+
+
+def read_site_origin(path: Path) -> str:
+    """Origin file (bare origin, or JSON with `origin` such as the lab operator catalog) -> origin. Never printed."""
+    try:
+        text = path.read_text(encoding="utf-8-sig").strip()
+    except OSError as error:
+        raise SystemExit("사본 주소 파일을 읽지 못했습니다: {} ({})".format(path, error.strerror))
+    try:
+        value = json.loads(text).get("origin", "") if text.startswith("{") else text
+    except ValueError:
+        value = ""
+    parts = urlsplit(value) if isinstance(value, str) else None
+    if not parts or parts.scheme != "https" or not parts.hostname or parts.path not in ("", "/") \
+            or parts.query or parts.fragment or parts.username or parts.password:
+        raise SystemExit("사본 주소 파일에서 HTTPS 주소를 찾지 못했습니다: {}".format(path))
+    return "https://" + parts.netloc
+
+
+def build_kit(python_version: str, chrome_version: str, access_code_file: Optional[Path] = None,
+              site_origin_file: Optional[Path] = None, catalog_file: Optional[Path] = None) -> Path:
     access_code = read_access_code(access_code_file) if access_code_file else ""
+    site_origin = read_site_origin(site_origin_file) if site_origin_file else ""
     addon_version = read_manifest_version(ROOT / "nvda-addon" / "manifest.ini")
     extension_version = json.loads(
         (ROOT / "browser-extension" / "manifest.json").read_text(encoding="utf-8")
@@ -365,6 +408,9 @@ def build_kit(python_version: str, chrome_version: str, access_code_file: Option
     )
 
     kit_name = "A11yTaskRecorder-{}-chrome{}".format(addon_version, cft["version"])
+    if catalog_file:
+        # A kit with its own assignment table (e.g. a peer check) must not overwrite the main kit.
+        kit_name += "-" + catalog_file.stem.split(".")[0]
     staging = BUILD_DIR / kit_name
     if staging.exists():
         remove_tree(staging)
@@ -372,10 +418,22 @@ def build_kit(python_version: str, chrome_version: str, access_code_file: Option
     app.mkdir(parents=True)
 
     log("구성 요소 복사 중...")
-    shutil.copytree(ROOT / "recorder", app / "recorder",
-                    ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
-    shutil.copytree(ROOT / "static", app / "static")
-    shutil.copytree(ROOT / "browser-extension", app / "browser-extension")
+    # .omc is the coding agent's local state, never part of the kit.
+    skip = shutil.ignore_patterns("__pycache__", "*.pyc", ".omc")
+    shutil.copytree(ROOT / "recorder", app / "recorder", ignore=skip)
+    shutil.copytree(ROOT / "static", app / "static", ignore=skip)
+    kit_catalog = app / "recorder" / "study_catalog.json"
+    if catalog_file:
+        shutil.copy2(catalog_file, kit_catalog)
+        log("배정표: {}".format(catalog_file.name))
+    if site_origin:
+        kit_catalog.write_text(kit_catalog.read_text(encoding="utf-8").replace(PUBLIC_ORIGIN, site_origin),
+                               encoding="utf-8", newline="\n")
+        log("사본 주소: 키트 배정표에 넣음")
+    else:
+        log("사본 주소: 넣지 않음 (이 키트로는 사이트에 접속할 수 없음, 배포 금지)")
+    check_catalog(kit_catalog)
+    shutil.copytree(ROOT / "browser-extension", app / "browser-extension", ignore=skip)
     shutil.copy2(ROOT / "run.py", app / "run.py")
     shutil.copy2(addon_file, staging / addon_file.name)
     research = staging / "_연구진용"  # 설치 점검 도구: 담당자가 실수로 실행하지 않게 최상위에서 뺀다
@@ -399,7 +457,7 @@ def build_kit(python_version: str, chrome_version: str, access_code_file: Option
         (app / "study_access.txt").write_text(access_code + "\n", encoding="utf-8", newline="\n")
         log("사이트 접속 코드: 키트에 내장함")
     else:
-        log("사이트 접속 코드: 내장하지 않음 (사이트 칸에서 입력)")
+        log("사이트 접속 코드: 내장하지 않음 (이 키트로는 사이트에 접속할 수 없음, 배포 금지)")
     (staging / "평가시작.bat").write_text(
         LAUNCHER_BAT.replace("@@EXTENSION_VERSION@@", extension_version),
         encoding="utf-8",
@@ -419,6 +477,8 @@ def build_kit(python_version: str, chrome_version: str, access_code_file: Option
                 "Chrome for Testing: {}".format(cft["version"]),
                 "임베디드 Python: {}".format(python_version),
                 "사이트 접속 코드: {}".format("키트에 내장" if access_code else "내장하지 않음"),
+                "사본 주소: {}".format("배정표에 넣음" if site_origin else "넣지 않음"),
+                "배정표: {}".format(catalog_file.name if catalog_file else "기본(recorder/study_catalog.json)"),
                 "",
                 "연구 보고 시 브라우저는 'Chrome for Testing {}(동일 버전 Chrome과 같은 엔진)'으로 기재하세요.".format(cft["version"]),
                 "",
@@ -454,8 +514,21 @@ def main() -> None:
         default=None,
         help="사이트 접속 코드 파일(코드 문자열, 또는 JSON의 code/accessCode). 주면 키트 app/study_access.txt에 넣습니다.",
     )
+    parser.add_argument(
+        "--site-origin-file",
+        type=Path,
+        default=None,
+        help="사본 주소 파일(주소 문자열, 또는 JSON의 origin, 예: lab의 operator-catalog.private.json). 주면 키트 배정표의 자리표시를 바꿉니다.",
+    )
+    parser.add_argument(
+        "--catalog",
+        type=Path,
+        default=None,
+        help="기본 배정표(recorder/study_catalog.json) 대신 넣을 배정표. 파일 이름 첫 부분이 키트 이름 끝에 붙습니다.",
+    )
     args = parser.parse_args()
-    build_kit(args.python_version, args.chrome_version, args.access_code_file)
+    build_kit(args.python_version, args.chrome_version, args.access_code_file, args.site_origin_file,
+              args.catalog)
 
 
 if __name__ == "__main__":

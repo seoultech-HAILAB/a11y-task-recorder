@@ -90,6 +90,10 @@ class ReleaseDownloadTests(unittest.TestCase):
                                  bundle.read(prefix + "_연구진용/verify_live_pipeline.ps1"))
                 self.assertIn(prefix + "_연구진용/windows-release-validation.md", bundle.namelist())
                 self.assertNotIn(prefix + "app/study_access.txt", bundle.namelist())
+                self.assertIn("https://study-copy.invalid/s/", bundle.read(prefix + "app/recorder/study_catalog.json").decode("utf-8"))
+                # 10/20: nobody types the access code, so the kit guides never ask for one.
+                for guide in ("설치안내.html", "진행안내.md"):
+                    self.assertNotIn("접속 코드", bundle.read(prefix + guide).decode("utf-8"), guide)
             # --access-code-file embeds the code (fake value, 16+ characters) as app/study_access.txt.
             code_file = root / "access.json"
             code_file.write_text(json.dumps({"code": "fake-kit-code-for-tests-0001", "note": "x"}), encoding="utf-8")
@@ -97,12 +101,45 @@ class ReleaseDownloadTests(unittest.TestCase):
                 build_release_kit, "BUILD_DIR", root / "dist/kit-build"
             ), patch.object(build_release_kit, "download", side_effect=[chrome, python]), \
                     patch("sys.stdout", io.StringIO()) as printed:
-                artifact = build_release_kit.build_kit("3.12.9", "151.0.7922.71", code_file)
+                origin_file = root / "operator-catalog.private.json"
+                origin_file.write_text(json.dumps({"origin": "https://copies.fixture.test", "tasks": []}), encoding="utf-8")
+                artifact = build_release_kit.build_kit("3.12.9", "151.0.7922.71", code_file, origin_file)
             self.assertNotIn("fake-kit-code-for-tests-0001", printed.getvalue())
+            self.assertNotIn("copies.fixture.test", printed.getvalue())
+            with zipfile.ZipFile(artifact) as bundle:
+                # --site-origin-file swaps the public placeholder for the copy origin in the kit only.
+                catalog = bundle.read(artifact.stem + "/app/recorder/study_catalog.json").decode("utf-8")
+                self.assertNotIn("study-copy.invalid", catalog)
+                self.assertIn('"https://copies.fixture.test/s/', catalog)
             with zipfile.ZipFile(artifact) as bundle:
                 self.assertEqual("fake-kit-code-for-tests-0001\n",
                                  bundle.read(prefix + "app/study_access.txt").decode("utf-8"))
                 self.assertNotIn("fake-kit-code-for-tests-0001", bundle.read(prefix + "_연구진용/KIT-INFO.txt").decode("utf-8"))
+            # --catalog swaps the assignment table, names the kit after it, and .omc never ships.
+            (root / "browser-extension/.omc").mkdir(exist_ok=True)
+            (root / "browser-extension/.omc/state.json").write_text("{}", encoding="utf-8")
+            peer = root / "peer-check.catalog.json"
+            # 10/28: a catalog the recorder cannot load stops the build (no kit without tester numbers).
+            peer.write_text(json.dumps({"id": "peer"}), encoding="utf-8")
+            with patch.object(build_release_kit, "ROOT", root), patch.object(
+                build_release_kit, "BUILD_DIR", root / "dist/kit-build"
+            ), patch.object(build_release_kit, "download", side_effect=[chrome, python]), \
+                    patch("sys.stdout", io.StringIO()):
+                with self.assertRaisesRegex(SystemExit, "테스터 번호가 나오지 않습니다"):
+                    build_release_kit.build_kit("3.12.9", "151.0.7922.71", code_file, origin_file, peer)
+            peer_data = json.loads((source_root / "recorder/study_catalog.json").read_text(encoding="utf-8"))
+            peer_data.update(id="peer", upload_url="https://study-copy.invalid/upload/session")
+            peer.write_text(json.dumps(peer_data, ensure_ascii=False), encoding="utf-8")
+            with patch.object(build_release_kit, "ROOT", root), patch.object(
+                build_release_kit, "BUILD_DIR", root / "dist/kit-build"
+            ), patch.object(build_release_kit, "download", side_effect=[chrome, python]), \
+                    patch("sys.stdout", io.StringIO()):
+                artifact = build_release_kit.build_kit("3.12.9", "151.0.7922.71", code_file, origin_file, peer)
+            self.assertTrue(artifact.stem.endswith("-peer-check"))
+            with zipfile.ZipFile(artifact) as bundle:
+                self.assertEqual(json.loads(peer.read_text(encoding="utf-8").replace("https://study-copy.invalid", "https://copies.fixture.test")),
+                                 json.loads(bundle.read(artifact.stem + "/app/recorder/study_catalog.json")))
+                self.assertFalse([name for name in bundle.namelist() if "/.omc/" in name])
 
     def test_access_code_file_accepts_bare_or_json_and_rejects_empty(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -114,6 +151,18 @@ class ReleaseDownloadTests(unittest.TestCase):
                 build_release_kit.read_access_code(path)
             with self.assertRaises(SystemExit):
                 build_release_kit.read_access_code(Path(directory) / "missing.txt")
+
+    def test_site_origin_file_accepts_bare_or_json_and_rejects_non_origins(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "origin.txt"
+            path.write_text("\ufeff https://copies.fixture.test \n", encoding="utf-8")
+            self.assertEqual("https://copies.fixture.test", build_release_kit.read_site_origin(path))
+            path.write_text('{"origin": "https://copies.fixture.test/"}', encoding="utf-8")
+            self.assertEqual("https://copies.fixture.test", build_release_kit.read_site_origin(path))
+            for bad in ('{"origin": ""}', "http://copies.fixture.test", "https://copies.fixture.test/s/x", "not json {"):
+                path.write_text(bad, encoding="utf-8")
+                with self.assertRaises(SystemExit, msg=bad):
+                    build_release_kit.read_site_origin(path)
 
     def test_chrome_argument_templates_preserve_paths_with_spaces(self):
         script = (Path(__file__).resolve().parents[1] / "scripts/verify_live_pipeline.ps1").read_text(encoding="utf-8")

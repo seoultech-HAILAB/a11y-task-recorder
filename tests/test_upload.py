@@ -11,6 +11,7 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from recorder.server import RecorderHTTPServer, RecorderStore
+from recorder.study import load_catalog
 from recorder.upload import UploadManager, builtin_access_code, parse_access_code
 
 FAKE_KIT_CODE = "fake-kit-code-for-tests-0001"
@@ -102,6 +103,22 @@ class UploadTests(unittest.TestCase):
         self.assertNotIn("secret-code-value", json.dumps(manager.status()))
         self.assertTrue(manager.status()["configured"])
 
+    def test_catalog_upload_url_overrides_the_task_site_origin(self):
+        data = catalog()
+        data["upload_url"] = "https://ours.example.test/upload/session"
+        for task in data["testers"][0]["tasks"]:
+            task["start_url"] = "http://partner.example.test/site/"
+        self.store.study_catalog_path.write_text(json.dumps(data), encoding="utf-8")
+        manager = self.manager(url="", builtin_code=FAKE_KIT_CODE)
+        self.assertEqual("https://ours.example.test/upload/session", manager.settings()["url"])
+
+    def test_invalid_catalog_upload_url_is_rejected(self):
+        data = catalog()
+        data["upload_url"] = "ftp://ours.example.test/upload"
+        self.store.study_catalog_path.write_text(json.dumps(data), encoding="utf-8")
+        with self.assertRaises(ValueError):
+            load_catalog(self.store.study_catalog_path)
+
     def test_unreachable_server_leaves_session_queued_and_task_flow_intact(self):
         manager = self.manager(url="http://127.0.0.1:9/upload/session")
         manager.configure({"code": "code"})
@@ -175,11 +192,10 @@ class UploadTests(unittest.TestCase):
         manager.enqueue(session["id"])
         self.assertEqual(1, manager.flush()["sent"])
         self.assertEqual("Bearer " + FAKE_KIT_CODE, self.fake.requests[0]["auth"])
-        self.assertEqual({"origin": "https://study.example.test", "code": FAKE_KIT_CODE}, manager.access())
         local = self.manager(builtin_code="")
         self.assertEqual("local", local.status()["code_source"])
         local.configure({"code": ""})
-        self.assertEqual({"origin": "https://study.example.test", "code": None}, local.access())
+        self.assertEqual("", local.settings()["code"])
 
     def test_builtin_code_comes_from_environment_then_code_file(self):
         self.assertEqual(FAKE_KIT_CODE, parse_access_code(json.dumps({"code": FAKE_KIT_CODE})))
@@ -197,33 +213,20 @@ class UploadTests(unittest.TestCase):
             os.environ.pop("A11Y_RECORDER_ACCESS_CODE", None)
             self.assertEqual("", builtin_access_code())
 
-    def test_access_route_answers_only_the_local_dashboard(self):
+    def test_no_route_hands_the_code_to_the_dashboard(self):
+        # 10/28: sites open without an access code; the dashboard never logs the frame in.
         server = RecorderHTTPServer(("127.0.0.1", 0), self.store)
         server.uploads = self.manager(builtin_code=FAKE_KIT_CODE)
         threading.Thread(target=server.serve_forever, daemon=True).start()
         base = "http://127.0.0.1:%s" % server.server_port
-
-        def get(headers):
-            req = Request(base + "/api/study/access", headers={"User-Agent": "test", **headers})
+        try:
             try:
-                with urlopen(req) as response:
-                    return response.status, json.load(response), response.headers.get("Access-Control-Allow-Origin")
+                with urlopen(base + "/api/study/access") as response:
+                    body = response.read().decode("utf-8")
             except HTTPError as response:
                 with response:
-                    return response.code, json.load(response), None
-        try:
-            status, body, cors = get({})
-            self.assertEqual((200, FAKE_KIT_CODE, "https://study.example.test"), (status, body["code"], body["origin"]))
-            self.assertIsNone(cors)
-            self.assertEqual(200, get({"Origin": base, "Sec-Fetch-Site": "same-origin"})[0])
-            for headers in ({"Origin": "https://evil.example"}, {"Origin": "chrome-extension://abcdef"},
-                            {"Host": "evil.example:%s" % server.server_port}, {"Sec-Fetch-Site": "cross-site"}):
-                status, body, _ = get(headers)
-                self.assertEqual(403, status, headers)
-                self.assertNotIn(FAKE_KIT_CODE, json.dumps(body))
-            # The tester route is not shadowed for real tester ids.
-            with urlopen(base + "/api/study/T01") as response:
-                self.assertEqual(200, response.status)
+                    body = response.read().decode("utf-8")
+            self.assertNotIn(FAKE_KIT_CODE, body)
         finally:
             server.shutdown()
             server.server_close()

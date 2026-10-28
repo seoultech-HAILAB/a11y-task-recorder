@@ -167,9 +167,10 @@ class StudyFlowTests(unittest.TestCase):
         self.assertTrue(board.decide("start", "nvda_addon", draft)["accepted"])
         self.assertFalse(board.decide("end", "nvda_addon", draft)["accepted"])
         repeat = board.decide("repeat", "nvda_addon", draft)
-        self.assertEqual("Find item 1 끝낼 때는 NVDA, Ctrl, Shift, E를 함께 누르세요.", repeat["speak"])
+        # 0.5.0: the scenario sentence alone; how to end is taught in the practice only.
+        self.assertEqual("Find item 1", repeat["speak"])
         answering = board.decide("repeat", "nvda_addon", {"id": draft["id"], "status": "answering", "scenario": "Find item 1"})
-        self.assertEqual("Find item 1", answering["speak"])  # task already over: no end hint
+        self.assertEqual("Find item 1", answering["speak"])
         active = self.store.start_session(draft["id"], study_ready=True)
         self.assertFalse(board.decide("start", "nvda_addon", active)["accepted"])
         end = board.decide("end", "nvda_addon", active)
@@ -181,8 +182,33 @@ class StudyFlowTests(unittest.TestCase):
         board.practice = True
         practice = board.decide("repeat", "nvda_addon", None)
         self.assertTrue(practice["accepted"])
-        self.assertIn("연습", practice["speak"])
-        self.assertTrue(practice["speak"].endswith("끝낼 때는 NVDA, Ctrl, Shift, E를 함께 누르세요."))
+        # The practice task sentence alone, as a real task's repeat (study.js PRACTICE_TASK).
+        self.assertEqual("연습 화면에서 '재료 보기' 버튼을 눌러 첫 번째 재료를 확인하세요.", practice["speak"])
+        self.assertNotIn("NVDA", practice["speak"])
+
+    def test_dashboard_csp_allows_plain_http_partner_copies_from_the_catalog(self):
+        # Our copies are https (always allowed); a partner's test copy over plain http (SNC)
+        # is allowed by its exact catalog origin, and nothing else is added.
+        self.assertEqual([], self.store.study_frame_origins())
+        data = catalog()
+        data["testers"][0]["tasks"][0]["start_url"] = "http://partner.example.test/koref/web/user/"
+        data["testers"][0]["tasks"][1]["start_url"] = "http://partner.example.test:8080/cj/"
+        data["testers"][0]["tasks"][2]["start_url"] = "http://localhost:8765/practice.html"
+        path = Path(self.temp.name) / "partner.json"
+        path.write_text(json.dumps(data), encoding="utf-8")
+        store = RecorderStore(Path(self.temp.name) / "partner.sqlite3")
+        store.study_catalog_path = path
+        self.assertEqual(["http://partner.example.test", "http://partner.example.test:8080"], store.study_frame_origins())
+        server = RecorderHTTPServer(("127.0.0.1", 0), store)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            with urlopen(Request("http://127.0.0.1:%s/" % server.server_port, headers={"User-Agent": "test"})) as response:
+                csp = response.headers["Content-Security-Policy"]
+        finally:
+            server.shutdown()
+            server.server_close()
+        self.assertIn("frame-src 'self' https: http://127.0.0.1:* http://localhost:*"
+                      " http://partner.example.test http://partner.example.test:8080", csp)
 
     def test_http_flow_end_answer_signals(self):
         server = RecorderHTTPServer(("127.0.0.1", 0), self.store)
@@ -206,7 +232,7 @@ class StudyFlowTests(unittest.TestCase):
             path = "/api/sessions/" + session["id"]
             status, body = request("/api/signals", {"kind": "repeat"})
             self.assertTrue(body["accepted"])
-            self.assertEqual("Find item 1 끝낼 때는 NVDA, Ctrl, Shift, E를 함께 누르세요.", body["speak"])
+            self.assertEqual("Find item 1", body["speak"])
             pending = request("/api/signals?after=0")[1]
             self.assertEqual(["repeat"], [signal["kind"] for signal in pending["signals"]])
             self.store.start_session(session["id"], study_ready=True)

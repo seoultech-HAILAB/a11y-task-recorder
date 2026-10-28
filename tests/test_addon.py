@@ -204,7 +204,8 @@ class SingleWindowAddonTests(unittest.TestCase):
         source = (Path(__file__).resolve().parents[1]
                   / "nvda-addon/globalPlugins/a11yTaskRecorder.py").read_text(encoding="utf-8")
         self.assertNotIn('"a11y task recorder" in title', source)
-        for gesture in ("kb:NVDA+control+shift+s", "kb:NVDA+control+shift+e", "kb:NVDA+control+shift+t"):
+        for gesture in ("kb:NVDA+control+e", "kb:NVDA+control+h",
+                        "kb:NVDA+control+shift+s", "kb:NVDA+control+shift+e", "kb:NVDA+control+shift+t"):
             self.assertIn(gesture, source)
 
     def test_frame_is_task_inside_internal_frame_and_recorder_outside(self):

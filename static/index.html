@@ -30,67 +30,103 @@
       <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
 
       <section id="study-view" class="page study-page" hidden aria-labelledby="study-heading" data-phase="idle">
+        <!-- 0.5.0: errors only. Everything else the participant needs is the focused instruction or result. -->
+        <p id="study-alert" class="study-message error" role="alert"></p>
         <header id="study-top" class="study-top">
           <div class="study-heading">
-            <div><h1 id="study-heading">배정된 과업</h1><p id="study-version" class="muted">배정표 확인 중</p></div>
+            <h1 id="study-heading">과업 기록기</h1>
             <button id="study-records" type="button" class="button quiet compact" data-action="operator-home">기록 관리</button>
           </div>
-          <form id="study-tester-form" class="study-selector">
-            <div class="field"><label for="study-tester">테스터 번호</label><select id="study-tester" required><option value="">번호 선택</option></select></div>
-            <button id="study-select" class="button primary" type="submit">배정 확인</button>
+          <!-- 0.5.0: the tester types the number they were given; there is no list to choose from. -->
+          <form id="study-tester-form" class="study-selector" novalidate>
+            <div class="field"><label for="study-tester">테스터 번호</label><input id="study-tester" autocomplete="off" spellcheck="false" placeholder="예: T01"></div>
+            <button id="study-select" class="button primary" type="submit">시작</button>
+            <button id="study-tester-keep" type="button" class="button quiet" hidden>바꾸지 않기</button>
           </form>
-          <p id="study-message" class="study-message" role="status" aria-live="polite"></p>
-          <section id="study-goal" class="study-goal" hidden aria-labelledby="study-site">
-            <p id="study-order" class="study-order"></p>
-            <h2 id="study-site" tabindex="-1"></h2>
+          <p id="study-message" class="study-message" aria-hidden="true"></p>
+          <section id="study-goal" class="study-goal" hidden aria-labelledby="study-order">
+            <h2 id="study-order"></h2>
             <p id="study-instruction" class="study-instruction" tabindex="-1"></p>
-            <p id="study-timer" class="muted"></p>
             <div class="study-actions">
               <button id="study-start" type="button" class="button primary" hidden>과업 시작</button>
-              <button id="study-practice" type="button" class="button quiet" hidden>연습 시작</button>
+              <button id="study-practice" type="button" class="button quiet" hidden>연습 다시 하기</button>
+              <button id="study-practice-skip" type="button" class="button quiet" hidden>본 과업으로 가기</button>
             </div>
-            <p id="study-shortcuts" class="study-shortcuts" hidden aria-label="단축키: 시작은 NVDA, Ctrl, Shift, S. 끝내기는 NVDA, Ctrl, Shift, E. 지시문 다시 듣기는 NVDA, Ctrl, Shift, T.">단축키: 시작 NVDA+Ctrl+Shift+S, 끝내기 NVDA+Ctrl+Shift+E, 지시문 다시 듣기 NVDA+Ctrl+Shift+T</p>
           </section>
+          <!-- 0.4.4: a wrong tester number can be changed; saved results stay (confirm step only when there are any). -->
+          <div id="study-tester-tools" class="study-tester-tools" hidden>
+            <button id="study-tester-change" type="button" class="button quiet compact">테스터 번호 바꾸기</button>
+            <div id="study-tester-confirm" class="study-end-confirm" role="group" aria-labelledby="study-tester-question" hidden>
+              <p id="study-tester-question"></p>
+              <button id="study-tester-yes" type="button" class="button danger">번호 바꾸기</button>
+              <button id="study-tester-no" type="button" class="button primary">취소</button>
+            </div>
+          </div>
         </header>
         <div id="study-stage" class="study-stage" hidden>
+          <!-- 0.5.0: Tab and Shift+Tab out of the site land here and go back into the site, so focus
+               never reaches the Chrome toolbar during a task. -->
+          <span id="study-trap-start" class="focus-trap" tabindex="-1" aria-hidden="true"></span>
           <iframe id="study-frame" name="study-frame" title="과업 사이트" sandbox="allow-scripts allow-same-origin allow-forms allow-modals" hidden></iframe>
-          <!-- Out of the Tab order so it never interrupts Tab through the site; mouse and NVDA browse mode reach it. -->
-          <button id="study-end" type="button" class="button danger study-end" tabindex="-1" hidden>과업 끝내기</button>
+          <span id="study-trap-end" class="focus-trap" tabindex="-1" aria-hidden="true"></span>
+          <!-- Mouse only (an observer): hidden from NVDA and out of the Tab order. Participants end with NVDA+Ctrl+E. -->
+          <div class="study-stage-actions" aria-hidden="true">
+            <button id="study-end" type="button" class="button danger study-end" tabindex="-1" hidden>과업 끝내기</button>
+            <div id="study-site-nav" class="study-site-nav" hidden>
+              <button id="study-site-back" type="button" class="button quiet" tabindex="-1">이전 페이지</button>
+              <button id="study-site-start" type="button" class="button quiet" tabindex="-1">과업 처음 화면</button>
+            </div>
+            <button id="study-restart" type="button" class="button quiet" tabindex="-1" hidden>과업 다시 시작</button>
+          </div>
           <div id="study-end-confirm" class="study-end-confirm" role="group" aria-labelledby="study-end-question" hidden>
             <p id="study-end-question">과업을 끝낼까요?</p>
             <button id="study-end-yes" type="button" class="button danger">끝내기</button>
             <button id="study-end-no" type="button" class="button primary">계속하기</button>
           </div>
-          <p id="study-stage-note" class="muted"></p>
+          <div id="study-restart-confirm" class="study-end-confirm" role="group" aria-labelledby="study-restart-question" hidden>
+            <p id="study-restart-question">이 과업을 처음부터 다시 할까요?</p>
+            <button id="study-restart-yes" type="button" class="button danger">다시 시작</button>
+            <button id="study-restart-no" type="button" class="button primary">계속하기</button>
+          </div>
+          <p id="study-site-status" class="sr-only" role="status"></p>
         </div>
         <section id="study-result" class="study-result" hidden aria-labelledby="study-result-heading">
-          <h2 id="study-result-heading" tabindex="-1">과업이 끝났습니다. 결과를 입력해 주세요.</h2>
+          <h2 id="study-result-heading" tabindex="-1">과업 결과</h2>
           <form id="study-answer-form">
             <fieldset class="study-fieldset">
-              <legend>과업을 마쳤습니까?</legend>
-              <label class="study-radio"><input type="radio" name="study-done" value="completed" required> 마쳤습니다</label>
-              <label class="study-radio"><input type="radio" name="study-done" value="blocked"> 마치지 못했습니다</label>
+              <legend>과업에 성공했나요?</legend>
+              <label class="study-radio"><input type="radio" name="study-done" value="completed" required> 성공</label>
+              <label class="study-radio"><input type="radio" name="study-done" value="blocked"> 실패</label>
             </fieldset>
             <div class="field">
-              <label for="study-answer">답</label>
-              <p id="study-answer-hint" class="muted"></p>
-              <textarea id="study-answer" rows="2" aria-describedby="study-answer-hint"></textarea>
+              <label id="study-answer-label" for="study-answer">답</label>
+              <textarea id="study-answer" rows="2"></textarea>
             </div>
             <button id="study-submit" class="button primary" type="submit">저장</button>
           </form>
+          <!-- 0.4.4: the end gesture pressed by mistake. Nothing was recorded while the result form was open. -->
+          <div id="study-undo" class="study-undo" role="group" aria-labelledby="study-undo-label" hidden>
+            <p id="study-undo-label">잘못 끝냈을 때</p>
+            <button id="study-return" type="button" class="button quiet">과업으로 돌아가기</button>
+            <button id="study-redo" type="button" class="button quiet">과업 처음부터 다시 하기</button>
+            <div id="study-redo-confirm" class="study-end-confirm" role="group" aria-labelledby="study-redo-question" hidden>
+              <p id="study-redo-question">이 과업을 처음부터 다시 할까요?</p>
+              <button id="study-redo-yes" type="button" class="button danger">다시 시작</button>
+              <button id="study-redo-no" type="button" class="button primary">취소</button>
+            </div>
+          </div>
           <div id="study-saved-box" hidden>
-            <p id="study-saved" role="status" tabindex="-1"></p>
-            <p id="study-break" class="study-message" hidden>4개 과업이 끝났습니다. 원하는 만큼 쉬었다가 다음 과업을 눌러 주세요.</p>
+            <p id="study-saved" tabindex="-1"></p>
             <div class="study-actions">
-              <button id="study-next" type="button" class="button primary" aria-describedby="study-saved study-break" hidden>다음 과업</button>
-              <button id="study-edit" type="button" class="button quiet">결과 수정</button>
-              <button id="study-practice-stop" type="button" class="button primary" hidden>연습 끝내기</button>
+              <button id="study-next" type="button" class="button primary" aria-describedby="study-saved" hidden>다음 과업</button>
+              <button id="study-practice-stop" type="button" class="button primary" hidden>본 과업으로 가기</button>
+              <button id="study-practice-again" type="button" class="button quiet" hidden>연습 다시 하기</button>
             </div>
           </div>
         </section>
         <section id="study-complete" hidden>
-          <h2 tabindex="-1">배정된 과업을 모두 마쳤습니다.</h2>
-          <p>참여해 주셔서 감사합니다. 더 하실 일은 없습니다. 담당자에게 끝났다고 알려 주세요.</p>
+          <h2 tabindex="-1">모든 과업을 마쳤습니다. 담당자에게 알려 주세요.</h2>
+          <p>참여해 주셔서 감사합니다.</p>
           <button type="button" class="button quiet" data-action="export-package">결과 패키지 만들기 (담당자용)</button>
         </section>
       </section>

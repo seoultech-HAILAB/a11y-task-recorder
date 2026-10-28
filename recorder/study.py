@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+from urllib.parse import urlsplit
 
 
 ADVANCING_OUTCOMES = frozenset({"completed", "blocked", "timeout"})
@@ -49,6 +50,13 @@ def load_catalog(path: Path) -> dict:
         "source": {key: raw["source"][key] for key in SOURCE_FIELDS},
         "testers": [],
     }
+    # Optional: where results go when tasks run on a site we do not host (e.g. a partner's test copies).
+    if raw.get("upload_url"):
+        upload_url = raw["upload_url"]
+        parts = urlsplit(upload_url) if isinstance(upload_url, str) else None
+        if not parts or parts.scheme not in {"https", "http"} or not parts.netloc:
+            raise ValueError("Invalid upload URL")
+        catalog["upload_url"] = upload_url
     tester_ids, assignment_ids = set(), set()
     for tester in raw["testers"]:
         if tester["id"] in tester_ids:

@@ -116,27 +116,20 @@ class UploadManager:
         source = "kit" if self.builtin_code else "local" if saved else ""
         return {"enabled": enabled, "code": code, "code_source": source, "url": url}
 
-    def _catalog_origin(self, connection: Any) -> str:
+    def _catalog_upload_url(self, connection: Any) -> str:
+        """The catalog's upload_url, else the copies' origin (first start URL) + /upload/session."""
         try:
             catalog = self.store._study_catalog(connection)
-            start_url = catalog["testers"][0]["tasks"][0]["start_url"]
+            url = catalog.get("upload_url") or catalog["testers"][0]["tasks"][0]["start_url"]
         except Exception:
             return ""
-        parts = urlsplit(start_url)
+        parts = urlsplit(url)
         if parts.scheme not in {"https", "http"} or not parts.netloc:
             return ""
-        return "{}://{}".format(parts.scheme, parts.netloc)
+        return url if catalog.get("upload_url") else "{}://{}{}".format(parts.scheme, parts.netloc, UPLOAD_PATH)
 
     def _derived_url(self, connection: Any) -> str:
-        """The copies' HTTPS origin from the frozen catalog + /upload/session."""
-        origin = self._catalog_origin(connection)
-        return origin + UPLOAD_PATH if origin else ""
-
-    def access(self) -> Dict[str, Any]:
-        """For the local dashboard's automatic iframe login only (GET /api/study/access)."""
-        with self.store.connect() as connection:
-            origin = self._catalog_origin(connection)
-        return {"origin": origin or None, "code": self.settings()["code"] or None}
+        return self._catalog_upload_url(connection)
 
     def configure(self, data: Dict[str, Any]) -> Dict[str, Any]:
         with self.store.connect() as connection:
