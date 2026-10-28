@@ -422,7 +422,24 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         category=scriptCategory,
     )
     def script_endTask(self, gesture):
+        self._focusBrowseCursor()
         self._postSignal("end")
+
+    def _focusBrowseCursor(self):
+        """Move the system focus to the focusable object at the browse-mode cursor (0.5.5).
+
+        과업으로 돌아가기 returns to the last system focus. A participant who read on with H, K or
+        the arrows had moved only the virtual cursor, so the return went back to an earlier link
+        (Windows 10/29, 2 of 2). NVDA's own focus sync for browse mode is used, as when leaving
+        browse mode; it moves focus without speaking it again.
+        """
+        try:
+            interceptor = getattr(api.getFocusObject(), "treeInterceptor", None)
+            sync = getattr(interceptor, "_focusLastFocusableObject", None)
+            if interceptor is not None and not getattr(interceptor, "passThrough", True) and callable(sync):
+                sync()
+        except Exception:
+            log.debugWarning("A11y Task Recorder browse cursor focus sync failed", exc_info=True)
 
     @script(
         description="현재 과업의 지시문을 다시 읽어 줍니다.",

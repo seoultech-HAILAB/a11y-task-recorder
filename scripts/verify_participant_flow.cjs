@@ -77,7 +77,15 @@ const step = (name) => console.log('ok -', name);
     const inFrame = () => page.evaluate(() => document.activeElement?.id === 'study-frame');
     for (let i = 0; i < 9; i++) { await page.keyboard.press('Tab'); await page.waitForTimeout(60); assert.ok(await inFrame(), `Tab ${i}: ${await active()}`); }
     for (let i = 0; i < 9; i++) { await page.keyboard.press('Shift+Tab'); await page.waitForTimeout(60); assert.ok(await inFrame(), `Shift+Tab ${i}: ${await active()}`); }
-    step('Tab / Shift+Tab stay inside the site');
+    // 0.5.6: nothing of the recorder after the site is in the page during a task (Ctrl+End, 10/29).
+    const after = await page.evaluate(() => {
+      const frame = document.getElementById('study-frame');
+      return [...document.querySelectorAll('#study-view *')].filter(n => frame.compareDocumentPosition(n) & Node.DOCUMENT_POSITION_FOLLOWING)
+        .filter(n => !n.closest('[hidden], [aria-hidden="true"], [inert]') && n.getClientRects().length > 0 && n.id !== 'study-site-status')
+        .map(n => n.id || n.tagName);
+    });
+    assert.deepEqual(after, [], `exposed after the site: ${after}`);
+    step('Tab / Shift+Tab stay inside the site; nothing of the recorder follows it');
     await frame.locator('#show').click();
     await page.screenshot({ path: path.join(out, '3-practice-active.png') });
     await signal('end');

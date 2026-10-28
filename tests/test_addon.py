@@ -219,6 +219,20 @@ class SingleWindowAddonTests(unittest.TestCase):
         self.assertEqual("task", self.plugin._objectFrame(link))
         self.assertEqual("recorder", self.plugin._objectFrame(heading))
 
+    def test_end_gesture_syncs_focus_to_the_browse_cursor_first(self):
+        # Windows 10/29: 과업으로 돌아가기 went to the last system focus, not where the participant read.
+        calls = []
+        browse = SimpleNamespace(passThrough=False, _focusLastFocusableObject=lambda: calls.append("sync"))
+        self.plugin._postSignal = lambda kind: calls.append(kind)
+        self.plugin._focusBrowseCursor.__globals__.update({"api": SimpleNamespace(getFocusObject=lambda: SimpleNamespace(treeInterceptor=browse))})
+        self.plugin.script_endTask(None)
+        self.assertEqual(["sync", "end"], calls)
+        calls.clear()
+        focusMode = SimpleNamespace(passThrough=True, _focusLastFocusableObject=lambda: calls.append("sync"))
+        self.plugin._focusBrowseCursor.__globals__.update({"api": SimpleNamespace(getFocusObject=lambda: SimpleNamespace(treeInterceptor=focusMode))})
+        self.plugin.script_endTask(None)
+        self.assertEqual(["end"], calls, "focus mode already has the system focus where the participant is")
+
     def test_input_element_is_read_on_the_main_thread(self):
         # Windows 10/29 (F4 in 0.5.2): IA2 reads on the input hook thread failed.
         queued = []
