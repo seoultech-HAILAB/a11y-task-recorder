@@ -31,6 +31,8 @@
 
       <section id="study-view" class="page study-page" hidden aria-labelledby="study-heading" data-phase="idle">
         <!-- 0.5.0: errors only. Everything else the participant needs is the focused instruction or result. -->
+        <!-- 0.5.2: Tab past either end of this view comes back in instead of reaching the Chrome info bar. -->
+        <span id="study-page-start" class="focus-trap" tabindex="0" aria-hidden="true"></span>
         <p id="study-alert" class="study-message error" role="alert"></p>
         <header id="study-top" class="study-top">
           <div class="study-heading">
@@ -44,7 +46,7 @@
             <button id="study-tester-keep" type="button" class="button quiet" hidden>바꾸지 않기</button>
           </form>
           <p id="study-message" class="study-message" aria-hidden="true"></p>
-          <section id="study-goal" class="study-goal" hidden aria-labelledby="study-order">
+          <section id="study-goal" class="study-goal" hidden>
             <h2 id="study-order"></h2>
             <p id="study-instruction" class="study-instruction" tabindex="-1"></p>
             <div class="study-actions">
@@ -90,12 +92,12 @@
           </div>
           <p id="study-site-status" class="sr-only" role="status"></p>
         </div>
-        <section id="study-result" class="study-result" hidden aria-labelledby="study-result-heading">
+        <section id="study-result" class="study-result" hidden>
           <h2 id="study-result-heading" tabindex="-1">과업 결과</h2>
           <form id="study-answer-form">
             <fieldset class="study-fieldset">
               <legend>과업에 성공했나요?</legend>
-              <label class="study-radio"><input type="radio" name="study-done" value="completed" required> 성공</label>
+              <label class="study-radio"><input type="radio" name="study-done" value="completed"> 성공</label>
               <label class="study-radio"><input type="radio" name="study-done" value="blocked"> 실패</label>
             </fieldset>
             <div class="field">
@@ -127,8 +129,10 @@
         <section id="study-complete" hidden>
           <h2 tabindex="-1">모든 과업을 마쳤습니다. 담당자에게 알려 주세요.</h2>
           <p>참여해 주셔서 감사합니다.</p>
+          <button id="study-practice-complete" type="button" class="button quiet" hidden>연습 다시 하기</button>
           <button type="button" class="button quiet" data-action="export-package">결과 패키지 만들기 (담당자용)</button>
         </section>
+        <span id="study-page-end" class="focus-trap" tabindex="0" aria-hidden="true"></span>
       </section>
 
       <section id="home-view" class="page" hidden>

@@ -25,13 +25,14 @@ window.Study = (() => {
   const PRACTICE_GUIDE = "연습입니다. 기록하지 않습니다. 본 과업에서 쓰는 키를 익힙니다. "
     + "지시문을 다시 들으려면 NVDA, Ctrl, H를 누르세요. 과업 중에도 됩니다. "
     + "답을 찾았거나 더 할 수 없으면 그 자리에서 NVDA, Ctrl, E를 눌러 과업을 끝내세요. "
-    + "사이트에서 이전 페이지는 Alt, 왼쪽 화살표입니다. "
+    + "사이트에서 이전 페이지는 Alt, 왼쪽 화살표, 과업 첫 화면은 Alt, Home입니다. "
     + "본 과업에서는 이 안내를 다시 하지 않습니다. "
     + `연습 과업: ${PRACTICE_TASK} 지금 NVDA, Ctrl, H를 한 번 눌러 본 뒤 과업 시작을 누르세요.`;
-  const SITE_UNREACHABLE = "사이트에 접속할 수 없습니다. 연구진에게 알려 주세요.";
+  const SITE_UNREACHABLE = "사이트에 접속할 수 없습니다. 과업 시작을 다시 누르거나 연구진에게 알려 주세요.";
   // The participant hears the short message with the cause label; the researcher gets the
   // extension's reason in the site_preparation event (server window, result package).
-  const siteUnreachable = label => label ? `사이트에 접속할 수 없습니다(${label}). 연구진에게 알려 주세요.` : SITE_UNREACHABLE;
+  // 0.5.2: 과업 시작 loads the site again (Windows 10/28, 17-1), so the sentence says so.
+  const siteUnreachable = label => `사이트에 접속할 수 없습니다${label ? `(${label})` : ""}. 과업 시작을 다시 누르거나 연구진에게 알려 주세요.`;
   const FRAME_TITLE = "과업 사이트";
   const view = { tester: null, testerIds: [], plan: null, session: null, ready: false, busy: false, timer: null, opened: false,
     pending: new Map(), lastPoll: 0, checking: false, signalSeq: 0, practice: null,
@@ -51,6 +52,12 @@ window.Study = (() => {
     setText("study-alert", error ? text : "");
     setText("study-message", error ? "" : text);
   };
+  function alertAgain(text) {
+    const alert = el("study-alert");
+    alert.replaceChildren();
+    setText("study-message", "");
+    setTimeout(() => { const line = document.createElement("span"); line.textContent = text; alert.replaceChildren(line); }, 250);
+  }
   function remembered() { try { return localStorage.getItem("study-tester"); } catch { return null; } }
   const practicedKey = tester => `study-practiced-${tester}`;
   function markPracticed() { try { localStorage.setItem(practicedKey(view.tester), "1"); } catch {} }
@@ -108,15 +115,19 @@ window.Study = (() => {
     let focusTarget = null;
     try { focusTarget = await action(); } catch (error) {
       try { await reconcileSession(); } catch { /* Keep the original operation error. */ }
-      // Emptied first so the same error is read again when the same action fails again.
-      message("", true);
-      setTimeout(() => message(error.message, true), 50);
+      // The same error after the same action is read again: NVDA did not repeat an alert whose
+      // text was emptied and set back within 50 ms (Windows 10/28, 17-1), so a new node is added.
+      alertAgain(error.message);
     }
     finally {
       view.busy = false;
       el("study-view").toggleAttribute("data-busy", false);
       renderControls();
       if (focusTarget instanceof HTMLElement) focusTarget.focus();
+      if (view.startPending) {
+        view.startPending = false;
+        if (phase() === "ready" && !view.practice) setTimeout(() => busy(start), 0);
+      }
     }
   }
 
@@ -150,20 +161,33 @@ window.Study = (() => {
     el("study-view").dataset.phase = current;
     const frame = el("study-frame");
     const active = current === "active";
+    // Leaving the practice: NVDA read "A11y Task Recorder 문서, 알 수 없음, 프레임 끝 …" before
+    // the result heading (10/28, 10/29). Focus goes to the heading first and the same-origin
+    // practice page stays shown 0.4 s longer. Real tasks keep the 0.5.0 order (site locked,
+    // then the heading): moving focus first there added the same noise (10/29, 3 of 4).
+    const parking = (current === "answering" || current === "ended") && !frame.hasAttribute("inert");
+    if (parking && view.practice && (document.activeElement === frame || el("study-stage").contains(document.activeElement))) {
+      el("study-result").hidden = false;
+      el("study-result-heading").focus();
+      view.holdStageUntil = Date.now() + 400;
+      setTimeout(applyPhase, 450);
+    }
+    const holding = Date.now() < (view.holdStageUntil || 0);
     shelve(el("study-top"), active);
     // The recorder header and footer are locked whenever this view is shown (app.js showView).
     // The site shows only during the task (0.5.0): it is prepared out of sight, and while the
     // result is entered it is put away with its page kept, so 과업으로 돌아가기 returns to it.
-    el("study-stage").hidden = !active;
+    el("study-stage").hidden = !(active || holding);
     requestAnimationFrame(() => { fitFrame(); if (active && !view.stageShown) { view.stageShown = true; el("study-stage").scrollIntoView({ block: "start" }); } if (!active) view.stageShown = false; });
     frame.hidden = !(active || current === "answering" || current === "ended");
     // Locked while the result is being entered.
-    const parked = current === "answering" || current === "ended";
+    const parked = (current === "answering" || current === "ended") && !holding;
     if (frame.hasAttribute("inert") !== parked) frame.toggleAttribute("inert", parked);
     setAttr(frame, "aria-hidden", parked ? "true" : "false");
     setAttr(frame, "tabindex", parked ? "-1" : "0");
     setAttr(frame, "title", FRAME_TITLE);
     for (const id of ["study-trap-start", "study-trap-end"]) setAttr(el(id), "tabindex", active ? "0" : "-1");
+    for (const id of ["study-page-start", "study-page-end"]) setAttr(el(id), "tabindex", active ? "-1" : "0");
     el("study-result").hidden = !(current === "answering" || current === "ended");
     const title = active && view.frameTitle ? view.frameTitle : RECORDER_TITLE;
     if (document.title !== title) document.title = title;
@@ -333,8 +357,10 @@ window.Study = (() => {
     const ended = current === "ended";
     // 과업 시작 shows as soon as the instruction does; the site may still be loading (start waits).
     el("study-start").hidden = current !== "ready";
-    // The practice can be opened again before any task (0.5.0), and skipped while it is open.
-    el("study-practice").hidden = practice || current !== "ready";
+    // The practice can be opened again from any screen without an open task (0.5.1): an
+    // instruction, a time-limit stop or the completion screen. Skipped while it is open.
+    el("study-practice").hidden = practice || !["ready", "ended"].includes(current);
+    el("study-practice-complete").hidden = practice || current !== "complete";
     el("study-practice-skip").hidden = !(practice && current === "ready");
     // Once a tester is confirmed the number field leaves the page; 테스터 번호 바꾸기 brings it
     // back (researchers still have ?change-tester=1 and ?tester=). Not while a task is open.
@@ -418,11 +444,13 @@ window.Study = (() => {
   }
 
   // ---- preparation (automatic; no facilitator) -----------------------------------
+  // Resolves true on the frame's load event, false when it did not come within the timeout.
   function frameLoaded(timeout = 15000) {
     return new Promise(resolve => {
-      const done = () => { clearTimeout(timer); resolve(); };
-      const timer = setTimeout(done, timeout);
-      el("study-frame").addEventListener("load", done, { once: true });
+      const done = loaded => { clearTimeout(timer); el("study-frame").removeEventListener("load", onLoad); resolve(loaded); };
+      const onLoad = () => done(true);
+      const timer = setTimeout(() => done(false), timeout);
+      el("study-frame").addEventListener("load", onLoad);
     });
   }
   // Ask the extension until the site is ready or clearly needs a login; transient errors are retried.
@@ -455,9 +483,15 @@ window.Study = (() => {
     const sessionId = view.session.id;
     const token = ++view.loadToken;
     const loading = view.siteLoading = loadSite(sessionId, retry, token)
-      .catch(error => { if (token === view.loadToken) message(error.message, true); })
+      // 과업 시작 waiting on this load reports the result itself (the sentence was read twice).
+      .catch(error => { if (token === view.loadToken && !view.startWaiting) message(error.message, true); })
       .finally(() => { if (view.siteLoading === loading) view.siteLoading = null; });
     return presentInstruction();
+  }
+  async function reloadSite() {
+    const token = ++view.loadToken;
+    const loading = view.siteLoading = loadSite(view.session.id, true, token);
+    try { await loading; } catch { /* start() reports the cause */ } finally { if (view.siteLoading === loading) view.siteLoading = null; }
   }
   async function loadSite(sessionId, retry, token) {
     const current = () => token === view.loadToken && view.session?.id === sessionId && !view.practice;
@@ -465,10 +499,17 @@ window.Study = (() => {
     const diagnosis = { login: "" };
     view.siteCause = "";
     message("배정된 사이트를 준비하고 있습니다.");
-    const loaded = frameLoaded();
+    const loaded = frameLoaded(10000);
     el("study-frame").src = view.session.target_url;
     view.opened = true;
-    await loaded;
+    // A page that had not loaded after 10 s stayed in "loading" for the whole 35 s, while
+    // opening it again took about 10 s (Windows 10/28 and 10/29). It is opened again once.
+    if (!(await loaded) && current()) {
+      diagnosis.reopened = true;
+      const again = frameLoaded(12000);
+      el("study-frame").src = view.session.target_url;
+      await again;
+    }
     if (!current()) return;
     let result;
     try {
@@ -492,7 +533,7 @@ window.Study = (() => {
   // (로그인 필요, 주소 허용 안 됨, 준비 시간 초과, 확장 응답 없음, ...) and returns its label.
   async function reportPreparation(sessionId, began, retry, detail) {
     const payload = { result: detail.ready ? "ready" : "failed", reason: detail.ready ? "" : detail.reason || "unknown",
-      login: detail.login || "", net_error: detail.net_error || "", stage: detail.stage || "",
+      login: detail.login || "", net_error: detail.net_error || "", stage: detail.stage || "", reopened: Boolean(detail.reopened),
       elapsed_ms: Date.now() - began, retry: Boolean(retry) };
     const response = await api(`/sessions/${sessionId}/study-events`, "POST", { type: "site_preparation", payload }).catch(() => null);
     return response?.event?.payload?.cause_label || "";
@@ -529,7 +570,12 @@ window.Study = (() => {
 
   // ---- task actions ---------------------------------------------------------------
   async function start() {
-    if (!view.ready && view.siteLoading) await view.siteLoading;
+    if (!view.ready && view.siteLoading) {
+      view.startWaiting = true;
+      try { await view.siteLoading; } finally { view.startWaiting = false; }
+    }
+    // A preparation that failed is tried again here; before 0.5.2 only F5 recovered (17-1).
+    if (!view.ready) { alertAgain("사이트를 다시 여는 중입니다."); await reloadSite(); }
     if (!view.ready) throw new Error(siteUnreachable(view.siteCause));
     await checkConnection();
     if (!state.nvdaConnected) throw new Error("NVDA가 연결되지 않아 과업을 시작하지 않았습니다. 연구진에게 알려 주세요.");
@@ -549,7 +595,8 @@ window.Study = (() => {
   // same-origin; a copy is asked through the extension's content script in the frame.
   // It also learns the history entry the task started on (back stops there); a copy replies
   // with "a11y-study-site-entry".
-  // edge "last" (Shift+Tab out of the top of the site) focuses its last control instead.
+  // edge "last" (Shift+Tab out of the top of the site) focuses its last control instead, and
+  // "resume" (과업으로 돌아가기) the control the task was ended on (Windows 10/28, 15).
   function focusSite(edge = "first") {
     const frame = el("study-frame");
     if (phase() !== "active") return;
@@ -557,7 +604,11 @@ window.Study = (() => {
     const doc = frame.contentDocument;
     if (doc) {
       view.siteStartKey ??= frame.contentWindow.navigation?.currentEntry?.key || null;
-      if (focus) { const list = controls(doc); (edge === "last" ? list.at(-1) : list[0])?.focus(); }
+      if (focus) {
+        const list = controls(doc);
+        const kept = edge === "resume" && view.siteFocus?.isConnected && view.siteFocus.ownerDocument === doc ? view.siteFocus : null;
+        (kept || (edge === "last" ? list.at(-1) : list[0]))?.focus();
+      }
     } else frame.contentWindow?.postMessage({ kind: "a11y-study-focus-site", focus, edge }, "*");
   }
   function controls(doc) {
@@ -575,9 +626,21 @@ window.Study = (() => {
     el("study-frame").focus();
     focusSite(edge);
   }
+  // Outside a task Tab ran from the first or last control into the Chrome info bar (Windows
+  // 10/28). Two traps at the ends of this view wrap it around.
+  function tabbables() {
+    return [...el("study-view").querySelectorAll("button, input, select, textarea, a[href], [tabindex]")]
+      .filter(node => node.tabIndex >= 0 && !node.disabled && !node.classList.contains("focus-trap")
+        && node.getClientRects().length > 0 && !node.closest("[inert], [aria-hidden='true'], [hidden]"));
+  }
   function onFocusIn(event) {
-    if (phase() !== "active" || el("study-view").hidden) return;
+    if (el("study-view").hidden) return;
     const target = event.target;
+    if (phase() !== "active") {
+      if (target === el("study-page-start")) tabbables().at(-1)?.focus();
+      else if (target === el("study-page-end")) tabbables()[0]?.focus();
+      return;
+    }
     if (target === el("study-trap-start")) trap("last");
     else if (target === el("study-trap-end")) trap("first");
     else if (target !== el("study-frame") && !el("study-stage").contains(target)) trap("first");
@@ -656,7 +719,10 @@ window.Study = (() => {
   function onFrameLoad() {
     const frame = el("study-frame");
     // The practice page shares this origin and has no content script: listen to its keys here.
-    try { frame.contentDocument?.addEventListener("keydown", event => onSiteKey(event, "site_key"), true); } catch { /* cross-origin */ }
+    try {
+      frame.contentDocument?.addEventListener("keydown", event => onSiteKey(event, "site_key"), true);
+      frame.contentDocument?.addEventListener("focusin", event => { view.siteFocus = event.target; }, true);
+    } catch { /* cross-origin: the content script keeps its own last focus */ }
     if (Date.now() < view.refocusUntil) { view.refocusUntil = 0; requestAnimationFrame(() => focusSite()); }
   }
 
@@ -725,8 +791,27 @@ window.Study = (() => {
     resetForms();
     await refreshPlan();
     render();
+    // An alert left from the result form ("성공인지 실패인지 골라 주세요.") was read again with the
+    // whole site on the way back (Windows 10/29, 1 of 1); it is cleared first.
+    message("");
     announce("과업으로 돌아왔습니다.");
-    return el("study-frame");
+    requestAnimationFrame(resumeSite);
+    return null;
+  }
+  // 과업으로 돌아가기 (0.5.3): focus goes straight to the control the task was ended on. Focusing
+  // the frame first made NVDA read the page title and address before it (Windows 10/29, 15).
+  function resumeSite() {
+    const frame = el("study-frame");
+    if (phase() !== "active") return;
+    const doc = frame.contentDocument;
+    if (doc) {
+      const kept = view.siteFocus?.isConnected && view.siteFocus.ownerDocument === doc ? view.siteFocus : null;
+      if (kept) kept.focus(); else { frame.focus(); focusSite(); }
+      return;
+    }
+    frame.contentWindow?.postMessage({ kind: "a11y-study-focus-site", focus: true, edge: "resume" }, "*");
+    // A copy that could not take focus by itself gets it through the frame.
+    setTimeout(() => { if (phase() === "active" && document.activeElement !== frame) { frame.focus(); focusSite("resume"); } }, 250);
   }
   // 테스터 번호 바꾸기: free while nothing is saved for this number; otherwise ask first.
   function beginTesterChange() {
@@ -768,14 +853,18 @@ window.Study = (() => {
     message("연습입니다. 연습은 기록하지 않습니다.");
     return el("study-instruction");
   }
-  // 본 과업으로 가기: leave practice and present the current task.
+  // 본 과업으로 가기: leave practice and present the current task (the completion screen when
+  // every task is done).
   async function stopPractice() {
     await api("/signals/practice", "POST", { on: false });
     markPracticed();
     view.practice = null;
     el("study-frame").src = "about:blank";
-    resetForms();
     message("연습을 끝냈습니다.");
+    if (view.plan.finished === view.plan.total) { resetForms(); render(); return el("study-complete").querySelector("h2"); }
+    // prepare() resets the forms after its request. Hiding the practice result first dropped
+    // focus onto the page while it waited and NVDA read "연습 결과 영역, 테스터 번호 바꾸기"
+    // before the next instruction (Windows 10/28, 17).
     return prepare();
   }
   function renderPractice() {
@@ -798,7 +887,7 @@ window.Study = (() => {
   }
   function practiceStart() { view.practice.phase = "active"; view.siteStartKey = null; renderPractice(); message("연습 중입니다."); requestAnimationFrame(() => focusSite()); return el("study-frame"); }
   function practiceEnd(by) { view.practice.phase = "answering"; view.practice.endedBy = by; renderPractice(); message("연습 과업이 끝났습니다."); return el("study-result-heading"); }
-  function practiceReturn() { view.practice.phase = "active"; renderPractice(); announce("과업으로 돌아왔습니다."); return el("study-frame"); }
+  function practiceReturn() { message(""); view.practice.phase = "active"; renderPractice(); announce("과업으로 돌아왔습니다."); requestAnimationFrame(resumeSite); return null; }
   function practiceRestart() {
     view.practice = { phase: "ready", repeated: false, endedBy: "" };
     view.confirm = null;
@@ -818,7 +907,7 @@ window.Study = (() => {
     ].filter(Boolean).join(" ");
     view.practice.phase = "ended";
     setText("study-saved", `연습을 마쳤습니다. ${checks ? `${checks} ` : "단축키를 모두 써 보셨습니다. "}`
-      + "본 과업으로 가려면 '본 과업으로 가기', 다시 연습하려면 '연습 다시 하기'를 누르세요. 연습은 과업을 시작하기 전이면 언제든 다시 할 수 있습니다.");
+      + "본 과업으로 가려면 '본 과업으로 가기', 다시 연습하려면 '연습 다시 하기'를 누르세요. 연습은 지시문 화면과 모든 과업을 마친 화면에서 다시 할 수 있습니다.");
     renderPractice();
     return el("study-saved");
   }
@@ -826,7 +915,12 @@ window.Study = (() => {
   document.addEventListener("DOMContentLoaded", () => {
     const on = (id, event, handler) => el(id).addEventListener(event, handler);
     on("study-tester-form", "submit", e => { e.preventDefault(); busy(() => confirmTester(el("study-tester").value)); });
-    on("study-start", "click", () => busy(view.practice ? async () => practiceStart() : start));
+    // 0.5.2: a press while the previous one is still running (a site being prepared again) is
+    // kept and run when it ends; before, it was dropped and nothing was heard (Windows 10/28, 17-1).
+    on("study-start", "click", () => {
+      if (view.busy && !view.practice) { view.startPending = true; return; }
+      busy(view.practice ? async () => practiceStart() : start);
+    });
     const escape = (id, focusId) => on(id, "keydown", e => { if (e.key === "Escape" && !view.busy) { e.preventDefault(); e.stopPropagation(); closeConfirm(focusId).focus(); } });
     on("study-end", "click", () => { if (!view.busy && phase() === "active") openConfirm("end", "study-end-no").focus(); });
     on("study-end-yes", "click", () => busy(view.practice ? async () => practiceEnd("button") : () => endTask("participant_button")));
@@ -849,6 +943,7 @@ window.Study = (() => {
     on("study-next", "click", () => busy(nextTask));
     on("study-answer-form", "submit", e => { e.preventDefault(); busy(view.practice ? async () => practiceSubmit() : submitParticipant); });
     on("study-practice", "click", () => busy(startPractice));
+    on("study-practice-complete", "click", () => busy(startPractice));
     on("study-practice-again", "click", () => busy(async () => practiceRestart()));
     on("study-practice-stop", "click", () => busy(stopPractice));
     on("study-practice-skip", "click", () => busy(stopPractice));

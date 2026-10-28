@@ -4,6 +4,9 @@
 // kit path app/study_access.txt); a second run restarts the recorder without a code and
 // checks that nobody is ever asked for one (site error instead). NVDA is a synthetic
 // heartbeat only; nothing here is human data or an NVDA verification.
+// Out of date since 0.4.4/0.5.0: it expects the 0.4.x texts, the tester list and the access-code
+// login, and the hosted fixture it uses always asks for a code. The 0.5.x participant flow is
+// checked by scripts/verify_participant_flow.cjs and tests/study_controls.test.cjs.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const net = require('node:net');

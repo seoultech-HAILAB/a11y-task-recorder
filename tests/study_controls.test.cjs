@@ -108,7 +108,11 @@ test('focus stays in the site during a task: traps around the frame return it', 
 });
 
 test('practice can be reopened before any task and opens by itself the first time', () => {
-  assert.match(script, /el\("study-practice"\)\.hidden = practice \|\| current !== "ready";/);
+  assert.match(script, /el\("study-practice"\)\.hidden = practice \|\| !\["ready", "ended"\]\.includes\(current\);/);
+  assert.match(script, /el\("study-practice-complete"\)\.hidden = practice \|\| current !== "complete";/);
+  // Leaving a practice opened from the completion screen goes back there, not to /prepare.
+  assert.match(script, /if \(view\.plan\.finished === view\.plan\.total\) \{ resetForms\(\); render\(\); return el\("study-complete"\)/);
+  assert.match(script.match(/const PRACTICE_GUIDE = ([\s\S]*?);\n/)[1], /Alt, Home/, 'the practice teaches the task start page key');
   assert.match(script, /if \(current === "ready" && firstTask\(\) && !practiced\(\)\) return startPractice\(\);/);
 });
 
@@ -118,4 +122,50 @@ test('restart and tester change call the abort API with their reasons; return us
   assert.match(script, /\/resume-task`, "POST", \{ by: "participant" \}/);
   // A time-limit end is saved by itself and cannot be undone from the result form.
   assert.match(script, /const undo = current === "answering" && \(practice \|\| view\.session\?\.end_reason !== "time_limit"\)/);
+});
+
+// ---- 0.5.2: Windows + NVDA check of 0.5.0 (10/28) --------------------------------------
+test('a failed preparation is retried by 과업 시작 and the error is read again', () => {
+  assert.match(script, /if \(!view\.ready\) \{ alertAgain\("사이트를 다시 여는 중입니다\."\); await reloadSite\(\); \}/);
+  assert.match(script, /function alertAgain\(text\)/);
+  assert.match(script, /alertAgain\(error\.message\)/);
+  assert.match(script, /과업 시작을 다시 누르거나 연구진에게 알려 주세요/);
+  // A press during the previous attempt is kept, not dropped.
+  assert.match(script, /if \(view\.busy && !view\.practice\) \{ view\.startPending = true; return; \}/);
+});
+
+test('과업으로 돌아가기 returns focus to the control the task was ended on', () => {
+  assert.match(script, /requestAnimationFrame\(resumeSite\)/);
+  // 0.5.3: the kept control is focused directly; focusing the frame first read its title and address.
+  assert.match(script, /if \(kept\) kept\.focus\(\); else \{ frame\.focus\(\); focusSite\(\); \}/);
+  assert.match(script, /addEventListener\("focusin", event => \{ view\.siteFocus = event\.target; \}, true\)/);
+  assert.match(fs.readFileSync('browser-extension/content.js', 'utf8'), /event\.data\.edge === "resume" && lastFocus\?\.isConnected/);
+});
+
+test('no region names, no required radio, and page traps outside a task', () => {
+  assert.equal(attr(tagOf('study-goal'), 'aria-labelledby'), undefined, '"과업 n / 3 영역" is not read before each instruction');
+  assert.equal(attr(tagOf('study-result'), 'aria-labelledby'), undefined, '"과업 결과 영역" is not read before the heading');
+  assert.doesNotMatch(html, /name="study-done"[^>]*required/, 'an unchecked radio is not read as "필요함 입력 오류"');
+  for (const id of ['study-page-start', 'study-page-end']) assert.equal(attr(tagOf(id), 'aria-hidden'), 'true', id);
+  assert.ok(html.indexOf('id="study-page-start"') < html.indexOf('id="study-alert"'));
+  assert.ok(html.indexOf('id="study-page-end"') > html.indexOf('id="study-complete"'));
+  // Focus leaves the site for the result heading before the site is locked.
+  assert.ok(script.indexOf('el("study-result-heading").focus();') < script.indexOf('frame.toggleAttribute("inert", parked)'));
+});
+
+// ---- 0.5.3: Windows + NVDA check of 0.5.2 (10/29) --------------------------------------
+test('only the practice moves focus before the site is locked; tasks keep the 0.5.0 order', () => {
+  assert.match(script, /if \(parking && view\.practice && /);
+  assert.match(script, /el\("study-stage"\)\.hidden = !\(active \|\| holding\);/);
+});
+
+test('a page still loading after 10 s is opened again once, and one failure sentence is read', () => {
+  assert.match(script, /const loaded = frameLoaded\(10000\);/);
+  assert.match(script, /diagnosis\.reopened = true;/);
+  assert.match(script, /if \(token === view\.loadToken && !view\.startWaiting\) message\(error\.message, true\)/);
+});
+
+test('returning to the task clears an alert left on the result form', () => {
+  assert.match(script, /message\(""\);\n    announce\("과업으로 돌아왔습니다\."\);/);
+  assert.match(script, /function practiceReturn\(\) \{ message\(""\);/);
 });

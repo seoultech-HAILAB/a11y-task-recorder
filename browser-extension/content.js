@@ -37,6 +37,8 @@
   // (Windows pilot, 10/28) never goes past it, so earlier tasks and the login page stay behind.
   if (!isTop) {
     const toRecorder = (data) => window.parent.postMessage(data, "http://127.0.0.1:8765");
+    let lastFocus = null;
+    window.addEventListener("focusin", (event) => { lastFocus = event.target; }, true);
     window.addEventListener("message", (event) => {
       if (event.source !== window.parent || event.origin !== "http://127.0.0.1:8765") return;
       if (event.data?.kind === "a11y-study-focus-site") {
@@ -44,7 +46,9 @@
         // edge "last": Shift+Tab ran out of the top of the site and comes back in at the bottom (0.5.0).
         const controls = [...document.querySelectorAll(selector)].filter((node) => !node.disabled &&
           node.getClientRects().length > 0 && !node.closest("[inert], [aria-hidden='true']"));
-        if (event.data.focus !== false) (event.data.edge === "last" ? controls.at(-1) : controls[0])?.focus();
+        // edge "resume": 과업으로 돌아가기 goes back to the control the task was ended on (0.5.2).
+        const kept = event.data.edge === "resume" && lastFocus?.isConnected ? lastFocus : null;
+        if (event.data.focus !== false) (kept || (event.data.edge === "last" ? controls.at(-1) : controls[0]))?.focus();
         toRecorder({ kind: "a11y-study-site-entry", key: window.navigation?.currentEntry?.key || "" });
       } else if (event.data?.kind === "a11y-study-site-back") {
         toRecorder({ kind: "a11y-study-site-back", moved: historyBack(window.navigation, event.data.startKey) });
