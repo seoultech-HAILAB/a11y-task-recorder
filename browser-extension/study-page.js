@@ -15,7 +15,8 @@
         (current.href !== assigned.href && current.href !== `${assigned.origin}/access`)) {
       return { ready: false, reason: "wrong_url" };
     }
-    if (document.readyState !== "complete") return { ready: false, reason: "loading" };
+    // `stage` tells the researcher where a preparation that timed out was stuck (10/28).
+    if (document.readyState !== "complete") return { ready: false, reason: "loading", stage: "page" };
     if (document.querySelector('form[action="/access"] input[type="password"]')) {
       return { ready: false, reason: "login_required" };
     }
@@ -46,7 +47,7 @@
     const add = document.querySelector('.product-card[data-blux-item-id="1034450"] .button-item button');
     const open = document.querySelector("#catalog-cart-trigger");
     const increase = document.querySelector("#catalog-cart-increase");
-    if (!quantity || !name || !dialog || !add || !open || !increase) return { ready: false, reason: "loading" };
+    if (!quantity || !name || !dialog || !add || !open || !increase) return { ready: false, reason: "loading", stage: "cart_elements" };
     const prepared = () => quantity.value === "3" && name.textContent.trim() === "팬트리 수납 바구니 1호" && dialog.open;
     if (!prepared()) {
       if (!message.allowPreparation || preparationAttempted) return { ready: false, reason: "preparation_required" };

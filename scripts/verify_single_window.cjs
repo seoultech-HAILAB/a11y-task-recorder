@@ -9,7 +9,7 @@ const fs = require('node:fs');
 const net = require('node:net');
 const os = require('node:os');
 const path = require('node:path');
-const { spawn } = require('node:child_process');
+const { spawn, execFileSync } = require('node:child_process');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 
 const LAB = process.env.A11Y_LAB_DIR || path.resolve('..', 'a11y-user-context-lab');
@@ -39,7 +39,9 @@ function a11yState() {
   const hiddenish = node => Boolean(node.closest('[hidden]')) || getComputedStyle(node).display === 'none';
   const state = {};
   for (const id of ['study-start', 'study-practice', 'study-end', 'study-end-yes', 'study-end-no', 'study-submit', 'study-next', 'study-edit',
-    'study-practice-stop', 'study-frame', 'study-tester', 'study-select', 'study-records', 'study-shortcuts']) {
+    'study-practice-stop', 'study-frame', 'study-tester', 'study-select', 'study-records', 'study-shortcuts',
+    'study-restart', 'study-restart-yes', 'study-restart-no', 'study-return', 'study-redo', 'study-redo-yes', 'study-redo-no',
+    'study-tester-change', 'study-tester-yes', 'study-tester-no', 'study-tester-keep']) {
     const node = document.getElementById(id);
     const ariaHidden = Boolean(node.closest('[aria-hidden="true"]'));
     state[id] = { shown: !hiddenish(node), ariaHidden, tabbable: !hiddenish(node) && !ariaHidden && node.tabIndex >= 0 && !node.disabled && !node.closest('[inert]') };
@@ -97,7 +99,9 @@ function a11yState() {
       instruction: `${n}번 과업: 화면에서 안내 문구를 찾아 주세요.`, start_url: `${hostedOrigin}/s/${MOUNT}/${page}`,
       time_limit_seconds: limit, preparation: [], requires_answer: requiresAnswer });
     const catalog = { schema_version: 1, id: 'e2e-single-window', title: 'E2E', source: { spec_version: 'e2e', spec_sha256: 'a'.repeat(64), assignments_sha256: 'b'.repeat(64) },
-      testers: [{ id: 'T01', tasks: [task(1, 'index.html', 600, true), task(2, PAGES[0], 4, false), task(3, PAGES[1], 600, true)] }] };
+      testers: [{ id: 'T01', tasks: [task(1, 'index.html', 600, true), task(2, PAGES[0], 4, false), task(3, PAGES[1], 600, true)] },
+        // 0.4.4: T02 exercises tester change, restart and return to the task.
+        { id: 'T02', tasks: [{ ...task(1, 'index.html', 600, true), id: 'e2e-b1' }, { ...task(2, PAGES[0], 600, true), id: 'e2e-b2' }] }] };
     fs.writeFileSync(path.join(temp, 'catalog.json'), JSON.stringify(catalog));
     recorder = spawn('python3', ['run.py', '--no-browser', '--port', String(recorderPort), '--db', path.join(temp, 'recorder.sqlite3'), '--catalog', path.join(temp, 'catalog.json')],
       { env: { ...process.env, A11Y_RECORDER_UPLOAD_URL: `${hostedOrigin}/upload/session`, A11Y_RECORDER_ACCESS_CODE: ACCESS_CODE, PYTHONUNBUFFERED: '1' }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -146,9 +150,10 @@ function a11yState() {
     assert.equal(dashboard.frames().some(f => f.url() === catalog.testers[0].tasks[0].start_url), true);
     let state = await a11y();
     assert.deepEqual([state['study-start'].tabbable, state['study-practice'].tabbable, state['study-end'].shown, state['study-next'].shown], [true, true, false, false]);
-    // Tester locked: the picker, 배정 확인 and 기록 관리 are gone; Tab reaches only 과업 시작 and 연습 시작.
+    // Tester locked: the picker, 배정 확인 and 기록 관리 are gone; Tab reaches 과업 시작, 연습 시작 and
+    // (0.4.4) 테스터 번호 바꾸기.
     assert.deepEqual([state['study-tester'].shown, state['study-select'].shown, state['study-records'].shown], [false, false, false]);
-    assert.deepEqual(state.order, ['study-start', 'study-practice']);
+    assert.deepEqual(state.order, ['study-start', 'study-practice', 'study-tester-change']);
     await dashboard.keyboard.press('Tab');
     await waitFocus('study-start', 3000);
     await dashboard.keyboard.press('Tab');
@@ -163,7 +168,7 @@ function a11yState() {
     await dashboard.screenshot({ path: path.join(shots, '1-ready.png') });
     const prepared = (await api(`/api/sessions/${(await api('/api/study/T01')).tasks[0].session_id}/events`)).events.filter(e => e.type === 'site_preparation');
     assert.deepEqual(prepared.map(e => [e.payload.result, e.payload.login]), [['ready', 'submitted']]);
-    check('배정 확인 -> automatic prepare + hidden-form login (no code typed); focus on instruction; tester picker hidden; Tab order = 과업 시작, 연습 시작; shortcut line shown; site_preparation ready');
+    check('배정 확인 -> automatic prepare + hidden-form login (no code typed); focus on instruction; tester picker hidden; Tab order = 과업 시작, 연습 시작, 테스터 번호 바꾸기; shortcut line shown; site_preparation ready');
 
     // Practice with the same participant buttons; 연습 끝내기 prepares the real task again.
     await dashboard.locator('#study-practice').click();
@@ -314,6 +319,7 @@ function a11yState() {
     assert.equal(await dashboard.title(), 'A11y Task Recorder');
     state = await a11y();
     assert.deepEqual([state['study-end'].shown, state['study-end-yes'].shown, state['study-submit'].tabbable, state['study-next'].shown, state['study-frame'].tabbable], [false, false, true, false, false]);
+    assert.deepEqual([state['study-return'].tabbable, state['study-redo'].tabbable, state['study-restart'].shown, state['study-tester-change'].shown], [true, true, false, false]);
     await dashboard.evaluate(() => document.querySelector('#study-result').scrollIntoView({ block: 'center', behavior: 'instant' }));
     await dashboard.screenshot({ path: path.join(shots, '3-result.png') });
     check('과업 끝내기 -> 끝내기 -> answering: heading focused, frame inert/aria-hidden, end button and confirm gone, 저장 tabbable, 다음 과업 not yet');
@@ -450,6 +456,211 @@ function a11yState() {
     assert.equal(await dashboard.locator('#study-tester-form').isHidden(), true);
     check('tester picker: hidden after reload, shown with ?change-tester=1, ?tester=T01 reopens locked');
 
+    // ---- 0.4.4: tester change, restart, return to the task -------------------------------
+    const sentBeforeUndo = lineCount();
+    const openPicker = async () => {
+      await dashboard.locator('#study-tester-change').click();
+      if (await dashboard.locator('#study-tester-confirm').isVisible()) {
+        await waitFocus('study-tester-no', 3000);
+        await dashboard.locator('#study-tester-yes').click();
+      }
+      await waitFocus('study-tester', 3000);
+    };
+    state = await a11y();
+    assert.equal(state['study-tester-change'].tabbable, true);
+    assert.equal(await dashboard.locator('#study-tester-change').textContent(), '테스터 번호 바꾸기 (지금 T01)');
+    await dashboard.locator('#study-tester-change').click();
+    await waitFocus('study-tester-no', 3000);
+    assert.equal(await dashboard.locator('#study-tester-confirm').getAttribute('role'), 'group');
+    assert.equal(await dashboard.locator('#study-tester-question').textContent(), 'T01로 저장된 결과 3개는 지워지지 않고 그대로 남습니다. 다른 테스터 번호로 바꿀까요?');
+    state = await a11y();
+    assert.deepEqual([state['study-tester-change'].shown, state['study-tester-yes'].tabbable, state['study-tester-no'].tabbable], [false, true, true]);
+    await dashboard.keyboard.press('Escape');
+    await waitFocus('study-tester-change', 3000);
+    await dashboard.locator('#study-tester-change').click();
+    await waitFocus('study-tester-no', 3000);
+    await dashboard.keyboard.press('Enter');
+    await waitFocus('study-tester-change', 3000);
+    assert.equal(await dashboard.locator('#study-tester-form').isHidden(), true);
+    await openPicker();
+    assert.equal(await dashboard.locator('#study-tester-keep').isVisible(), true);
+    await dashboard.locator('#study-tester-keep').click();
+    await waitFocus('study-tester-change', 3000);
+    assert.equal(await dashboard.locator('#study-tester-form').isHidden(), true);
+    await openPicker();
+    await dashboard.locator('#study-tester').selectOption('T02');
+    await dashboard.locator('#study-select').click();
+    await waitFocus('study-instruction', 40000);
+    assert.equal(await dashboard.locator('#study-order').textContent(), 'T02 · 과업 1 / 2');
+    assert.equal((await api('/api/study/T01')).finished, 3);
+    check('tester change with saved results: confirm step (group, focus 취소; Escape and 취소 keep T01), 번호 바꾸기 shows the picker, 바꾸지 않기 keeps T01; T02 prepared; T01 results untouched');
+    const wrongDraft = (await api('/api/study/T02')).tasks[0].session_id;
+    await dashboard.locator('#study-tester-change').click();
+    await waitFocus('study-tester', 3000);
+    await dashboard.locator('#study-tester').selectOption('T01');
+    await dashboard.locator('#study-select').click();
+    await waitPhase('complete');
+    const cancelledDraft = (await api(`/api/sessions/${wrongDraft}`)).session;
+    assert.deepEqual([cancelledDraft.status, cancelledDraft.study_outcome, cancelledDraft.abort_reason, cancelledDraft.study_attempt.analysis],
+      ['aborted', 'cancelled', 'tester_change', 'exclude']);
+    await openPicker();
+    await dashboard.locator('#study-tester').selectOption('T02');
+    await dashboard.locator('#study-select').click();
+    await waitFocus('study-instruction', 40000);
+    const t02First = (await api('/api/study/T02')).tasks[0].session_id;
+    assert.notEqual(t02First, wrongDraft);
+    assert.deepEqual((await api(`/api/sessions/${t02First}`)).session.study_attempt, { attempt: 2, retry_of: wrongDraft, next_attempt: null, analysis: 'include' });
+    check('tester change with nothing saved: no confirm step; the unstarted draft is kept as aborted/cancelled (tester_change); reopening T02 makes attempt 2');
+
+    // Practice: 과업으로 돌아가기 and 처음부터 다시 하기 work there too (nothing recorded).
+    await dashboard.locator('#study-practice').click();
+    await waitFocus('study-instruction');
+    await dashboard.locator('#study-start').click();
+    await waitPhase('active');
+    await api('/api/signals', 'POST', { kind: 'end', source: 'nvda_addon' });
+    await waitPhase('answering');
+    await dashboard.locator('#study-return').click();
+    await waitPhase('active');
+    await waitFocus('study-frame', 3000);
+    await dashboard.locator('#study-restart').click();
+    await waitFocus('study-restart-no', 3000);
+    await dashboard.locator('#study-restart-yes').click();
+    await waitPhase('ready');
+    await waitFocus('study-instruction', 3000);
+    assert.match(await dashboard.locator('#study-message').textContent(), /연습을 처음부터 다시 합니다/);
+    await dashboard.locator('#study-start').click();
+    await waitPhase('active');
+    await api('/api/signals', 'POST', { kind: 'end', source: 'nvda_addon' });
+    await waitPhase('answering');
+    await dashboard.locator('input[name="study-done"][value="completed"]').check();
+    await dashboard.locator('#study-submit').click();
+    await waitFocus('study-saved');
+    await dashboard.locator('#study-practice-stop').click();
+    await waitFocus('study-instruction', 40000);
+    assert.equal((await api('/api/study/T02')).tasks[0].session_id, t02First);
+    check('practice: 과업으로 돌아가기 and 과업 다시 시작 return to the practice task or its instruction; no session created');
+
+    // Restart during a task: 과업 다시 시작 below the site (out of the Tab order) asks first.
+    await dashboard.locator('#study-start').click();
+    await waitPhase('active');
+    await waitFocus('study-frame');
+    const firstAttempt = (await api('/api/active-session')).session;
+    state = await a11y();
+    assert.deepEqual([state['study-restart'].shown, state['study-restart'].ariaHidden, state['study-restart'].tabbable], [true, false, false]);
+    assert.deepEqual(state.order, ['study-frame']);
+    await dashboard.locator('#study-restart').click();
+    await waitFocus('study-restart-no', 3000);
+    state = await a11y();
+    assert.deepEqual(state.order, ['study-frame', 'study-restart-yes', 'study-restart-no']);
+    assert.deepEqual([state['study-end'].shown, state['study-restart'].shown], [false, false]);
+    const restartBox = await dashboard.locator('#study-restart-confirm').boundingBox();
+    assert.ok(restartBox.y + restartBox.height <= 900, `restart confirm inside the viewport (${Math.round(restartBox.y)})`);
+    await dashboard.screenshot({ path: path.join(shots, '4-restart-confirm.png') });
+    await dashboard.keyboard.press('Escape');
+    await waitFocus('study-frame', 3000);
+    assert.equal((await api('/api/active-session')).session?.id, firstAttempt.id);
+    await dashboard.locator('#study-restart').click();
+    await waitFocus('study-restart-no', 3000);
+    await dashboard.locator('#study-restart-yes').click();
+    await waitPhase('ready');
+    await waitFocus('study-instruction', 40000);
+    assert.match(await dashboard.locator('#study-message').textContent(), /과업을 처음부터 다시 합니다/);
+    const restarted = (await api(`/api/sessions/${firstAttempt.id}`)).session;
+    assert.deepEqual([restarted.status, restarted.study_outcome, restarted.abort_reason, restarted.end_reason, restarted.study_attempt.analysis],
+      ['aborted', 'restarted', 'restart', 'restart', 'exclude']);
+    assert.equal((await api('/api/active-session')).session, null);
+    const secondAttempt = (await api('/api/study/T02')).tasks[0].session_id;
+    assert.notEqual(secondAttempt, firstAttempt.id);
+    assert.equal((await api(`/api/sessions/${secondAttempt}`)).session.study_attempt.retry_of, firstAttempt.id);
+    check('과업 다시 시작 during a task: in-page confirm (focus 계속하기, Escape keeps recording); 다시 시작 keeps the attempt as aborted/restarted and prepares a new attempt with focus on the instruction');
+
+    // End pressed by mistake: 과업으로 돌아가기 resumes recording on the same page.
+    await dashboard.locator('#study-start').click();
+    await waitPhase('active');
+    await waitFocus('study-frame');
+    await frame.locator('body').press('Tab');
+    await api('/api/signals', 'POST', { kind: 'end', source: 'nvda_addon' });
+    await waitPhase('answering');
+    await waitFocus('study-result-heading');
+    state = await a11y();
+    assert.deepEqual(state.order.slice(-3), ['study-submit', 'study-return', 'study-redo']);
+    await dashboard.locator('#study-return').focus();
+    await dashboard.keyboard.press('Enter');
+    await waitPhase('active');
+    await waitFocus('study-frame', 3000);
+    await dashboard.waitForFunction(() => /과업으로 돌아왔습니다/.test(document.querySelector('#study-site-status').textContent), null, { timeout: 3000 });
+    let resumed = (await api(`/api/sessions/${secondAttempt}`)).session;
+    assert.deepEqual([resumed.status, resumed.end_reason], ['active', '']);
+    assert.ok(resumed.paused_seconds > 0, `result-form time not counted (${resumed.paused_seconds}s)`);
+    // Recording is open again: an NVDA event is taken as a normal event, and a page change in the
+    // copy (Alt+Home) is recorded by the extension.
+    const nvdaAfter = await fetch(`${recorderBase}/api/events`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: secondAttempt, source: 'nvda', type: 'input', timestamp: new Date().toISOString(), payload: { gesture: 'tab' } }) });
+    assert.equal(nvdaAfter.status, 201);
+    assert.notEqual((await nvdaAfter.json()).event.payload.received_after_stop, true);
+    const browserCount = async () => (await api(`/api/sessions/${secondAttempt}/events`)).events.filter(e => e.source === 'browser' && !e.payload.received_after_stop).length;
+    const beforeResume = await browserCount();
+    await frame.locator('body').press('Alt+Home');
+    await waitFor(async () => (await browserCount()) > beforeResume, 'recording after return');
+    check(`end by mistake: result form offers 과업으로 돌아가기 and 처음부터 다시 하기 after 저장 (group "잘못 끝냈을 때"); return resumes recording on the same page, announced, result-form time excluded (${resumed.paused_seconds}s)`);
+
+    // 처음부터 다시 하기 from the result form asks first, then a third attempt is saved normally.
+    await api('/api/signals', 'POST', { kind: 'end', source: 'nvda_addon' });
+    await waitPhase('answering');
+    await dashboard.locator('#study-redo').click();
+    await waitFocus('study-redo-no', 3000);
+    state = await a11y();
+    assert.deepEqual([state['study-return'].shown, state['study-redo-yes'].tabbable, state['study-redo-no'].tabbable], [false, true, true]);
+    await dashboard.keyboard.press('Escape');
+    await waitFocus('study-redo', 3000);
+    assert.equal(await phase(), 'answering');
+    await dashboard.locator('#study-redo').click();
+    await waitFocus('study-redo-no', 3000);
+    await dashboard.locator('#study-redo-yes').click();
+    await waitFocus('study-instruction', 40000);
+    const redone = (await api(`/api/sessions/${secondAttempt}`)).session;
+    assert.deepEqual([redone.status, redone.study_outcome, redone.end_reason], ['aborted', 'restarted', 'participant_gesture']);
+    assert.deepEqual((await api(`/api/sessions/${secondAttempt}/events`)).events.filter(e => e.source === 'dashboard').map(e => e.type).filter(t => t.startsWith('task_')),
+      ['task_end', 'task_resume', 'task_end', 'task_abort']);
+    await dashboard.locator('#study-start').click();
+    await waitPhase('active');
+    await api('/api/signals', 'POST', { kind: 'end', source: 'nvda_addon' });
+    await waitPhase('answering');
+    await dashboard.locator('input[name="study-done"][value="completed"]').check();
+    await dashboard.locator('#study-submit').click();
+    await waitPhase('ended');
+    const thirdAttempt = (await api('/api/study/T02')).tasks[0];
+    assert.equal(thirdAttempt.outcome, 'completed');
+    assert.equal((await api(`/api/sessions/${thirdAttempt.session_id}`)).session.study_attempt.attempt, 4);
+    await waitFor(async () => lineCount() === sentBeforeUndo + 1, 'only the saved attempt is uploaded');
+    const uploadedIds = (await api('/api/uploads')).uploads.items.map(item => item.session_id);
+    assert.ok(![firstAttempt.id, secondAttempt, wrongDraft].some(id => uploadedIds.includes(id)), 'aborted attempts are not uploaded');
+    check('처음부터 다시 하기: confirm (focus 취소, Escape stays), attempt kept with its end reason; the next attempt saves normally and only it is uploaded');
+
+    // Researcher side: the package keeps aborted attempts apart and lists every attempt.
+    const pkg = (await api('/api/export-package', 'POST', { open_folder: false })).package;
+    assert.equal(pkg.aborted_session_count, 2);
+    const pkgListing = JSON.parse(execFileSync('python3', ['-c', [
+      'import csv, io, json, sys, zipfile',
+      'z = zipfile.ZipFile(sys.argv[1])',
+      'rows = list(csv.DictReader(io.StringIO(z.read("attempts.csv").decode("utf-8-sig"))))',
+      'print(json.dumps({"names": z.namelist(), "rows": rows, "info": z.read("패키지정보.txt").decode("utf-8")}))'].join('\n'), pkg.path], { encoding: 'utf8' }));
+    assert.equal(pkgListing.names.filter(n => n.startsWith('sessions/aborted/') && n.endsWith('.json')).length, 2);
+    const byId = Object.fromEntries(pkgListing.rows.map(r => [r.session_id, r]));
+    assert.deepEqual([byId[wrongDraft].analysis, byId[firstAttempt.id].analysis, byId[secondAttempt].analysis, byId[thirdAttempt.session_id].analysis],
+      ['exclude', 'exclude', 'exclude', 'include']);
+    assert.match(pkgListing.info, /다시 시작으로 취소된 시도: 2건/);
+    check('result package: sessions/aborted/ holds the 2 restarted attempts, attempts.csv marks 3 aborted attempts analysis=exclude');
+
+    // Back to T01 from the saved state (ended), so the run below opens T01 again.
+    await dashboard.goto(`${recorderBase}/?tester=T02`);
+    await waitPhase('ended');
+    await openPicker();
+    await dashboard.locator('#study-tester').selectOption('T01');
+    await dashboard.locator('#study-select').click();
+    await waitPhase('complete');
+    check('tester change from a saved task (ended) back to T01');
+
     // Kit built without a code (not for distribution): nobody is ever asked for one. Same port
     // (the copy's CSP lists it), fresh DB, cookies cleared: preparation stops with the site error,
     // the frame and its login page stay hidden, and nothing is uploaded.
@@ -491,7 +702,7 @@ function a11yState() {
     const noCodeUploads = (await api('/api/uploads')).uploads;
     assert.deepEqual([noCodeUploads.configured, noCodeUploads.code_source], [false, '']);
     assert.equal((await api('/api/uploads/flush', 'POST', {})).result.skipped, 'not_configured');
-    assert.equal(lineCount(), 4);
+    assert.equal(lineCount(), sentBeforeUndo + 1);
     assert.match(noCodeOut, /사이트 접속 코드: 내장되지 않음/);
     check('kit without a code: uploads not configured, nothing reaches the server; server window says the code is not built in');
     assert.deepEqual(errors, []);

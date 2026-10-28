@@ -55,6 +55,12 @@ body:has(#study-view[data-phase="active"]) .app-header { position: static; }
 .study-end-confirm p { margin: 0; font-size: 18px; font-weight: 700; }
 .study-end-confirm .button { min-height: 48px; font-size: 18px; }
 .study-shortcuts { margin: 0; color: var(--muted); overflow-wrap: anywhere; }
+.study-tester-tools { margin-top: 12px; }
+.study-tester-tools .study-end-confirm { margin-top: 0; }
+.study-undo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+.study-undo > p { margin: 0; width: 100%; color: var(--muted); }
+.study-undo .button { min-height: 44px; }
+.study-undo .study-end-confirm { width: 100%; margin-top: 4px; }
 .study-result { padding: 16px; border: 2px solid #247355; border-radius: 10px; background: #f3faf6; }
 .study-result h2 { margin: 0 0 12px; font-size: 20px; }
 .study-fieldset { border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px 12px; margin: 0 0 12px; }
@@ -603,6 +609,12 @@ summary {
 .session-status.abandoned {
   color: #991b1b;
   background: var(--red-pale);
+}
+
+.session-status.aborted {
+  color: #3f3f46;
+  background: #e4e4e7;
+  border: 1px dashed #71717a;
 }
 
 .summary-title {

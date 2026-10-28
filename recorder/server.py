@@ -25,6 +25,7 @@ from recorder import __version__
 from recorder.common import ApiError, json_load, parse_capture_instant, parse_timestamp, utc_now
 from recorder.signals import ANNOUNCE_MODE, SignalBoard
 from recorder.study import ADVANCING_OUTCOMES, STUDY_OUTCOMES, load_catalog, validate_setup
+from recorder.attempts import AttemptsMixin, aborted_count, attempts_csv
 from recorder.site_check import failure_count, failure_line, preparation_csv
 from recorder.study_flow import StudyFlowMixin
 from recorder.upload import UploadManager
@@ -52,7 +53,7 @@ SESSION_FIELDS = {
 }
 
 
-class RecorderStore(StudyFlowMixin):
+class RecorderStore(StudyFlowMixin, AttemptsMixin):
     def __init__(self, db_path: Path):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -202,6 +203,9 @@ class RecorderStore(StudyFlowMixin):
             self._ensure_column(connection, "sessions", "pause_reason", "TEXT NOT NULL DEFAULT ''")
             self._ensure_column(connection, "sessions", "study_answer_entered_by", "TEXT NOT NULL DEFAULT ''")
             self._ensure_column(connection, "sessions", "answer_history", "TEXT NOT NULL DEFAULT '[]'")
+            # 0.4.4: an attempt closed by a restart or a tester change (status 'aborted').
+            self._ensure_column(connection, "sessions", "aborted_at", "TEXT")
+            self._ensure_column(connection, "sessions", "abort_reason", "TEXT NOT NULL DEFAULT ''")
 
     def _study_catalog(self, connection: sqlite3.Connection) -> Dict[str, Any]:
         row = connection.execute("SELECT catalog FROM study_catalog WHERE singleton = 1").fetchone()
@@ -253,7 +257,9 @@ class RecorderStore(StudyFlowMixin):
                 current = assignment["order"]
             task = dict(assignment)
             task.update({
-                "status": (row["status"] if row["status"] in {"draft", "active", "answering"} else "finished") if row else "pending",
+                # An aborted last attempt (restart, tester change) leaves the task to be done again.
+                "status": (row["status"] if row["status"] in {"draft", "active", "answering"}
+                           else "pending" if row["status"] == "aborted" else "finished") if row else "pending",
                 "session_id": row["id"] if row else None,
                 "outcome": row["study_outcome"] if row else "",
             })
@@ -305,6 +311,11 @@ class RecorderStore(StudyFlowMixin):
                 raise ApiError(HTTPStatus.CONFLICT, "다른 세션이 진행 중입니다.")
             if retry_of is not None and task["session_id"] != retry_of:
                 raise ApiError(HTTPStatus.CONFLICT, "현재 과업만 재시도할 수 있습니다.")
+            if retry_of is None and task["session_id"]:
+                latest = connection.execute("SELECT * FROM sessions WHERE id = ?", (task["session_id"],)).fetchone()
+                if latest["status"] == "aborted":
+                    # Restarted or cancelled: the same task gets a fresh attempt chained to it.
+                    source, retry_of = latest, latest["id"]
             if retry_of is None and task["session_id"]:
                 session_id = task["session_id"]
             else:
@@ -529,6 +540,11 @@ class RecorderStore(StudyFlowMixin):
             raise ApiError(HTTPStatus.NOT_FOUND, "세션을 찾을 수 없습니다.")
         result = self.session_from_row(row)
         result["summary"] = self.session_summary(session_id)
+        if result["study"]:
+            with self.connect() as connection:
+                result["study_attempt"] = self.attempt_info(connection, session_id, result["status"])
+                # Pauses and time spent in the result form before a return to the task (0.4.4).
+                result["paused_seconds"] = round(self._paused_seconds(connection, session_id), 2)
         if include_related:
             result["events"] = self.list_events(session_id, limit=None)
             result["issues"] = self.list_issues(session_id)
@@ -1562,7 +1578,7 @@ class RecorderStore(StudyFlowMixin):
             "browser_extension_version",
         )
         checks = {
-            "session_finished": payload["status"] in {"completed", "abandoned"},
+            "session_finished": payload["status"] in {"completed", "abandoned", "aborted"},
             "nvda_data_present": source_counts["nvda"] > 0,
             "browser_data_present": source_counts["browser"] > 0,
             "environment_complete": all(
@@ -1601,9 +1617,13 @@ class RecorderStore(StudyFlowMixin):
             # Assigned collection records one task report, not inferred substeps.
             del checks["steps_defined"]
             del checks["step_outcomes_recorded"]
-            checks["study_outcome_recorded"] = payload["study_outcome"] in STUDY_OUTCOMES
+            aborted = payload["status"] == "aborted"
+            checks["study_outcome_recorded"] = aborted or payload["study_outcome"] in STUDY_OUTCOMES
             warning_labels["study_outcome_recorded"] = "참가자의 과업 종료 결과가 기록되지 않았습니다."
-            critical_checks += ("study_outcome_recorded",)
+            # 0.4.4: a restarted or cancelled attempt is kept but excluded from analysis.
+            checks["attempt_valid"] = not aborted
+            warning_labels["attempt_valid"] = "다시 시작하거나 테스터 번호를 바꿔 취소된 시도입니다. 분석에서 제외하세요."
+            critical_checks += ("study_outcome_recorded", "attempt_valid")
         payload["data_quality"] = {
             "collection_check_passed": all(checks[name] for name in critical_checks),
             "checks": checks,
@@ -1658,22 +1678,28 @@ class RecorderStore(StudyFlowMixin):
 
         with self.connect() as connection:
             rows = connection.execute(
-                "SELECT id, participant, status, created_at, round FROM sessions"
+                "SELECT id, participant, status, created_at, started_at, round FROM sessions"
                 " ORDER BY created_at ASC"
             ).fetchall()
         finished = [row for row in rows if row["status"] in {"completed", "abandoned"}]
         active_count = sum(1 for row in rows if row["status"] == "active")
+        # Restarted attempts that recorded something go in their own folder; attempts.csv lists all.
+        aborted = [row for row in rows if row["status"] == "aborted" and row["started_at"]]
 
         with self.connect() as connection:
             preparations = preparation_csv(connection)
             site_failures = failure_count(connection)
+            attempts = attempts_csv(connection)
+            aborted_by_reason = aborted_count(connection)
 
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         zip_path = package_dir / "\uacb0\uacfc\ud328\ud0a4\uc9c0_{}.zip".format(stamp)
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as bundle:
-            for session in finished:
+            for session in finished + aborted:
                 label = re.sub(r'[\\/:*?"<>|\s]+', "_", session["participant"] or "\ubb34\uae30\uba85")
-                name = "sessions/{}_r{}_{}_{}".format(
+                folder = "sessions/aborted" if session["status"] == "aborted" else "sessions"
+                name = "{}/{}_r{}_{}_{}".format(
+                    folder,
                     label,
                     session["round"] or 1,
                     (session["created_at"] or "")[:10],
@@ -1693,6 +1719,7 @@ class RecorderStore(StudyFlowMixin):
                     source.backup(target)
                 bundle.write(backup_path, "recorder.sqlite3")
             bundle.writestr("site_preparation.csv", preparations)
+            bundle.writestr("attempts.csv", attempts)
             kit_info = root / "KIT-INFO.txt"
             if kit_info.exists():
                 bundle.writestr("KIT-INFO.txt", kit_info.read_bytes())
@@ -1708,6 +1735,10 @@ class RecorderStore(StudyFlowMixin):
                         "recorder.sqlite3: \ubcf5\uad6c\uc6a9 \uc804\uccb4 \uae30\ub85d \ubc31\uc5c5(SQLite)",
                         "site_preparation.csv: 과업별 사이트 준비 결과와 실패 원인(로그인 필요, 주소 허용 안 됨, 준비 시간 초과, 확장 응답 없음 등)",
                         "사이트 준비 실패 기록: {}건".format(site_failures),
+                        "attempts.csv: 과업별 모든 시도. analysis=exclude는 취소된 시도(다시 시작, 테스터 번호 변경)",
+                        "다시 시작으로 취소된 시도: {}건 (기록이 있는 시도는 sessions/aborted/)".format(
+                            aborted_by_reason.get("restart", 0)),
+                        "테스터 번호 변경으로 취소된 준비 과업: {}건".format(aborted_by_reason.get("tester_change", 0)),
                         "",
                     ]
                 ),
@@ -1717,6 +1748,7 @@ class RecorderStore(StudyFlowMixin):
             "file_name": zip_path.name,
             "session_count": len(finished),
             "active_session_count": active_count,
+            "aborted_session_count": len(aborted),
         }
 
 
@@ -1938,7 +1970,7 @@ class RecorderHandler(BaseHTTPRequestHandler):
             self.server.signals.practice = bool(data.get("on"))
             self._json({"practice": self.server.signals.practice})
             return
-        match = re.fullmatch(r"/api/sessions/([^/]+)/(end-task|resume-task|pause|resume|study-events)", path)
+        match = re.fullmatch(r"/api/sessions/([^/]+)/(end-task|resume-task|abort|pause|resume|study-events)", path)
         if match:
             session_id, action = match.groups()
             store = self.server.store
@@ -1946,6 +1978,8 @@ class RecorderHandler(BaseHTTPRequestHandler):
                 session = store.end_task(session_id, data)
             elif action == "resume-task":
                 session = store.resume_task(session_id, data)
+            elif action == "abort":
+                session = store.abort_task(session_id, data)
             elif action == "pause":
                 session = store.pause_task(session_id, data)
             elif action == "resume":

@@ -1,0 +1,111 @@
+"""Cancelled attempts of an assigned task (0.4.4): restart and tester change.
+
+A participant who started a task by mistake restarts it, and a wrong tester number is
+changed. Nothing is deleted: the attempt is closed as `aborted` and the next preparation
+of the same task opens a new attempt (`study_attempts.retry_of`). Analysis excludes
+aborted attempts; the result package lists every attempt in attempts.csv.
+"""
+
+import csv
+import io
+import sqlite3
+from http import HTTPStatus
+from typing import Any, Dict
+
+from recorder.common import ApiError, json_load, utc_now
+
+# reason -> (study_outcome, statuses it may close)
+ABORT_REASONS = {
+    "restart": ("restarted", frozenset({"active", "answering"})),
+    "tester_change": ("cancelled", frozenset({"draft"})),
+}
+ATTEMPT_FIELDS = (
+    "tester", "order", "assignment_id", "attempt", "session_id", "retry_of", "status", "study_outcome",
+    "analysis", "abort_reason", "end_reason", "created_at", "started_at", "task_ended_at", "aborted_at",
+    "net_task_seconds",
+)
+
+
+def _short(value: Any, limit: int = 40) -> str:
+    return str(value or "")[:limit]
+
+
+class AttemptsMixin:
+    """Methods mixed into RecorderStore; relies on the StudyFlowMixin helpers."""
+
+    def abort_task(self, session_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Close the current attempt as aborted; the next prepare opens a new attempt."""
+        reason = str(data.get("reason") or "")
+        if reason not in ABORT_REASONS:
+            raise ApiError(HTTPStatus.BAD_REQUEST, "취소 사유가 올바르지 않습니다.")
+        outcome, allowed = ABORT_REASONS[reason]
+        with self.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = self._study_row(connection, session_id)
+            if row["status"] not in allowed:
+                raise ApiError(HTTPStatus.CONFLICT, "이 단계에서는 과업을 취소할 수 없습니다.")
+            if row["end_reason"] == "time_limit":
+                # The limit was reached; a restart would only buy the participant more time.
+                raise ApiError(HTTPStatus.CONFLICT, "제한 시간으로 끝난 과업은 다시 시작할 수 없습니다.")
+            study = json_load(row["study"], {})
+            progress = self._study_progress(connection, self._study_catalog(connection), study["tester"])
+            task = next((task for task in progress["tasks"] if task["order"] == study["order"]), None)
+            if task is None or task["session_id"] != session_id:
+                raise ApiError(HTTPStatus.CONFLICT, "현재 과업의 마지막 시도만 취소할 수 있습니다.")
+            now = utc_now()
+            if row["paused_at"]:
+                self._close_pause(connection, row, now, auto=True)
+            task_ended_at = row["task_ended_at"] or (now if row["started_at"] else None)
+            net = self._net_seconds(connection, row, task_ended_at) if task_ended_at else None
+            end_reason = row["end_reason"] or ("restart" if row["started_at"] else "")
+            connection.execute(
+                "UPDATE sessions SET status = 'aborted', ended_at = ?, task_ended_at = ?, end_reason = ?,"
+                " net_task_seconds = ?, study_outcome = ?, aborted_at = ?, abort_reason = ? WHERE id = ?",
+                (now, task_ended_at, end_reason, net, outcome, now, reason, session_id),
+            )
+            self._insert_dashboard_event(connection, session_id, "task_abort", {
+                "reason": reason, "from_status": row["status"], "trigger": _short(data.get("trigger")),
+                "by": _short(data.get("by") or "participant"), "previous_end_reason": row["end_reason"],
+                "net_task_seconds": net, "to_tester": _short(data.get("to_tester")),
+            }, now)
+        return self.get_session(session_id)
+
+    @staticmethod
+    def attempt_info(connection: sqlite3.Connection, session_id: str, status: str) -> Dict[str, Any]:
+        """Where this session sits in its task's attempts, and whether analysis keeps it."""
+        row = connection.execute("SELECT attempt, retry_of FROM study_attempts WHERE session_id = ?",
+                                 (session_id,)).fetchone()
+        if row is None:
+            return {}
+        following = connection.execute("SELECT session_id FROM study_attempts WHERE retry_of = ?",
+                                       (session_id,)).fetchone()
+        return {"attempt": row["attempt"], "retry_of": row["retry_of"],
+                "next_attempt": following["session_id"] if following else None,
+                "analysis": "exclude" if status == "aborted" else "include"}
+
+
+def attempts_csv(connection: sqlite3.Connection) -> bytes:
+    """Every attempt of every assigned task, aborted ones marked analysis=exclude."""
+    rows = connection.execute(
+        "SELECT a.tester, a.assignment_id, a.attempt, a.retry_of, s.id AS session_id, s.study, s.status,"
+        " s.study_outcome, s.abort_reason, s.end_reason, s.created_at, s.started_at, s.task_ended_at,"
+        " s.aborted_at, s.net_task_seconds FROM study_attempts a JOIN sessions s ON s.id = a.session_id"
+        " ORDER BY a.tester, s.created_at, a.attempt"
+    ).fetchall()
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(ATTEMPT_FIELDS)
+    for row in rows:
+        record = dict(row)
+        record["order"] = json_load(row["study"], {}).get("order", "")
+        record["analysis"] = "exclude" if row["status"] == "aborted" else "include"
+        writer.writerow(["" if record.get(field) is None else record.get(field) for field in ATTEMPT_FIELDS])
+    return ("﻿" + output.getvalue()).encode("utf-8")
+
+
+def aborted_count(connection: sqlite3.Connection) -> Dict[str, int]:
+    rows = connection.execute(
+        "SELECT abort_reason, COUNT(*) AS n FROM sessions WHERE status = 'aborted' GROUP BY abort_reason"
+    ).fetchall()
+    return {row["abort_reason"]: row["n"] for row in rows}
+

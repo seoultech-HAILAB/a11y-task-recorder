@@ -4,6 +4,9 @@
  * and logged in automatically, and the participant starts, ends, saves and moves on with
  * the buttons here or the NVDA add-on gestures (which run the same code). Progress lives in
  * SQLite; localStorage only remembers the slot.
+ * 0.4.4: mistakes can be undone without losing data. A wrong tester number is changed, a
+ * task is restarted (the attempt is kept as `aborted` and a new attempt is prepared), and
+ * an end pressed by mistake goes back to the task from the result form.
  */
 window.Study = (() => {
   const RECORDER_TITLE = "A11y Task Recorder";
@@ -27,8 +30,9 @@ window.Study = (() => {
   const ACTIVE_FRAME_TITLE = "과업 사이트, 끝내기는 NVDA, Ctrl, E";
   const view = { tester: null, plan: null, session: null, ready: false, busy: false, timer: null, opened: false,
     pending: new Map(), lastPoll: 0, checking: false, signalSeq: 0, practice: null,
-    pauses: 0, timeLimitHandled: null, lastTitlePoll: 0, frameTitle: "", editing: false, siteError: false,
-    confirmEnd: false, changeTester: new URLSearchParams(location.search).has("change-tester"),
+    timeLimitHandled: null, lastTitlePoll: 0, frameTitle: "", editing: false, siteError: false,
+    // The open in-page confirm step: "end", "restart" (below the site), "redo" (result form), "tester".
+    confirm: null, changeTester: new URLSearchParams(location.search).has("change-tester"),
     siteStartKey: null, pendingBack: null, refocusUntil: 0, siteCause: "", prepBegan: 0 };
   const labels = { completed: "마쳤습니다", blocked: "마치지 못했습니다", timeout: "제한 시간 종료", technical: "기술 문제" };
   const el = id => document.getElementById(id);
@@ -217,13 +221,16 @@ window.Study = (() => {
     } catch (error) { message(error.message, true); }
     resumePolling();
   }
-  async function selectTester(tester) {
-    if (!tester) return;
+  async function assertNoOtherRecording(tester) {
     const active = (await api("/active-session")).session;
     if (active && active.study?.tester !== tester) {
       el("study-tester").value = view.tester || "";
       throw new Error("다른 과업이 기록 중입니다. 연구진에게 알려 주세요.");
     }
+  }
+  async function selectTester(tester) {
+    if (!tester) return;
+    await assertNoOtherRecording(tester);
     const plan = await api(`/study/${encodeURIComponent(tester)}`);
     view.tester = tester;
     view.changeTester = false;
@@ -248,6 +255,13 @@ window.Study = (() => {
   // 배정 확인: choose the tester, then prepare the current task straight away.
   async function confirmTester(tester) {
     if (!tester) throw new Error("테스터 번호를 선택해 주세요.");
+    if (view.plan && tester === view.tester) return keepTester();
+    // A task prepared for the wrong number but never started is closed (kept as cancelled), so
+    // NVDA+Ctrl+H and the start gesture cannot pick up the other tester's task.
+    if (view.tester && view.session?.status === "draft" && view.session.study?.tester === view.tester) {
+      await assertNoOtherRecording(tester);
+      await api(`/sessions/${view.session.id}/abort`, "POST", { reason: "tester_change", trigger: "tester_picker", by: "participant", to_tester: tester });
+    }
     await selectTester(tester);
     return phase() === "ready" ? prepare() : phase() === "complete" ? el("study-complete").querySelector("h2") : null;
   }
@@ -283,20 +297,37 @@ window.Study = (() => {
     const ended = current === "ended";
     el("study-start").hidden = !(current === "ready" && view.ready);
     el("study-practice").hidden = practice || current !== "ready" || !firstTask();
-    if (current !== "active") view.confirmEnd = false;
-    el("study-end").hidden = current !== "active" || view.confirmEnd;
-    el("study-site-nav").hidden = current !== "active" || view.confirmEnd;
-    el("study-end-confirm").hidden = current !== "active" || !view.confirmEnd;
-    el("study-shortcuts").hidden = current !== "ready";
-    // Once a tester is confirmed the picker leaves the page; researchers reopen with ?change-tester=1 or ?tester=.
+    // Once a tester is confirmed the picker leaves the page; 테스터 번호 바꾸기 brings it back
+    // (researchers still have ?change-tester=1 and ?tester=). Not while a task is open.
     const locked = Boolean(view.tester) && !view.changeTester;
+    const testerChangeable = locked && !practice && ["ready", "ended", "complete"].includes(current);
+    const undo = current === "answering" && (practice || view.session?.end_reason !== "time_limit");
+    // A confirm step belongs to one phase; leaving that phase closes it.
+    const open = { end: current === "active", restart: current === "active", redo: undo, tester: testerChangeable };
+    if (view.confirm && !open[view.confirm]) view.confirm = null;
+    const asking = Boolean(view.confirm);
+    el("study-end").hidden = current !== "active" || asking;
+    el("study-site-nav").hidden = current !== "active" || asking;
+    el("study-restart").hidden = current !== "active" || asking;
+    el("study-end-confirm").hidden = view.confirm !== "end";
+    el("study-restart-confirm").hidden = view.confirm !== "restart";
+    el("study-undo").hidden = !undo;
+    el("study-return").hidden = view.confirm === "redo";
+    el("study-redo").hidden = view.confirm === "redo";
+    el("study-redo-confirm").hidden = view.confirm !== "redo";
+    el("study-shortcuts").hidden = current !== "ready";
     el("study-tester-form").hidden = locked;
     el("study-records").hidden = locked;
+    el("study-tester-keep").hidden = !(view.tester && view.changeTester);
+    el("study-tester-tools").hidden = !testerChangeable;
+    el("study-tester-change").hidden = view.confirm === "tester";
+    el("study-tester-confirm").hidden = view.confirm !== "tester";
+    if (view.tester) setText("study-tester-change", `테스터 번호 바꾸기 (지금 ${view.tester})`);
     el("study-next").hidden = practice || !ended;
     el("study-practice-stop").hidden = !(practice && ended);
     el("study-tester").disabled = current === "active" || current === "answering" || view.busy || practice;
     el("study-select").disabled = el("study-tester").disabled;
-    el("study-view").querySelectorAll(".study-actions button, #study-submit, #study-end, #study-end-confirm button, #study-site-nav button").forEach(b => { b.disabled = view.busy; });
+    el("study-view").querySelectorAll(".study-actions button, #study-submit, #study-end, #study-site-nav button, #study-restart, .study-end-confirm button, #study-undo button, #study-tester-change").forEach(b => { b.disabled = view.busy; });
     applyPhase();
   }
   function render() {
@@ -342,7 +373,9 @@ window.Study = (() => {
     if (!session?.started_at) return 0;
     const now = Date.now();
     const pausedNow = session.paused_at ? Math.max(0, now - Date.parse(session.paused_at)) : 0;
-    return Math.max(0, Math.floor((now - Date.parse(session.started_at) - view.pauses - pausedNow) / 1000));
+    // paused_seconds includes time spent in the result form before a return to the task.
+    const paused = (session.paused_seconds || 0) * 1000;
+    return Math.max(0, Math.floor((now - Date.parse(session.started_at) - paused - pausedNow) / 1000));
   }
   function updateTimer() {
     const task = currentTask();
@@ -417,7 +450,6 @@ window.Study = (() => {
     view.session = data.session;
     view.ready = false;
     view.siteError = false;
-    view.pauses = 0;
     resetForms();
     await refreshPlan();
     render();
@@ -497,7 +529,6 @@ window.Study = (() => {
     if (!result.started) throw new Error("사이트가 아직 준비되지 않았습니다. 잠시 뒤 다시 눌러 주세요.");
     if (result.frame_title) view.frameTitle = result.frame_title;
     view.session = (await api(`/sessions/${view.session.id}`)).session;
-    view.pauses = 0;
     view.siteStartKey = null;
     await refreshPlan();
     render();
@@ -661,8 +692,53 @@ window.Study = (() => {
   function nextTask() { return prepare(view.session?.study_outcome === "technical"); }
 
   // 과업 끝내기 button: ask first (focus on 계속하기); the E gesture and the time limit end without asking.
-  function openEndConfirm() { view.confirmEnd = true; renderControls(); return el("study-end-no"); }
-  function closeEndConfirm() { view.confirmEnd = false; renderControls(); return el("study-frame"); }
+  // Every confirm step is in the page (no window.confirm) and opens with focus on the safe choice.
+  function openConfirm(name, focusId) { view.confirm = name; renderControls(); return el(focusId); }
+  function closeConfirm(focusId) { view.confirm = null; renderControls(); return el(focusId); }
+
+  // ---- 되돌리기 (0.4.4) -------------------------------------------------------------
+  // 과업 다시 시작 / 처음부터 다시 하기: the attempt is kept as aborted (excluded from analysis)
+  // and the same task is prepared again as a new attempt; focus goes to its instruction.
+  async function restartTask(trigger) {
+    await api(`/sessions/${view.session.id}/abort`, "POST", { reason: "restart", trigger, by: "participant" });
+    view.confirm = null;
+    view.frameTitle = "";
+    const target = await prepare();
+    if (target) message("과업을 처음부터 다시 합니다. 지시문을 들은 뒤 과업 시작을 누르세요.");
+    return target;
+  }
+  // 과업으로 돌아가기: the end was pressed by mistake. Recording resumes on the same page; the
+  // time in the result form is not counted (server paused_seconds).
+  async function returnToTask() {
+    const data = await api(`/sessions/${view.session.id}/resume-task`, "POST", { by: "participant" });
+    view.session = data.session;
+    resetForms();
+    await refreshPlan();
+    render();
+    announce("과업으로 돌아왔습니다. 하던 곳에서 이어서 하세요.");
+    return el("study-frame");
+  }
+  // 테스터 번호 바꾸기: free while nothing is saved for this number; otherwise ask first.
+  function beginTesterChange() {
+    const saved = view.plan?.finished || 0;
+    if (!saved) return showTesterPicker();
+    setText("study-tester-question", `${view.tester}로 저장된 결과 ${saved}개는 지워지지 않고 그대로 남습니다. 다른 테스터 번호로 바꿀까요?`);
+    return openConfirm("tester", "study-tester-no");
+  }
+  function showTesterPicker() {
+    view.confirm = null;
+    view.changeTester = true;
+    renderControls();
+    message("바꿀 테스터 번호를 고른 뒤 배정 확인을 눌러 주세요.");
+    return el("study-tester");
+  }
+  function keepTester() {
+    view.changeTester = false;
+    el("study-tester").value = view.tester;
+    renderControls();
+    message(`테스터 번호 ${view.tester}를 그대로 씁니다.`);
+    return el("study-tester-change");
+  }
 
   // ---- practice (대본 §4.4; nothing is recorded) -------------------------------------
   async function startPractice() {
@@ -708,6 +784,16 @@ window.Study = (() => {
   }
   function practiceStart() { view.practice.phase = "active"; view.siteStartKey = null; renderPractice(); message("연습 중입니다."); requestAnimationFrame(focusSite); return el("study-frame"); }
   function practiceEnd() { view.practice.phase = "answering"; renderPractice(); message("연습 과업이 끝났습니다. 결과를 입력해 주세요."); return el("study-result-heading"); }
+  function practiceReturn() { view.practice.phase = "active"; renderPractice(); announce("과업으로 돌아왔습니다. 하던 곳에서 이어서 하세요."); return el("study-frame"); }
+  function practiceRestart() {
+    view.practice.phase = "ready";
+    view.confirm = null;
+    resetForms();
+    el("study-frame").src = "/practice.html";
+    renderPractice();
+    message("연습을 처음부터 다시 합니다. 지시문을 들은 뒤 과업 시작을 누르세요.");
+    return el("study-instruction");
+  }
   function practiceSubmit() {
     const outcome = document.querySelector('input[name="study-done"]:checked')?.value;
     if (!outcome) throw new Error("과업을 마쳤는지 골라 주세요.");
@@ -721,10 +807,25 @@ window.Study = (() => {
     const on = (id, event, handler) => el(id).addEventListener(event, handler);
     on("study-tester-form", "submit", e => { e.preventDefault(); busy(() => confirmTester(el("study-tester").value)); });
     on("study-start", "click", () => busy(view.practice ? async () => practiceStart() : start));
-    on("study-end", "click", () => { if (!view.busy && phase() === "active") openEndConfirm().focus(); });
+    const escape = (id, focusId) => on(id, "keydown", e => { if (e.key === "Escape" && !view.busy) { e.preventDefault(); e.stopPropagation(); closeConfirm(focusId).focus(); } });
+    on("study-end", "click", () => { if (!view.busy && phase() === "active") openConfirm("end", "study-end-no").focus(); });
     on("study-end-yes", "click", () => busy(view.practice ? async () => practiceEnd() : () => endTask("participant_button")));
-    on("study-end-no", "click", () => closeEndConfirm().focus());
-    on("study-end-confirm", "keydown", e => { if (e.key === "Escape" && !view.busy) { e.preventDefault(); closeEndConfirm().focus(); } });
+    on("study-end-no", "click", () => closeConfirm("study-frame").focus());
+    escape("study-end-confirm", "study-frame");
+    on("study-restart", "click", () => { if (!view.busy && phase() === "active") openConfirm("restart", "study-restart-no").focus(); });
+    on("study-restart-yes", "click", () => busy(view.practice ? async () => practiceRestart() : () => restartTask("button")));
+    on("study-restart-no", "click", () => closeConfirm("study-frame").focus());
+    escape("study-restart-confirm", "study-frame");
+    on("study-return", "click", () => busy(view.practice ? async () => practiceReturn() : returnToTask));
+    on("study-redo", "click", () => { if (!view.busy && phase() === "answering") openConfirm("redo", "study-redo-no").focus(); });
+    on("study-redo-yes", "click", () => busy(view.practice ? async () => practiceRestart() : () => restartTask("result_form")));
+    on("study-redo-no", "click", () => closeConfirm("study-redo").focus());
+    escape("study-redo-confirm", "study-redo");
+    on("study-tester-change", "click", () => { if (!view.busy) beginTesterChange().focus(); });
+    on("study-tester-yes", "click", () => showTesterPicker().focus());
+    on("study-tester-no", "click", () => closeConfirm("study-tester-change").focus());
+    escape("study-tester-confirm", "study-tester-change");
+    on("study-tester-keep", "click", () => { if (!view.busy) keepTester().focus(); });
     on("study-next", "click", () => busy(nextTask));
     on("study-answer-form", "submit", e => { e.preventDefault(); busy(view.practice ? async () => practiceSubmit() : view.editing ? saveEdit : submitParticipant); });
     on("study-edit", "click", () => busy(editAnswer));

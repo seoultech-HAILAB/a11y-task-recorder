@@ -102,6 +102,8 @@ class StudyFlowMixin:
             row = self._study_row(connection, session_id)
             if row["status"] != "answering":
                 raise ApiError(HTTPStatus.CONFLICT, "결과 입력 단계의 과업만 다시 시작할 수 있습니다.")
+            if row["end_reason"] == "time_limit":
+                raise ApiError(HTTPStatus.CONFLICT, "제한 시간으로 끝난 과업에는 돌아갈 수 없습니다.")
             other = connection.execute(
                 "SELECT id FROM sessions WHERE status = 'active' AND id != ? LIMIT 1", (session_id,)
             ).fetchone()
@@ -153,11 +155,14 @@ class StudyFlowMixin:
         connection.execute("UPDATE sessions SET paused_at = NULL, pause_reason = '' WHERE id = ?", (row["id"],))
 
     def _paused_seconds(self, connection: sqlite3.Connection, session_id: str) -> float:
+        """Pauses plus the time spent in the result form before a return to the task (0.4.4)."""
         rows = connection.execute(
-            "SELECT payload FROM events WHERE session_id = ? AND source = 'dashboard' AND type = 'resume'",
+            "SELECT type, payload FROM events WHERE session_id = ? AND source = 'dashboard'"
+            " AND type IN ('resume', 'task_resume')",
             (session_id,),
         ).fetchall()
-        return sum(float(json_load(row["payload"], {}).get("paused_seconds") or 0) for row in rows)
+        field = {"resume": "paused_seconds", "task_resume": "gap_seconds"}
+        return sum(float(json_load(row["payload"], {}).get(field[row["type"]]) or 0) for row in rows)
 
     def _net_seconds(self, connection: sqlite3.Connection, row: sqlite3.Row, task_ended_at: str) -> Optional[float]:
         if not row["started_at"]:

@@ -18,7 +18,12 @@ const statusLabels = {
   active: "기록 중",
   completed: "완료",
   abandoned: "중단",
+  answering: "결과 입력",
+  // 0.4.4: an assigned-task attempt closed by a restart or a tester change. Kept, never analysed.
+  aborted: "취소된 시도(분석 제외)",
 };
+const abortReasonLabels = { restart: "다시 시작", tester_change: "테스터 번호 변경" };
+const finishedStatuses = ["completed", "abandoned", "aborted"];
 
 const sourceLabels = {
   nvda: "NVDA",
@@ -192,6 +197,9 @@ function renderSessions(sessions) {
                 ${escapeHtml(statusLabels[session.status] || session.status)}
               </span>
               ${escapeHtml(session.participant || "참여자 미지정")}
+              ${session.status === "aborted"
+                ? ` · ${escapeHtml(abortReasonLabels[session.abort_reason] || session.abort_reason || "취소")}`
+                : ""}
             </p>
             <h3>${escapeHtml(session.title)}${
               Number(session.round) > 1
@@ -311,7 +319,7 @@ function renderSession() {
   byId("abandon-button").hidden = !active || Boolean(session.study?.assignment_id);
   byId("hint-form").hidden = !active;
   byId("step-form").querySelectorAll("input, button").forEach((control) => {
-    control.disabled = session.status === "completed" || session.status === "abandoned";
+    control.disabled = finishedStatuses.includes(session.status);
   });
   byId("event-filter").disabled = !state.events.length;
   if (!state.notesDirty) {
@@ -851,7 +859,7 @@ function renderRounds() {
   const nav = byId("round-tabs");
   const session = state.currentSession;
   const rounds = session.rounds || [];
-  const finished = ["completed", "abandoned"].includes(session.status);
+  const finished = finishedStatuses.includes(session.status);
   nav.hidden = rounds.length <= 1 && !finished;
   if (nav.hidden) {
     nav.innerHTML = "";
@@ -861,7 +869,8 @@ function renderRounds() {
     .map((item) => {
       const current = item.id === session.id;
       const suffix =
-        item.status === "active" ? " · 기록 중" : item.status === "draft" ? " · 준비" : "";
+        item.status === "active" ? " · 기록 중" : item.status === "draft" ? " · 준비"
+          : item.status === "aborted" ? " · 취소" : "";
       return `<button type="button" class="round-tab${current ? " active" : ""}"
         data-action="open-round" data-session-id="${escapeHtml(item.id)}"
         aria-current="${current ? "true" : "false"}">${item.round}회차${suffix}</button>`;
@@ -879,7 +888,7 @@ function renderRounds() {
 function renderAnchors() {
   const container = byId("anchor-chips");
   const guide = byId("review-guide");
-  const completed = ["completed", "abandoned"].includes(state.currentSession?.status);
+  const completed = finishedStatuses.includes(state.currentSession?.status);
   guide.hidden = !completed;
   const anchors = state.events.filter(
     (event) => event.type === "marker" || event.type === "hint"
