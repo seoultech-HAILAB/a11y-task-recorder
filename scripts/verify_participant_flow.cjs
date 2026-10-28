@@ -60,6 +60,11 @@ const step = (name) => console.log('ok -', name);
     const guide = await page.textContent('#study-instruction');
     assert.ok(guide.includes('NVDA, Ctrl, H') && guide.includes('NVDA, Ctrl, E'));
     step('"1" names T01; practice opens by itself with the guide focused');
+    // 0.5.2: outside a task, Tab past either end of the screen comes back in (Chrome info bar, 10/28).
+    const inView = () => page.evaluate(() => { const a = document.activeElement; return Boolean(a) && a !== document.body && document.getElementById('study-view').contains(a) && !a.classList.contains('focus-trap'); });
+    for (let i = 0; i < 6; i++) { await page.keyboard.press('Shift+Tab'); await page.waitForTimeout(60); assert.ok(await inView(), `page Shift+Tab ${i}: ${await active()}`); }
+    for (let i = 0; i < 6; i++) { await page.keyboard.press('Tab'); await page.waitForTimeout(60); assert.ok(await inView(), `page Tab ${i}: ${await active()}`); }
+    step('outside a task Tab and Shift+Tab wrap around the recorder screen');
     await page.screenshot({ path: path.join(out, '2-practice.png') });
 
     const repeat = await signal('repeat');
@@ -80,7 +85,9 @@ const step = (name) => console.log('ok -', name);
     await page.click('#study-return');
     await page.waitForFunction(() => document.querySelector('#study-view').dataset.phase === 'active');
     assert.match(await frame.locator('#ingredients').textContent(), /두부/);
-    step('과업으로 돌아가기 returns to the same page state');
+    // 0.5.2: and to the control the task was ended on (Windows 10/28, 15).
+    await page.waitForFunction(() => document.querySelector('#study-frame').contentDocument.activeElement?.id === 'show', null, { timeout: 5000 });
+    step('과업으로 돌아가기 returns to the same page state and the same control');
     await signal('end');
     await waitFocus('study-result-heading');
     await page.check('input[value="completed"]');

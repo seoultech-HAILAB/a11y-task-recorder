@@ -18,6 +18,7 @@ import globalPluginHandler
 import inputCore
 import queueHandler
 import synthDriverHandler
+import textInfos
 import tones
 import ui
 from logHandler import log
@@ -222,7 +223,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
                         "nvda_script": scriptName,
                         "script_description": scriptDescription,
                     },
-                    "element": self._objectContext(focus),
+                    "element": self._inputContext(focus),
                     "page_title": self._foregroundTitle(),
                 }
             )
@@ -548,6 +549,40 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
                 windowHandle if windowHandle is not None else "",
                 ia2UniqueId,
             )
+        return context
+
+    def _inputContext(self, focus):
+        """Context of the object a key acts on; in browse mode, the one under the virtual cursor.
+
+        Windows check of 0.5.0 (10/28, F4): inside the study frame NVDA's focus object was an
+        "unknown, unavailable" object for every key, so all 133 inputs were filed as browser_ui
+        while NVDA read the site normally. Browse-mode keys move the virtual cursor, so the
+        object at the cursor is recorded, with the focus object's role and name kept beside it.
+        """
+        target, source = focus, "focus"
+        try:
+            interceptor = getattr(focus, "treeInterceptor", None)
+            if interceptor is None:
+                caret = api.getCaretObject()
+                interceptor = caret if hasattr(caret, "rootNVDAObject") else None
+            if interceptor is not None and not getattr(interceptor, "passThrough", True):
+                atCursor = interceptor.makeTextInfo(textInfos.POSITION_CARET).NVDAObjectAtStart
+                if atCursor is not None:
+                    target, source = atCursor, "browse_cursor"
+        except Exception:
+            pass
+        try:
+            if source == "focus" and self._objectScope(focus) == "browser_ui":
+                navigator = api.getNavigatorObject()
+                if navigator is not None and self._objectScope(navigator) == "web_content":
+                    target, source = navigator, "navigator"
+        except Exception:
+            pass
+        context = self._objectContext(target)
+        context["context_source"] = source
+        if target is not focus:
+            focusContext = self._objectContext(focus)
+            context["focus_object"] = {key: focusContext[key] for key in ("role", "name", "states", "scope") if key in focusContext}
         return context
 
     def _objectScope(self, obj):

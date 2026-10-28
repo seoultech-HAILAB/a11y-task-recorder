@@ -426,8 +426,24 @@ async function createMarker(label) {
   }, tab?.id, state?.frameId ?? undefined);
 }
 
+// 0.5.2: the first window of a new kit once stayed blank, titled with its address, until F5
+// (Windows 10/28, 준비5). When the browser starts, a recorder tab that has not loaded its page
+// 8 s later is reloaded once. Only at start-up: the worker also wakes during a task.
+const DASHBOARD_TITLE = "A11y Task Recorder";
+async function reloadStalledDashboard() {
+  try {
+    const tabs = await chrome.tabs.query({ url: ["http://127.0.0.1:8765/*"] });
+    for (const tab of tabs) {
+      if (tab.status !== "complete" || tab.title !== DASHBOARD_TITLE) await chrome.tabs.reload(tab.id);
+    }
+  } catch { /* no recorder tab */ }
+}
+const watchStartup = () => setTimeout(reloadStalledDashboard, 8000);
+
 chrome.runtime.onInstalled.addListener(() => {
   getActiveSession(true);
+  watchStartup();
 });
+chrome.runtime.onStartup?.addListener(watchStartup);
 
 getActiveSession(true);

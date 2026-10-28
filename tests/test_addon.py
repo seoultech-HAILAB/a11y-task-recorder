@@ -219,6 +219,34 @@ class SingleWindowAddonTests(unittest.TestCase):
         self.assertEqual("task", self.plugin._objectFrame(link))
         self.assertEqual("recorder", self.plugin._objectFrame(heading))
 
+    def test_input_in_browse_mode_uses_the_virtual_cursor_object(self):
+        # Windows 10/28 (F4): the focus object was "unknown, unavailable" for every key in the frame.
+        self.plugin.__dict__.pop("_objectContext", None)
+        roles = SimpleNamespace(INTERNALFRAME="frame", DOCUMENT="document")
+        top = SimpleNamespace(role="document", parent=None, name="A11y Task Recorder", states=[])
+        frame = SimpleNamespace(role="frame", parent=top, name="과업 사이트", states=[])
+        inner_doc = SimpleNamespace(role="document", parent=frame, name="한국에너지재단", states=[])
+        link = SimpleNamespace(role="link", parent=inner_doc, name="메뉴 바로가기", states=[])
+        info = SimpleNamespace(NVDAObjectAtStart=link)
+        interceptor = SimpleNamespace(passThrough=False, rootNVDAObject=inner_doc, makeTextInfo=lambda position: info)
+        broken = SimpleNamespace(role="unknown", parent=None, name="", states=["unavailable"], treeInterceptor=interceptor)
+        self.plugin._inputContext.__globals__.update({
+            "controlTypes": SimpleNamespace(Role=roles), "textInfos": SimpleNamespace(POSITION_CARET="caret"),
+            "api": SimpleNamespace(getCaretObject=lambda: interceptor, getNavigatorObject=lambda: link)})
+        context = self.plugin._inputContext(broken)
+        self.assertEqual("browse_cursor", context["context_source"])
+        self.assertEqual("web_content", context["scope"])
+        self.assertEqual("task", context["frame"])
+        self.assertEqual("메뉴 바로가기", context["name"])
+        self.assertEqual("unknown", context["focus_object"]["role"])
+        # Focus mode (passThrough) keeps the focus object, as before.
+        field = SimpleNamespace(role="editabletext", parent=inner_doc, name="검색어", states=[],
+                                treeInterceptor=SimpleNamespace(passThrough=True, rootNVDAObject=inner_doc, makeTextInfo=lambda p: info))
+        context = self.plugin._inputContext(field)
+        self.assertEqual("focus", context["context_source"])
+        self.assertEqual("검색어", context["name"])
+        self.assertNotIn("focus_object", context)
+
     def test_prompt_speech_is_tagged_and_not_merged_with_user_speech(self):
         self.plugin._onSpeechQueued(["버튼 재료 보기"])
         spoken = []
