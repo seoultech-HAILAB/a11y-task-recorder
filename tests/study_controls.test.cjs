@@ -108,7 +108,11 @@ test('focus stays in the site during a task: traps around the frame return it', 
 });
 
 test('practice can be reopened before any task and opens by itself the first time', () => {
-  assert.match(script, /el\("study-practice"\)\.hidden = practice \|\| current !== "ready";/);
+  assert.match(script, /el\("study-practice"\)\.hidden = practice \|\| !\["ready", "ended"\]\.includes\(current\);/);
+  assert.match(script, /el\("study-practice-complete"\)\.hidden = practice \|\| current !== "complete";/);
+  // Leaving a practice opened from the completion screen goes back there, not to /prepare.
+  assert.match(script, /if \(view\.plan\.finished === view\.plan\.total\) \{ render\(\); return el\("study-complete"\)/);
+  assert.match(script.match(/const PRACTICE_GUIDE = ([\s\S]*?);\n/)[1], /Alt, Home/, 'the practice teaches the task start page key');
   assert.match(script, /if \(current === "ready" && firstTask\(\) && !practiced\(\)\) return startPractice\(\);/);
 });
 

@@ -25,7 +25,7 @@ window.Study = (() => {
   const PRACTICE_GUIDE = "연습입니다. 기록하지 않습니다. 본 과업에서 쓰는 키를 익힙니다. "
     + "지시문을 다시 들으려면 NVDA, Ctrl, H를 누르세요. 과업 중에도 됩니다. "
     + "답을 찾았거나 더 할 수 없으면 그 자리에서 NVDA, Ctrl, E를 눌러 과업을 끝내세요. "
-    + "사이트에서 이전 페이지는 Alt, 왼쪽 화살표입니다. "
+    + "사이트에서 이전 페이지는 Alt, 왼쪽 화살표, 과업 첫 화면은 Alt, Home입니다. "
     + "본 과업에서는 이 안내를 다시 하지 않습니다. "
     + `연습 과업: ${PRACTICE_TASK} 지금 NVDA, Ctrl, H를 한 번 눌러 본 뒤 과업 시작을 누르세요.`;
   const SITE_UNREACHABLE = "사이트에 접속할 수 없습니다. 연구진에게 알려 주세요.";
@@ -333,8 +333,10 @@ window.Study = (() => {
     const ended = current === "ended";
     // 과업 시작 shows as soon as the instruction does; the site may still be loading (start waits).
     el("study-start").hidden = current !== "ready";
-    // The practice can be opened again before any task (0.5.0), and skipped while it is open.
-    el("study-practice").hidden = practice || current !== "ready";
+    // The practice can be opened again from any screen without an open task (0.5.1): an
+    // instruction, a time-limit stop or the completion screen. Skipped while it is open.
+    el("study-practice").hidden = practice || !["ready", "ended"].includes(current);
+    el("study-practice-complete").hidden = practice || current !== "complete";
     el("study-practice-skip").hidden = !(practice && current === "ready");
     // Once a tester is confirmed the number field leaves the page; 테스터 번호 바꾸기 brings it
     // back (researchers still have ?change-tester=1 and ?tester=). Not while a task is open.
@@ -768,7 +770,8 @@ window.Study = (() => {
     message("연습입니다. 연습은 기록하지 않습니다.");
     return el("study-instruction");
   }
-  // 본 과업으로 가기: leave practice and present the current task.
+  // 본 과업으로 가기: leave practice and present the current task (the completion screen when
+  // every task is done).
   async function stopPractice() {
     await api("/signals/practice", "POST", { on: false });
     markPracticed();
@@ -776,6 +779,7 @@ window.Study = (() => {
     el("study-frame").src = "about:blank";
     resetForms();
     message("연습을 끝냈습니다.");
+    if (view.plan.finished === view.plan.total) { render(); return el("study-complete").querySelector("h2"); }
     return prepare();
   }
   function renderPractice() {
@@ -818,7 +822,7 @@ window.Study = (() => {
     ].filter(Boolean).join(" ");
     view.practice.phase = "ended";
     setText("study-saved", `연습을 마쳤습니다. ${checks ? `${checks} ` : "단축키를 모두 써 보셨습니다. "}`
-      + "본 과업으로 가려면 '본 과업으로 가기', 다시 연습하려면 '연습 다시 하기'를 누르세요. 연습은 과업을 시작하기 전이면 언제든 다시 할 수 있습니다.");
+      + "본 과업으로 가려면 '본 과업으로 가기', 다시 연습하려면 '연습 다시 하기'를 누르세요. 연습은 지시문 화면에서 언제든 다시 할 수 있습니다.");
     renderPractice();
     return el("study-saved");
   }
@@ -849,6 +853,7 @@ window.Study = (() => {
     on("study-next", "click", () => busy(nextTask));
     on("study-answer-form", "submit", e => { e.preventDefault(); busy(view.practice ? async () => practiceSubmit() : submitParticipant); });
     on("study-practice", "click", () => busy(startPractice));
+    on("study-practice-complete", "click", () => busy(startPractice));
     on("study-practice-again", "click", () => busy(async () => practiceRestart()));
     on("study-practice-stop", "click", () => busy(stopPractice));
     on("study-practice-skip", "click", () => busy(stopPractice));
