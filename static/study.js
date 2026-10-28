@@ -791,6 +791,9 @@ window.Study = (() => {
     resetForms();
     await refreshPlan();
     render();
+    // An alert left from the result form ("성공인지 실패인지 골라 주세요.") was read again with the
+    // whole site on the way back (Windows 10/29, 1 of 1); it is cleared first.
+    message("");
     announce("과업으로 돌아왔습니다.");
     requestAnimationFrame(resumeSite);
     return null;
@@ -884,7 +887,7 @@ window.Study = (() => {
   }
   function practiceStart() { view.practice.phase = "active"; view.siteStartKey = null; renderPractice(); message("연습 중입니다."); requestAnimationFrame(() => focusSite()); return el("study-frame"); }
   function practiceEnd(by) { view.practice.phase = "answering"; view.practice.endedBy = by; renderPractice(); message("연습 과업이 끝났습니다."); return el("study-result-heading"); }
-  function practiceReturn() { view.practice.phase = "active"; renderPractice(); announce("과업으로 돌아왔습니다."); requestAnimationFrame(resumeSite); return null; }
+  function practiceReturn() { message(""); view.practice.phase = "active"; renderPractice(); announce("과업으로 돌아왔습니다."); requestAnimationFrame(resumeSite); return null; }
   function practiceRestart() {
     view.practice = { phase: "ready", repeated: false, endedBy: "" };
     view.confirm = null;

@@ -968,6 +968,16 @@ class RecorderStore(StudyFlowMixin, AttemptsMixin):
             captured_at = parse_timestamp(timestamp)
             if session["started_at"] and captured_at < parse_timestamp(session["started_at"]):
                 raise ApiError(HTTPStatus.CONFLICT, "세션 시작 전 이벤트는 기록할 수 없습니다.")
+            if session["status"] == "active" and source in {"nvda", "browser"}:
+                # 0.5.3: a capture made on the result form (between end-task and 과업으로 돌아가기)
+                # but delivered after the return was filed into the task (Windows check, 10/29).
+                # The result form is not task time, so it is refused like a capture after the end.
+                for gap in connection.execute(
+                    "SELECT timestamp, payload FROM events WHERE session_id = ? AND type = 'task_resume'", (session_id,)
+                ).fetchall():
+                    gap_start = json.loads(gap["payload"] or "{}").get("previous_task_ended_at")
+                    if gap_start and parse_timestamp(gap_start) < captured_at < parse_timestamp(gap["timestamp"]):
+                        raise ApiError(HTTPStatus.CONFLICT, "결과 입력 중에 잡힌 이벤트는 과업 기록에 넣지 않습니다.")
             if session["status"] != "active":
                 # In "answering" the task interval is sealed by task_ended_at while ended_at is still open.
                 boundary = session["task_ended_at"] if session["status"] == "answering" else session["ended_at"]

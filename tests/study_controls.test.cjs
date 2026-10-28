@@ -165,3 +165,7 @@ test('a page still loading after 10 s is opened again once, and one failure sent
   assert.match(script, /if \(token === view\.loadToken && !view\.startWaiting\) message\(error\.message, true\)/);
 });
 
+test('returning to the task clears an alert left on the result form', () => {
+  assert.match(script, /message\(""\);\n    announce\("과업으로 돌아왔습니다\."\);/);
+  assert.match(script, /function practiceReturn\(\) \{ message\(""\);/);
+});

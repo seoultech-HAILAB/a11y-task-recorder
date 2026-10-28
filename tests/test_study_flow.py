@@ -1,5 +1,6 @@
 """0.4.0 single-window flow: end-task / resume, pauses, participant answers, signals."""
 import json
+import time
 import tempfile
 import threading
 import unittest
@@ -88,6 +89,18 @@ class StudyFlowTests(unittest.TestCase):
         late = self.nvda_event(session["id"], before)
         self.assertTrue(late["payload"]["received_after_stop"])
         self.assertEqual("answering", self.store.get_session(ended["id"])["status"])
+
+    def test_capture_from_the_result_form_is_refused_after_the_return(self):
+        # Windows 10/29: keys typed on the result form reached the task when posted after the return.
+        session = self.started()
+        self.store.end_task(session["id"], {"reason": "participant_gesture"})
+        time.sleep(0.01)
+        on_result_form = utc_now()
+        time.sleep(0.01)
+        self.store.resume_task(session["id"], {"by": "participant"})
+        with self.assertRaises(ApiError):
+            self.nvda_event(session["id"], on_result_form)
+        self.assertEqual("input", self.nvda_event(session["id"])["type"], "captures after the return are kept")
 
     def test_resume_returns_to_recording_and_keeps_both_events(self):
         session = self.started()
