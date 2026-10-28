@@ -219,6 +219,27 @@ class SingleWindowAddonTests(unittest.TestCase):
         self.assertEqual("task", self.plugin._objectFrame(link))
         self.assertEqual("recorder", self.plugin._objectFrame(heading))
 
+    def test_input_element_is_read_on_the_main_thread(self):
+        # Windows 10/29 (F4 in 0.5.2): IA2 reads on the input hook thread failed.
+        queued = []
+        self.plugin._queueMain = lambda function, *args: queued.append((function, args))
+        self.plugin._shouldRecord = lambda obj: True
+        self.plugin._inputKind = lambda *a: "key"
+        self.plugin._finalizeSpeech = lambda **k: None
+        self.plugin._inputContext = lambda obj: {"name": "메뉴 바로가기", "context_source": "browse_cursor"}
+        self.plugin._foregroundTitle = lambda: "A11y Task Recorder"
+        self.plugin._onGesture.__globals__.update({"api": SimpleNamespace(getFocusObject=lambda: object())})
+        self.plugin._onGesture(SimpleNamespace(isModifier=False, displayName="아래쪽 화살표", script=None,
+                                               identifiers=("kb(desktop):downarrow",)))
+        self.assertTrue(self.plugin._events.empty(), "nothing is read or queued on the hook thread")
+        self.assertEqual(1, len(queued))
+        function, args = queued[0]
+        self.assertEqual("session-a", args[0]["session_id"], "the session is bound at the key press")
+        function(*args)
+        event = self.plugin._events.get_nowait()
+        self.assertEqual("메뉴 바로가기", event["element"]["name"])
+        self.assertEqual("A11y Task Recorder", event["page_title"])
+
     def test_input_in_browse_mode_uses_the_virtual_cursor_object(self):
         # Windows 10/28 (F4): the focus object was "unknown, unavailable" for every key in the frame.
         self.plugin.__dict__.pop("_objectContext", None)

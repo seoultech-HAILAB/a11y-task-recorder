@@ -211,25 +211,37 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             if scriptObject is not None:
                 scriptName = safeString(getattr(scriptObject, "__name__", ""), 180)
                 scriptDescription = safeString(getattr(scriptObject, "__doc__", ""), 300)
-            self._enqueue(
-                {
-                    "type": "input",
-                    "timestamp": inputTimestamp,
-                    "payload": {
-                        "gesture": displayName,
-                        "display_name": displayName,
-                        "identifiers": identifiers,
-                        "input_kind": inputKind,
-                        "nvda_script": scriptName,
-                        "script_description": scriptDescription,
-                    },
-                    "element": self._inputContext(focus),
-                    "page_title": self._foregroundTitle(),
-                }
-            )
+            event = {
+                "type": "input",
+                "timestamp": inputTimestamp,
+                "payload": {
+                    "gesture": displayName,
+                    "display_name": displayName,
+                    "identifiers": identifiers,
+                    "input_kind": inputKind,
+                    "nvda_script": scriptName,
+                    "script_description": scriptDescription,
+                },
+            }
+            with self._sessionLock:
+                event["session_id"] = self._activeSession
+            # 0.5.3: this hook runs on NVDA's input thread (winInputHook), where IA2 reads of the
+            # focus object fail; every 0.5.0/0.5.2 input came out "unknown, unavailable,
+            # browser_ui" (Windows F4). The element is read on the main thread instead, queued
+            # before the gesture's own script, so it is still the position before the key acts.
+            self._queueMain(self._completeInput, event)
         except Exception:
             log.debugWarning("A11y Task Recorder gesture capture failed", exc_info=True)
         return True
+
+    def _completeInput(self, event):
+        """Main thread: add the element and window title to an input captured on the hook thread."""
+        try:
+            event["element"] = self._inputContext(api.getFocusObject())
+            event["page_title"] = self._foregroundTitle()
+        except Exception:
+            log.debugWarning("A11y Task Recorder input element capture failed", exc_info=True)
+        self._enqueue(event)
 
     def _onSpeechQueued(self, speechSequence, priority=None, **kwargs):
         """Store queued speech verbatim, including typed-character echo and edit fields."""
@@ -570,7 +582,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
                 if atCursor is not None:
                     target, source = atCursor, "browse_cursor"
         except Exception:
-            pass
+            log.debugWarning("A11y Task Recorder browse cursor read failed", exc_info=True)
         try:
             if source == "focus" and self._objectScope(focus) == "browser_ui":
                 navigator = api.getNavigatorObject()

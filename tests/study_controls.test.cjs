@@ -135,7 +135,9 @@ test('a failed preparation is retried by 과업 시작 and the error is read aga
 });
 
 test('과업으로 돌아가기 returns focus to the control the task was ended on', () => {
-  assert.match(script, /focusSite\("resume"\)/);
+  assert.match(script, /requestAnimationFrame\(resumeSite\)/);
+  // 0.5.3: the kept control is focused directly; focusing the frame first read its title and address.
+  assert.match(script, /if \(kept\) kept\.focus\(\); else \{ frame\.focus\(\); focusSite\(\); \}/);
   assert.match(script, /addEventListener\("focusin", event => \{ view\.siteFocus = event\.target; \}, true\)/);
   assert.match(fs.readFileSync('browser-extension/content.js', 'utf8'), /event\.data\.edge === "resume" && lastFocus\?\.isConnected/);
 });
@@ -150,3 +152,16 @@ test('no region names, no required radio, and page traps outside a task', () => 
   // Focus leaves the site for the result heading before the site is locked.
   assert.ok(script.indexOf('el("study-result-heading").focus();') < script.indexOf('frame.toggleAttribute("inert", parked)'));
 });
+
+// ---- 0.5.3: Windows + NVDA check of 0.5.2 (10/29) --------------------------------------
+test('only the practice moves focus before the site is locked; tasks keep the 0.5.0 order', () => {
+  assert.match(script, /if \(parking && view\.practice && /);
+  assert.match(script, /el\("study-stage"\)\.hidden = !\(active \|\| holding\);/);
+});
+
+test('a page still loading after 10 s is opened again once, and one failure sentence is read', () => {
+  assert.match(script, /const loaded = frameLoaded\(10000\);/);
+  assert.match(script, /diagnosis\.reopened = true;/);
+  assert.match(script, /if \(token === view\.loadToken && !view\.startWaiting\) message\(error\.message, true\)/);
+});
+
