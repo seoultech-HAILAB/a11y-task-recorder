@@ -41,8 +41,10 @@
       if (event.source !== window.parent || event.origin !== "http://127.0.0.1:8765") return;
       if (event.data?.kind === "a11y-study-focus-site") {
         const selector = 'a[href], button, input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])';
-        if (event.data.focus !== false) [...document.querySelectorAll(selector)].find((node) => !node.disabled &&
-          node.getClientRects().length > 0 && !node.closest("[inert], [aria-hidden='true']"))?.focus();
+        // edge "last": Shift+Tab ran out of the top of the site and comes back in at the bottom (0.5.0).
+        const controls = [...document.querySelectorAll(selector)].filter((node) => !node.disabled &&
+          node.getClientRects().length > 0 && !node.closest("[inert], [aria-hidden='true']"));
+        if (event.data.focus !== false) (event.data.edge === "last" ? controls.at(-1) : controls[0])?.focus();
         toRecorder({ kind: "a11y-study-site-entry", key: window.navigation?.currentEntry?.key || "" });
       } else if (event.data?.kind === "a11y-study-site-back") {
         toRecorder({ kind: "a11y-study-site-back", moved: historyBack(window.navigation, event.data.startKey) });

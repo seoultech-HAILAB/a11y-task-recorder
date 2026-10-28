@@ -20,21 +20,11 @@ if ANNOUNCE_MODE not in {"focus", "nvda", "both"}:
     ANNOUNCE_MODE = "focus"
 # Short sentences: the laptop plays NVDA through speakers in a shared room.
 END_PROMPT = "과업이 끝났습니다. 결과를 입력해 주세요."
-PRACTICE_INSTRUCTION = "연습입니다. 연습 화면에서 '재료 보기' 버튼을 눌러 첫 번째 재료를 확인해 주세요."
-# Appended to the repeated instruction so the way to end can be heard again during a task.
-# Windows pilot 10/28: participants who had the answer kept doing other things instead of
-# ending, so the hint says to end right there (same text as study.js END_HINT).
-END_HINT = "답을 찾았거나 더 진행할 수 없다고 판단되면, 그 자리에서 NVDA, Ctrl, E를 함께 눌러 과업을 끝내세요."
+# 0.5.0 (participant feedback 10/28): NVDA+Ctrl+H reads the scenario sentence alone. How to end
+# is taught once, in the practice (study.js PRACTICE_GUIDE), and never repeated after it.
+# Same sentence as study.js PRACTICE_TASK.
+PRACTICE_INSTRUCTION = "연습 화면에서 '재료 보기' 버튼을 눌러 첫 번째 재료를 확인하세요."
 MAX_SIGNALS = 50
-
-
-def _with_end_hint(text: str) -> str:
-    """The instruction followed by how to end the task (NVDA+Ctrl+H, end hint NVDA+Ctrl+E)."""
-    text = text.strip()
-    # A task sentence without a final period ran into the hint as one sentence (Windows check, 10/20).
-    if text and text[-1] not in ".?!。":
-        text += "."
-    return "{} {}".format(text, END_HINT).strip()
 
 
 class SignalBoard:
@@ -51,7 +41,7 @@ class SignalBoard:
         if kind not in SIGNAL_KINDS or source not in SIGNAL_SOURCES:
             return {"accepted": False, "reason": "invalid_signal", "speak": ""}
         if self.practice:
-            speak = _with_end_hint(PRACTICE_INSTRUCTION) if kind == "repeat" else (END_PROMPT if kind == "end" and ANNOUNCE_MODE != "focus" else "")
+            speak = PRACTICE_INSTRUCTION if kind == "repeat" else (END_PROMPT if kind == "end" and ANNOUNCE_MODE != "focus" else "")
             return self._append(kind, source, None, speak, practice=True)
         status = session.get("status") if session else None
         if kind == "start" and status != "draft":
@@ -62,9 +52,7 @@ class SignalBoard:
             return {"accepted": False, "reason": "no_task", "speak": ""}
         speak = ""
         if kind == "repeat":
-            scenario = str(session.get("scenario") or "")
-            # While the result is being entered the task is already over; no end hint then.
-            speak = scenario if status == "answering" else _with_end_hint(scenario)
+            speak = str(session.get("scenario") or "").strip()
         elif kind == "end" and ANNOUNCE_MODE != "focus":
             speak = END_PROMPT
         return self._append(kind, source, session["id"], speak, practice=False)

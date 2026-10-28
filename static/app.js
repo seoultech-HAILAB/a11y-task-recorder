@@ -117,10 +117,16 @@ async function checkConnection() {
 }
 
 function showView(name) {
+  // 0.5.0: on the participant screen the recorder header (live connection pills), skip link and
+  // footer are out of NVDA's reach, so only the task is heard.
+  for (const region of document.querySelectorAll(".skip-link, .app-header, body > footer")) {
+    region.toggleAttribute("inert", name === "study");
+  }
   byId("study-view").hidden = name !== "study";
   byId("home-view").hidden = name !== "home";
   byId("session-view").hidden = name !== "session";
-  byId("main").focus();
+  // The study view puts focus on the number field or the instruction itself.
+  if (name !== "study") byId("main").focus();
 }
 
 function stopPolling() {

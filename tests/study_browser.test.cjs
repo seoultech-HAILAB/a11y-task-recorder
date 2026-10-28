@@ -26,7 +26,7 @@ function background({ frameUrl = target } = {}) {
   const context = vm.createContext({ URL, Date, Map, Promise,
     setTimeout: fn => fn(), navigator: { userAgent: 'Chrome/151' },
     chrome: { runtime: { id: 'extension', onMessage: { addListener: fn => listeners.push(fn) },
-      onInstalled: listener, getManifest: () => ({ version: '0.4.4' }) },
+      onInstalled: listener, getManifest: () => ({ version: '0.5.0' }) },
       storage: { session: { get: async key => ({ [key]: storage[key] }),
         set: async data => Object.assign(storage, data), remove: async key => delete storage[key] } },
       tabs: { onRemoved: listener, get: async id => { if (id !== DASHBOARD) throw Error('missing'); return { id, url: 'http://127.0.0.1:8765/' }; },
@@ -175,7 +175,7 @@ test('manifest runs the content script in all frames and declares no browser com
   const manifest = JSON.parse(fs.readFileSync('browser-extension/manifest.json', 'utf8'));
   assert.equal(manifest.commands, undefined);
   assert.equal(manifest.content_scripts[0].all_frames, true);
-  assert.equal(manifest.version, '0.4.4');
+  assert.equal(manifest.version, '0.5.0');
   assert.equal(/chrome\.commands/.test(fs.readFileSync('browser-extension/background.js', 'utf8')), false);
 });
 
@@ -342,9 +342,9 @@ function studyFrame({ ancestor = 'http://127.0.0.1:8765', entries = ['s0', 'k1',
     back() { backs.push(current); return { committed: Promise.resolve(), finished: Promise.resolve() }; } };
   const window = { location, parent, top: parent, navigation: nav,
     addEventListener: (name, fn) => { (handlers[name] ||= []).push(fn); } };
-  const link = { disabled: false, getClientRects: () => [{}], closest: () => null, focus: () => focused.push('link') };
+  const control = name => ({ disabled: false, getClientRects: () => [{}], closest: () => null, focus: () => focused.push(name) });
   const document = { readyState: 'complete', title: '사본', documentElement: { lang: 'ko' }, addEventListener() {},
-    querySelectorAll: () => [link] };
+    querySelectorAll: () => [control('link'), control('button')] };
   vm.runInNewContext(fs.readFileSync('browser-extension/content.js', 'utf8'), {
     URL, Date, Set, Element: class {}, Node: { ELEMENT_NODE: 1 }, window, document,
     MutationObserver: class { observe() {} }, setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0,
@@ -391,6 +391,9 @@ test('focus request reports the start entry and focuses only when asked', () => 
   assert.deepEqual(plain(frame.posted.at(-1)[0]), { kind: 'a11y-study-site-entry', key: 's0' });
   frame.message({ kind: 'a11y-study-focus-site' });
   assert.deepEqual(frame.focused, ['link']);
+  // 0.5.0 focus trap: Shift+Tab out of the top of the site comes back in at its last control.
+  frame.message({ kind: 'a11y-study-focus-site', edge: 'last' });
+  assert.deepEqual(frame.focused, ['link', 'button']);
 });
 
 test('a frame Chrome refused reports the net error instead of loading forever', async () => {

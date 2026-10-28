@@ -1,4 +1,4 @@
-// 0.4.4 participant controls in static/index.html and their wiring in static/study.js.
+// 0.4.4/0.5.0 participant controls in static/index.html and their wiring in static/study.js.
 // Behaviour runs end to end in scripts/verify_single_window.cjs; these are the static rules.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -63,7 +63,53 @@ test('controls below the site stay out of the Tab order; undo and tester change 
   assert.equal(attr(undo, 'aria-labelledby'), 'study-undo-label');
   assert.match(tagOf('study-undo-label'), /<p\b/);
   assert.ok(html.indexOf('id="study-submit"') < html.indexOf('id="study-undo"'), '저장 comes first in the result form');
-  assert.ok(html.indexOf('id="study-shortcuts"') < html.indexOf('id="study-tester-tools"'), '테스터 번호 바꾸기 follows 과업 시작 and 연습 시작');
+  assert.ok(html.indexOf('id="study-practice"') < html.indexOf('id="study-tester-tools"'), '테스터 번호 바꾸기 follows 과업 시작 and 연습 다시 하기');
+});
+
+// ---- 0.5.0: participant feedback 10/28 ------------------------------------------------
+const studyView = html.slice(html.indexOf('<section id="study-view"'), html.indexOf('<section id="home-view"'));
+const visibleText = studyView.replace(/<!--[\s\S]*?-->/g, '');
+
+test('the shortcuts are taught in the practice only, never on the task screens', () => {
+  assert.doesNotMatch(visibleText, /NVDA, Ctrl|Alt, /, 'no shortcut text in the study markup');
+  assert.doesNotMatch(script, /END_HINT|withEndHint|SHORTCUT_INTRO/);
+  const guide = script.match(/const PRACTICE_GUIDE = ([\s\S]*?);\n/)[1];
+  for (const key of ['NVDA, Ctrl, H', 'NVDA, Ctrl, E', 'Alt, 왼쪽 화살표']) assert.ok(guide.includes(key), key);
+  // A task instruction is the catalog sentence alone.
+  assert.match(script, /setText\("study-instruction", String\(task\.instruction \|\| ""\)\.trim\(\)\)/);
+  const outside = script.replace(/const PRACTICE_GUIDE = [\s\S]*?;\n/, '').replace(/function practiceSubmit\(\) \{[\s\S]*?\n  \}\n/, '');
+  assert.doesNotMatch(outside.replace(/^\s*\/\/.*$/gm, ''), /NVDA, Ctrl/, 'no shortcut sentence outside the practice');
+});
+
+test('only errors are announced: no live status lines, no timer, header out of reach', () => {
+  assert.equal(attr(tagOf('study-alert'), 'role'), 'alert');
+  assert.equal(attr(tagOf('study-message'), 'aria-hidden'), 'true');
+  assert.doesNotMatch(studyView.replace(/id="study-alert"[^>]*>/, '').replace(/id="study-site-status"[^>]*>/, ''), /aria-live|role="status"/);
+  assert.doesNotMatch(studyView, /study-timer|study-shortcuts|study-break|study-edit/);
+  assert.match(fs.readFileSync('static/app.js', 'utf8'), /\.skip-link, \.app-header, body > footer"\)\) \{\n\s*region\.toggleAttribute\("inert", name === "study"\)/);
+});
+
+test('the tester types a number; results read 성공 and 실패', () => {
+  assert.match(tagOf('study-tester'), /^<input\b/);
+  assert.doesNotMatch(studyView, /<select id="study-tester"/);
+  const radios = [...studyView.matchAll(/name="study-done" value="(\w+)"[^>]*>\s*([^<]+)</g)].map(m => [m[1], m[2].trim()]);
+  assert.deepEqual(radios, [['completed', '성공'], ['blocked', '실패']]);
+});
+
+test('focus stays in the site during a task: traps around the frame return it', () => {
+  const start = html.indexOf('id="study-trap-start"'), frame = html.indexOf('id="study-frame"'), end = html.indexOf('id="study-trap-end"');
+  assert.ok(start < frame && frame < end, 'traps surround the frame');
+  for (const id of ['study-trap-start', 'study-trap-end']) assert.equal(attr(tagOf(id), 'aria-hidden'), 'true', id);
+  assert.match(script, /target === el\("study-trap-start"\)\) trap\("last"\)/);
+  assert.match(script, /target === el\("study-trap-end"\)\) trap\("first"\)/);
+  assert.match(script, /document\.addEventListener\("focusin", onFocusIn\)/);
+  // The controls below the site are for a mouse; NVDA does not meet them in browse mode.
+  assert.match(html, /<div class="study-stage-actions" aria-hidden="true">/);
+});
+
+test('practice can be reopened before any task and opens by itself the first time', () => {
+  assert.match(script, /el\("study-practice"\)\.hidden = practice \|\| current !== "ready";/);
+  assert.match(script, /if \(current === "ready" && firstTask\(\) && !practiced\(\)\) return startPractice\(\);/);
 });
 
 test('restart and tester change call the abort API with their reasons; return uses resume-task', () => {

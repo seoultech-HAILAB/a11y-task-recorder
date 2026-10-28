@@ -116,7 +116,7 @@ if errorlevel 1 (
 echo NVDA 애드온 연결을 확인하는 중입니다...
 powershell -NoProfile -Command "$ok=$false; for($i=0;$i -lt 20;$i++){ try { if((Invoke-RestMethod 'http://127.0.0.1:8765/api/health' -TimeoutSec 1).nvda_connected){$ok=$true;break} } catch {}; Start-Sleep -Milliseconds 700 }; if($ok){ Write-Host 'NVDA 애드온 연결 확인됨.' } else { Write-Host '경고: NVDA 애드온이 연결되지 않았습니다. 기록 시작은 차단됩니다.' }"
 :resume_dashboard
-start "" "%KIT%app\\chrome\\chrome.exe" --load-extension="%KIT%app\\browser-extension" --user-data-dir="%KIT%app\\chrome-profile-@@EXTENSION_VERSION@@" --no-first-run --no-default-browser-check "http://127.0.0.1:8765"
+start "" "%KIT%app\\chrome\\chrome.exe" --load-extension="%KIT%app\\browser-extension" --user-data-dir="%KIT%app\\chrome-profile-@@EXTENSION_VERSION@@" --no-first-run --no-default-browser-check --start-maximized --app="http://127.0.0.1:8765"
 endlocal
 """
 
@@ -191,29 +191,25 @@ table { border-collapse: collapse; } th, td { border-bottom: 1px solid #ccc; pad
 <li>키트 폴더의 <strong>평가시작.bat</strong>을 더블클릭합니다. 처음에 Windows 보안 창이 나오면 <strong>추가 정보</strong>, <strong>실행</strong>을 차례로 누릅니다. 연구진에게 받은 키트일 때만 실행하세요.</li>
 <li>잠시 기다리면 NVDA가 다시 켜지고, 검은색 <strong>서버 창</strong>과 기록 화면이 열립니다. 서버 창은 끝날 때까지 <strong>닫지 마세요</strong>. 닫으면 기록이 멈춥니다.</li>
 <li>기록 화면 위쪽에 <strong>NVDA 연결됨</strong>이 보이는지 확인합니다.</li>
-<li>참가자의 <strong>테스터 번호</strong>(예: T01)를 고르고 <strong>배정 확인</strong>을 누릅니다. 그러면 번호 칸이 사라집니다.</li>
-<li>화면에 "사이트가 준비되었습니다"가 나오면 참가자에게 자리를 넘깁니다.</li>
+<li>참가자에게 받은 <strong>테스터 번호</strong>(예: T01)를 입력하고 <strong>시작</strong>을 누릅니다. 번호 칸이 사라지고 연습 안내가 읽힙니다.</li>
+<li>여기서 참가자에게 자리를 넘깁니다.</li>
 </ol>
 
 <h2>3. 과업 진행 (참가자)</h2>
-<p>참가자는 연습 과업에서 아래 순서를 한 번 해 본 뒤 본 과업을 합니다. 담당자는 기술 문제가 생겼을 때만 돕습니다.</p>
+<p>참가자 화면에는 지시문만 나옵니다. 단축키는 연습에서 한 번만 안내하고, 본 과업에서는 다시 말하지 않습니다. 담당자는 기술 문제가 생겼을 때만 돕습니다.</p>
 <ol>
-<li><strong>연습</strong>: 처음에는 <strong>연습 시작</strong>을 누릅니다. 연습 지시문 뒤에 단축키 안내가 나옵니다. 연습은 기록하지 않습니다.</li>
-<li><strong>듣기</strong>: 지시문으로 초점이 가면 NVDA가 읽어 줍니다.</li>
-<li><strong>시작</strong>: 지시문 바로 아래 <strong>과업 시작</strong> 버튼을 누릅니다. 사이트가 열리고 기록이 시작됩니다.</li>
-<li><strong>수행</strong>: 평소처럼 키보드와 NVDA로 과업을 합니다.</li>
-<li><strong>끝내기</strong>: 답을 찾았거나 더 진행할 수 없다고 판단되면, 다른 곳을 더 둘러보지 말고 그 자리에서 <kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>E</kbd>를 누릅니다. 10분이 지나면 저절로 끝납니다.</li>
-<li><strong>결과</strong>: <strong>마쳤습니다</strong> 또는 <strong>마치지 못했습니다</strong>를 고르고, 답을 적고 <strong>저장</strong>합니다.</li>
-<li><strong>다음</strong>: <strong>다음 과업</strong>을 누르면 2번으로 돌아갑니다. 4개 과업마다 원하는 만큼 쉬어도 됩니다.</li>
+<li><strong>연습</strong>: 번호를 넣으면 연습이 저절로 열립니다. 단축키 안내와 연습 과업을 듣고, <kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>H</kbd>와 <kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>E</kbd>를 직접 써 봅니다. 연습은 기록하지 않습니다. 끝나면 두 키를 써 봤는지 알려 줍니다. 과업을 시작하기 전이면 <strong>연습 다시 하기</strong>로 언제든 다시 할 수 있습니다.</li>
+<li><strong>듣기</strong>: 과업 화면이 나오면 지시문으로 초점이 가고 NVDA가 지시문만 읽습니다.</li>
+<li><strong>시작</strong>: 지시문 바로 아래 <strong>과업 시작</strong>을 누릅니다. 사이트가 열리고 기록이 시작됩니다. 과업 중에는 초점이 사이트 밖으로 나가지 않습니다.</li>
+<li><strong>끝내기</strong>: 답을 찾았거나 더 할 수 없으면 그 자리에서 <kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>E</kbd>를 누릅니다. 10분이 지나면 저절로 끝납니다.</li>
+<li><strong>결과</strong>: <strong>성공</strong> 또는 <strong>실패</strong>를 고르고 답을 적어 <strong>저장</strong>합니다. 저장하면 바로 다음 과업의 지시문이 읽힙니다. 잘못 끝냈으면 저장하기 전에 <strong>과업으로 돌아가기</strong>나 <strong>과업 처음부터 다시 하기</strong>를 누릅니다.</li>
 </ol>
-<p>과업 중에 지시문이 기억나지 않으면 <kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>H</kbd>를 누릅니다. 지시문과 끝내는 방법을 다시 읽어 주고, 초점은 사이트에 그대로 있습니다.</p>
-<p>사이트 아래에도 <strong>과업 끝내기</strong> 버튼이 있습니다. 실수로 누르지 않도록 Tab으로는 가지 않고, 마우스나 NVDA 브라우즈 모드(아래 화살표)로만 닿습니다. 누르면 "과업을 끝낼까요?"라고 묻습니다. <strong>끝내기</strong>를 누르면 끝나고, <strong>계속하기</strong>를 누르면 사이트로 돌아갑니다.</p>
 
 <h2>평가 중 단축키</h2>
 <table>
 <tr><th>단축키</th><th>하는 일</th></tr>
 <tr><td><kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>E</kbd></td><td>과업 끝내기 (묻지 않고 바로 끝남)</td></tr>
-<tr><td><kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>H</kbd></td><td>지시문 다시 듣기 (끝내는 단축키도 함께 알려 줌)</td></tr>
+<tr><td><kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>H</kbd></td><td>지시문 다시 듣기 (지시문만 읽음)</td></tr>
 <tr><td><kbd>NVDA</kbd>+<kbd>Ctrl</kbd>+<kbd>L</kbd></td><td>기록 상태 확인 (높아지는 음 두 번: 기록 중, 낮은 음: 대기 중). 담당자용</td></tr>
 <tr><td><kbd>Alt</kbd>+<kbd>왼쪽 화살표</kbd></td><td>사이트의 이전 페이지 (과업을 시작한 페이지보다 앞으로는 가지 않음)</td></tr>
 <tr><td><kbd>Alt</kbd>+<kbd>Home</kbd></td><td>과업 처음 화면 (과업을 시작한 페이지를 다시 엶)</td></tr>
@@ -223,21 +219,21 @@ table { border-collapse: collapse; } th, td { border-bottom: 1px solid #ccc; pad
 
 <h2>4. 마무리 (담당자)</h2>
 <ol>
-<li>배정된 과업이 모두 끝나면 "배정된 과업을 모두 마쳤습니다" 화면이 나옵니다.</li>
+<li>배정된 과업이 모두 끝나면 "모든 과업을 마쳤습니다" 화면이 나옵니다.</li>
 <li>그 화면의 <strong>결과 패키지 만들기 (담당자용)</strong>를 누릅니다. <strong>결과</strong> 폴더가 열리고 ZIP 파일 하나가 생깁니다.</li>
-<li>그 ZIP 파일을 연구진에게 보냅니다(이메일 또는 안내받은 업로드 링크). 과업 기록은 연구 서버로도 자동 전송되지만, <strong>ZIP은 꼭 보내 주세요.</strong></li>
+<li>그 ZIP 파일을 연구진에게 보냅니다(이메일 또는 안내받은 업로드 링크). <strong>ZIP은 꼭 보내 주세요.</strong></li>
 <li>기록 화면(브라우저)과 서버 창을 닫습니다.</li>
 </ol>
-<p>세션을 중간에 끝내야 하면 기록 화면 주소 끝에 <code>?change-tester=1</code>을 붙여 다시 열고(<code>http://127.0.0.1:8765/?change-tester=1</code>), 나타나는 <strong>기록 관리</strong>에서 결과 패키지를 만듭니다.</p>
+<p>세션을 중간에 끝내야 하면 과업 화면의 <strong>테스터 번호 바꾸기</strong>를 누르고, 나타나는 <strong>기록 관리</strong>에서 결과 패키지를 만듭니다.</p>
 
 <h2>문제 해결</h2>
 <ul>
 <li><strong>기록 화면이 안 열려요</strong>: 서버 창이 열려 있는지 확인하고, 평가용 브라우저에서 <code>http://127.0.0.1:8765</code>를 다시 엽니다.</li>
-<li><strong>배정 확인 뒤 "기록 프로그램에 연결할 수 없습니다"가 나와요</strong>: 평가용 브라우저를 막 연 직후에 생길 수 있습니다. <kbd>F5</kbd>로 기록 화면을 새로 고친 뒤 다시 배정 확인을 누르세요.</li>
+<li><strong>시작 뒤 "기록 프로그램에 연결할 수 없습니다"가 나와요</strong>: 평가용 브라우저를 막 연 직후에 생길 수 있습니다. <kbd>F5</kbd>로 기록 화면을 새로 고치세요.</li>
 <li><strong>"NVDA 연결됨"이 안 보여요</strong>: 기록 화면과 서버 창을 닫고 <strong>평가시작.bat</strong>을 다시 실행해 보세요. 그래도 안 되면 연구진에게 알려 주세요.</li>
 <li><strong>"사이트에 접속할 수 없습니다"가 나와요</strong>: 인터넷 연결을 확인하고, 그래도 안 되면 연구진에게 알려 주세요.</li>
 <li><strong>단축키를 누르면 낮은 음만 나요</strong>: 지금은 그 단축키를 쓸 수 없는 단계입니다(예: 과업 시작 전에 끝내기). 서버 창이 열려 있는지도 확인하세요.</li>
-<li><strong>테스터 번호를 잘못 골랐어요</strong>: <code>http://127.0.0.1:8765/?change-tester=1</code>로 다시 열어 고릅니다. 이미 기록 중인 과업이 있으면 바꿀 수 없습니다.</li>
+<li><strong>테스터 번호를 잘못 넣었어요</strong>: 지시문 화면 아래 <strong>테스터 번호 바꾸기</strong>를 누르고 다시 입력합니다. 과업을 하는 중에는 바꿀 수 없습니다. 이미 저장한 결과는 지워지지 않습니다.</li>
 <li><strong>_연구진용 폴더</strong>: 연구진이 설치를 점검할 때 쓰는 파일입니다. 담당자는 열거나 실행하지 마세요.</li>
 <li><strong>새 키트로 바꿔야 해요</strong>: 서버 창과 평가용 브라우저를 닫고, 새 ZIP을 다른 폴더에 풉니다. 기존 기록을 이어가려면 이전 키트의 <code>data</code> 폴더 전체를 새 키트로 복사하고, 이전 폴더는 지우지 말고 보관합니다.</li>
 <li><strong>동영상이 재생되지 않아요</strong>: 평가용 브라우저에는 일부 상용 동영상 코덱이 없습니다. 과업에 문제가 되면 연구진에게 알려 주세요.</li>
