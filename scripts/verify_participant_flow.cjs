@@ -16,12 +16,12 @@ const step = (name) => console.log('ok -', name);
 (async () => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'rec050-'));
   const server = spawn('/usr/bin/python3', ['run.py', '--no-browser', '--port', '28791', '--db', path.join(temp, 'r.sqlite3')], { cwd: repo });
-  let browser;
+  let browser, beat;
   const signal = (kind) => fetch(base + '/api/signals', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-A11y-Client': 'nvda-addon' }, body: JSON.stringify({ kind, source: 'nvda_addon' }) }).then(r => r.json());
   try {
     for (let i = 0; i < 80; i++) { try { if ((await fetch(base + '/api/health')).ok) break; } catch {} await new Promise(r => setTimeout(r, 100)); }
     // Keep the NVDA heartbeat alive.
-    const beat = setInterval(() => fetch(base + '/api/active-session', { headers: { 'X-A11y-Client': 'nvda-addon' } }).catch(() => {}), 500);
+    beat = setInterval(() => fetch(base + '/api/active-session', { headers: { 'X-A11y-Client': 'nvda-addon' } }).catch(() => {}), 500);
     browser = await chromium.launch({ headless: true });
     const page = await browser.newPage({ viewport: { width: 1366, height: 900 } });
     const errors = [];
@@ -107,8 +107,16 @@ const step = (name) => console.log('ok -', name);
     step('practice result tells whether H and E were used');
     await page.screenshot({ path: path.join(out, '4-practice-end.png') });
 
+    // 0.5.9: focus never falls to the page between 본 과업으로 가기 and the next instruction.
+    // The plan request is slowed to 300 ms, as on a busy PC, so a drop would last long enough to see.
+    const slow = route => setTimeout(() => route.continue(), 300);
+    await page.route(/\/api\/study\/T01$/, slow);
+    await page.waitForTimeout(600); // a person hears the practice result before pressing on
+    await page.evaluate(() => { window.__drops = 0; window.__watch = setInterval(() => { if (document.activeElement === document.body) window.__drops++; }, 2); });
     await page.click('#study-practice-stop');
     await waitFocus('study-instruction');
+    assert.equal(await page.evaluate(() => { clearInterval(window.__watch); return window.__drops; }), 0, 'focus fell to the page');
+    await page.unroute(/\/api\/study\/T01$/, slow);
     const plan = await (await fetch(base + '/api/study/T01')).json();
     assert.equal(await page.textContent('#study-instruction'), plan.tasks[0].instruction.trim());
     assert.equal(await page.textContent('#study-order'), `과업 1 / ${plan.total}`);
@@ -185,6 +193,7 @@ const step = (name) => console.log('ok -', name);
     assert.deepEqual(errors, []);
     console.log('PASS');
   } finally {
+    clearInterval(beat); // a failed check must not keep node alive
     if (browser) await browser.close();
     server.kill();
     fs.rmSync(temp, { recursive: true, force: true });

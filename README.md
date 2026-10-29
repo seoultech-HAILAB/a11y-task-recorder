@@ -349,7 +349,14 @@ py -3 scripts\build_release_kit.py --access-code-file <사본 서버 자격 파�
 `dist\A11yTaskRecorder-<버전>-chrome<버전>.zip`이 생성됩니다. 키트에는 기록
 서버, 임베디드 Python, Chrome for Testing, 브라우저 확장, NVDA 애드온과
 `설치안내.html`이 들어 있습니다. 전달받은 평가자는 압축을 푼 뒤
-`평가시작.bat`만 더블클릭하면 됩니다.
+`평가시작.bat`만 실행하면 됩니다.
+
+설치 안내(0.5.9)는 NVDA 사용자가 혼자 읽고 키보드만으로 설치하도록 쓴 한 페이지입니다
+(`docs/kit-install-guide.html`, 단계마다 누를 키, 들리는 말, 안 될 때). 키트를 풀기 전에 읽도록
+같은 파일을 링크로도 전달합니다. 연구진용 진행 안내는 `_연구진용/진행안내.md`로 옮겼습니다.
+`평가시작.bat`은 같은 판의 애드온이 이미 있으면 켜져 있는 NVDA를 다시 시작하지 않고, 새로
+설치했을 때만 켜져 있던 `nvda.exe`를 다시 실행합니다(`scripts/kit/`). 서버 창은 최소화로 열리고
+기록 화면을 닫으면 3분 뒤 저절로 닫힙니다.
 
 `평가시작.bat`은 서버를 띄운 뒤 Chrome for Testing을 `--load-extension`으로
 실행해 확장을 자동 로드합니다. 브랜드 Chrome은 137부터 이 플래그를 지원하지
