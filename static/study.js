@@ -486,8 +486,11 @@ window.Study = (() => {
     view.session = data.session;
     view.ready = false;
     view.siteError = false;
-    resetForms();
+    // 0.5.9: the plan is fetched before the forms are reset. Resetting first hid the focused button
+    // (본 과업으로 가기, 저장) while the request ran, and NVDA read "알 수 없음, 테스터 번호 바꾸기"
+    // before the instruction (Windows 10/29). Now hiding and the instruction focus come together.
     await refreshPlan();
+    resetForms();
     render();
     if (view.session.status !== "draft") return null;
     const sessionId = view.session.id;

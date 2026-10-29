@@ -211,3 +211,9 @@ test('a time-limit end says why on 다음 과업, where focus goes', () => {
   assert.match(script, /timeLimit \? "제한 시간이 지나 과업이 끝났습니다\. 다음 과업을 누르면 다음 지시문을 읽어 드립니다\."/);
   assert.equal(attr(tagOf('study-next'), 'aria-describedby'), 'study-saved');
 });
+
+// ---- 0.5.9 ------------------------------------------------------------------------------
+test('preparing a task keeps the focused button until the next instruction takes focus', () => {
+  const body = script.match(/async function prepare\(retry = false\) \{[\s\S]*?\n  \}\n/)[0];
+  assert.ok(body.indexOf('await refreshPlan();') < body.indexOf('resetForms();'), 'no await between hiding the forms and the instruction focus');
+});
