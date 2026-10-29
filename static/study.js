@@ -350,6 +350,7 @@ window.Study = (() => {
   function currentTask() {
     return view.plan?.tasks.find(t => t.order === (view.session?.study.order ?? view.plan.current_order));
   }
+  const savedTasks = () => (view.plan?.tasks || []).filter(t => t.status === "finished");
   const firstTask = () => view.plan?.finished === 0 && (currentTask()?.order ?? 1) === 1;
 
   // ---- rendering ------------------------------------------------------------------
@@ -369,8 +370,10 @@ window.Study = (() => {
     const locked = Boolean(view.tester) && !view.changeTester;
     const testerChangeable = locked && !practice && ["ready", "ended", "complete"].includes(current);
     const undo = current === "answering" && (practice || view.session?.end_reason !== "time_limit");
+    // 저장한 과업 다시 하기 (0.5.7): from the same screens, once at least one task is saved.
+    const again = testerChangeable && savedTasks().length > 0;
     // A confirm step belongs to one phase; leaving that phase closes it.
-    const open = { end: current === "active", restart: current === "active", redo: undo, tester: testerChangeable };
+    const open = { end: current === "active", restart: current === "active", redo: undo, tester: testerChangeable, again };
     if (view.confirm && !open[view.confirm]) view.confirm = null;
     const asking = Boolean(view.confirm);
     el("study-end").hidden = current !== "active" || asking;
@@ -388,6 +391,10 @@ window.Study = (() => {
     el("study-tester-tools").hidden = !testerChangeable;
     el("study-tester-change").hidden = view.confirm === "tester";
     el("study-tester-confirm").hidden = view.confirm !== "tester";
+    el("study-again").hidden = !again || view.confirm === "tester";
+    el("study-again-open").hidden = view.confirm === "again";
+    el("study-again-form").hidden = view.confirm !== "again";
+    if (view.confirm === "again") el("study-tester-tools").hidden = true;
     el("study-next").hidden = practice || !ended;
     el("study-practice-stop").hidden = !(practice && ended);
     el("study-practice-again").hidden = !(practice && ended);
@@ -774,6 +781,35 @@ window.Study = (() => {
   function openConfirm(name, focusId) { view.confirm = name; renderControls(); return el(focusId); }
   function closeConfirm(focusId) { view.confirm = null; renderControls(); return el(focusId); }
 
+  // ---- 저장한 과업 다시 하기 (0.5.7) ----------------------------------------------------
+  // A saved task is done again when something went wrong (a technical problem, an interruption,
+  // a wrong result). The saved attempt stays and is marked superseded in attempts.csv; the new
+  // attempt carries the reason. Focus goes to the instruction of the task done again.
+  function openAgain() {
+    const select = el("study-again-task");
+    select.replaceChildren(...savedTasks().map(task => {
+      const option = document.createElement("option");
+      const instruction = String(task.instruction || "").trim();
+      option.value = String(task.order);
+      option.textContent = `과업 ${task.order}: ${instruction.length > 40 ? `${instruction.slice(0, 40)}…` : instruction}`;
+      return option;
+    }));
+    for (const radio of document.querySelectorAll('input[name="study-again-reason"]')) radio.checked = false;
+    return openConfirm("again", "study-again-task");
+  }
+  async function redoSavedTask() {
+    const reason = document.querySelector('input[name="study-again-reason"]:checked')?.value;
+    if (!reason) throw new Error("다시 하는 이유를 골라 주세요.");
+    const order = Number(el("study-again-task").value);
+    await api(`/study/${view.tester}/redo`, "POST", { order, reason, by: "participant" });
+    view.confirm = null;
+    // The next task's draft waits (its site is loaded again when it comes); this task is prepared now.
+    view.frameTitle = "";
+    const target = await prepare();
+    if (target) message(`과업 ${order}을 다시 합니다.`);
+    return target;
+  }
+
   // ---- 되돌리기 (0.4.4) -------------------------------------------------------------
   // 과업 다시 시작 / 처음부터 다시 하기: the attempt is kept as aborted (excluded from analysis)
   // and the same task is prepared again as a new attempt; focus goes to its instruction.
@@ -942,6 +978,10 @@ window.Study = (() => {
     on("study-tester-yes", "click", () => showTesterPicker().focus());
     on("study-tester-no", "click", () => closeConfirm("study-tester-change").focus());
     escape("study-tester-confirm", "study-tester-change");
+    on("study-again-open", "click", () => { if (!view.busy) openAgain().focus(); });
+    on("study-again-yes", "click", () => busy(redoSavedTask));
+    on("study-again-no", "click", () => closeConfirm("study-again-open").focus());
+    escape("study-again-form", "study-again-open");
     on("study-tester-keep", "click", () => { if (!view.busy) keepTester().focus(); });
     on("study-next", "click", () => busy(nextTask));
     on("study-answer-form", "submit", e => { e.preventDefault(); busy(view.practice ? async () => practiceSubmit() : submitParticipant); });

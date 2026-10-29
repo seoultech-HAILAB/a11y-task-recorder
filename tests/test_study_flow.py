@@ -90,6 +90,41 @@ class StudyFlowTests(unittest.TestCase):
         self.assertTrue(late["payload"]["received_after_stop"])
         self.assertEqual("answering", self.store.get_session(ended["id"])["status"])
 
+    def save(self, outcome="completed"):
+        session = self.started()
+        self.store.end_task(session["id"], {"reason": "participant_gesture"})
+        return self.store.stop_session(session["id"], {"status": "completed" if outcome == "completed" else "abandoned",
+                                                       "study_outcome": outcome, "answer": "답", "entered_by": "participant"})
+
+    def test_saved_task_is_done_again_and_the_saved_attempt_is_kept(self):
+        # 0.5.7 저장한 과업 다시 하기: something went wrong after the task was saved.
+        first = self.save()
+        self.save("blocked")
+        self.assertEqual(2, self.store.get_study("T01")["finished"])
+        with self.assertRaises(ApiError):
+            self.store.redo_saved_task("T01", {"order": 1, "reason": "because"})
+        redo = self.store.redo_saved_task("T01", {"order": 1, "reason": "interrupted"})
+        self.assertEqual("draft", redo["status"])
+        self.assertEqual({"attempt": 2, "retry_of": first["id"], "redo_reason": "interrupted", "analysis": "include"},
+                         {key: redo["study_attempt"][key] for key in ("attempt", "retry_of", "redo_reason", "analysis")})
+        old = self.store.get_session(first["id"])
+        self.assertEqual(("completed", "superseded"), (old["status"], old["study_attempt"]["analysis"]))
+        self.assertEqual(["task_redo"], [e["type"] for e in self.store.list_events(first["id"]) if e["type"] == "task_redo"])
+        plan = self.store.get_study("T01")
+        self.assertEqual((1, 1), (plan["current_order"], plan["finished"]))
+        # The next preparation is the repeated task, then the plan moves on past the saved ones.
+        self.assertEqual(redo["id"], self.store.prepare_study("T01")["id"])
+
+    def test_only_saved_tasks_and_no_open_task_can_be_redone(self):
+        session = self.started()
+        with self.assertRaises(ApiError):
+            self.store.redo_saved_task("T01", {"order": 1, "reason": "technical"})
+        self.store.end_task(session["id"], {"reason": "participant_gesture"})
+        with self.assertRaises(ApiError):
+            self.store.redo_saved_task("T01", {"order": 1, "reason": "technical"})
+        with self.assertRaises(ApiError):
+            self.store.redo_saved_task("T01", {"order": 2, "reason": "technical"})
+
     def test_capture_from_the_result_form_is_refused_after_the_return(self):
         # Windows 10/29: keys typed on the result form reached the task when posted after the return.
         session = self.started()

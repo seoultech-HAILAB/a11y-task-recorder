@@ -206,6 +206,8 @@ class RecorderStore(StudyFlowMixin, AttemptsMixin):
             # 0.4.4: an attempt closed by a restart or a tester change (status 'aborted').
             self._ensure_column(connection, "sessions", "aborted_at", "TEXT")
             self._ensure_column(connection, "sessions", "abort_reason", "TEXT NOT NULL DEFAULT ''")
+            # 0.5.7: why a saved task was done again (저장한 과업 다시 하기); empty for first attempts.
+            self._ensure_column(connection, "study_attempts", "redo_reason", "TEXT NOT NULL DEFAULT ''")
 
     def _study_catalog(self, connection: sqlite3.Connection) -> Dict[str, Any]:
         row = connection.execute("SELECT catalog FROM study_catalog WHERE singleton = 1").fetchone()
@@ -288,6 +290,7 @@ class RecorderStore(StudyFlowMixin, AttemptsMixin):
             catalog = self._study_catalog(connection)
             progress = self._study_progress(connection, catalog, tester)
             active = connection.execute("SELECT id FROM sessions WHERE status = 'active' LIMIT 1").fetchone()
+            source = None
             if retry_of is not None:
                 source = connection.execute(
                     "SELECT s.*, a.tester, a.catalog_id FROM sessions s "
@@ -319,27 +322,37 @@ class RecorderStore(StudyFlowMixin, AttemptsMixin):
             if retry_of is None and task["session_id"]:
                 session_id = task["session_id"]
             else:
-                session_id = str(uuid.uuid4())
-                metadata = {key: task[key] for key in ("task_id", "order", "block", "site_name", "time_limit_seconds", "preparation")}
-                # ui_mode tells analysis which collection screen produced the record:
-                # "tabbed" opens the site in a new tab (0.3.x), "single_window" embeds it (0.4+).
-                metadata.update({"catalog_id": catalog["id"], "assignment_id": task["id"],
-                                 "tester": tester, "total": progress["total"], "source": catalog["source"],
-                                 "ui_mode": STUDY_UI_MODE})
-                attempt = source["round"] + 1 if retry_of else 1
-                group_id = source["group_id"] if retry_of else session_id
-                connection.execute(
-                    "INSERT INTO sessions(id, title, participant, target_url, scenario, created_at, group_id, round, study) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (session_id, "{} {}/{}".format(task["site_name"], task["order"], progress["total"]),
-                     tester, task["start_url"], task["instruction"], utc_now(), group_id, attempt,
-                     json.dumps(metadata, ensure_ascii=False)),
-                )
-                connection.execute(
-                    "INSERT INTO study_attempts(session_id, catalog_id, tester, assignment_id, attempt, retry_of) VALUES (?, ?, ?, ?, ?, ?)",
-                    (session_id, catalog["id"], tester, task["id"], attempt, retry_of),
-                )
+                session_id = self._insert_attempt(connection, catalog, progress, tester, task, source, retry_of)
         return self.get_session(session_id)
+
+    def _insert_attempt(self, connection: sqlite3.Connection, catalog: Dict[str, Any], progress: Dict[str, Any],
+                        tester: str, task: Dict[str, Any], source: Optional[sqlite3.Row], retry_of: Optional[str],
+                        redo_reason: str = "") -> str:
+        """A new draft attempt of an assigned task, chained to `source` when it repeats one."""
+        session_id = str(uuid.uuid4())
+        metadata = {key: task[key] for key in ("task_id", "order", "block", "site_name", "time_limit_seconds", "preparation")}
+        # ui_mode tells analysis which collection screen produced the record:
+        # "tabbed" opens the site in a new tab (0.3.x), "single_window" embeds it (0.4+).
+        metadata.update({"catalog_id": catalog["id"], "assignment_id": task["id"],
+                         "tester": tester, "total": progress["total"], "source": catalog["source"],
+                         "ui_mode": STUDY_UI_MODE})
+        if redo_reason:
+            metadata["redo_reason"] = redo_reason
+        attempt = source["round"] + 1 if retry_of else 1
+        group_id = source["group_id"] if retry_of else session_id
+        connection.execute(
+            "INSERT INTO sessions(id, title, participant, target_url, scenario, created_at, group_id, round, study) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (session_id, "{} {}/{}".format(task["site_name"], task["order"], progress["total"]),
+             tester, task["start_url"], task["instruction"], utc_now(), group_id, attempt,
+             json.dumps(metadata, ensure_ascii=False)),
+        )
+        connection.execute(
+            "INSERT INTO study_attempts(session_id, catalog_id, tester, assignment_id, attempt, retry_of, redo_reason)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (session_id, catalog["id"], tester, task["id"], attempt, retry_of, redo_reason),
+        )
+        return session_id
 
     def prepare_study(self, tester: str) -> Dict[str, Any]:
         return self._prepare_study(tester)
@@ -1745,7 +1758,7 @@ class RecorderStore(StudyFlowMixin, AttemptsMixin):
                         "recorder.sqlite3: \ubcf5\uad6c\uc6a9 \uc804\uccb4 \uae30\ub85d \ubc31\uc5c5(SQLite)",
                         "site_preparation.csv: 과업별 사이트 준비 결과와 실패 원인(로그인 필요, 주소 허용 안 됨, 준비 시간 초과, 확장 응답 없음 등)",
                         "사이트 준비 실패 기록: {}건".format(site_failures),
-                        "attempts.csv: 과업별 모든 시도. analysis=exclude는 취소된 시도(다시 시작, 테스터 번호 변경)",
+                        "attempts.csv: 과업별 모든 시도. analysis=exclude는 취소된 시도(다시 시작, 테스터 번호 변경), analysis=superseded는 '저장한 과업 다시 하기'로 다시 한 앞 시도(redo_reason은 다시 한 시도에 있음)",
                         "다시 시작으로 취소된 시도: {}건 (기록이 있는 시도는 sessions/aborted/)".format(
                             aborted_by_reason.get("restart", 0)),
                         "테스터 번호 변경으로 취소된 준비 과업: {}건".format(aborted_by_reason.get("tester_change", 0)),
@@ -1939,6 +1952,10 @@ class RecorderHandler(BaseHTTPRequestHandler):
     def _handle_post(self) -> None:
         path = urlparse(self.path).path
         data = self._read_json()
+        match = re.fullmatch(r"/api/study/([^/]+)/redo", path)
+        if match:
+            self._json({"session": self.server.store.redo_saved_task(match.group(1), data)})
+            return
         match = re.fullmatch(r"/api/study/([^/]+)/(prepare|retry)", path)
         if match:
             tester, action = match.groups()

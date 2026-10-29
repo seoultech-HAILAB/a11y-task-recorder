@@ -180,3 +180,20 @@ test('during a task nothing of the recorder page follows the site for Ctrl+End t
   assert.equal(attr(tagOf('study-view'), 'aria-labelledby'), undefined, '"과업 기록기 영역" is not a region around the site');
 });
 
+
+// ---- 0.5.7: 저장한 과업 다시 하기 ---------------------------------------------------------
+test('a saved task is done again from an in-page group: task, reason, then 다시 하기 or 취소', () => {
+  const tag = tagOf('study-again-form');
+  assert.equal(attr(tag, 'role'), 'group');
+  assert.equal(attr(tag, 'aria-labelledby'), 'study-again-title');
+  assert.match(tag, /\bhidden\b/);
+  assert.match(tagOf('study-again-task'), /^<select\b/);
+  const reasons = [...html.matchAll(/name="study-again-reason" value="(\w+)"[^>]*>\s*([^<]+)</g)].map(m => [m[1], m[2].trim()]);
+  assert.deepEqual(reasons, [['technical', '기술 문제'], ['interrupted', '중간에 방해받음'], ['wrong_save', '결과를 잘못 저장함'], ['other', '기타']]);
+  for (const id of ['study-again-open', 'study-again-yes', 'study-again-no']) assert.equal(attr(tagOf(id), 'type'), 'button', id);
+  assert.match(script, /return openConfirm\("again", "study-again-task"\);/);
+  assert.match(script, /escape\("study-again-form", "study-again-open"\)/);
+  assert.match(script, /\/redo`, "POST", \{ order, reason, by: "participant" \}/);
+  // Offered on the screens the tester number can be changed from, once a task is saved.
+  assert.match(script, /const again = testerChangeable && savedTasks\(\)\.length > 0;/);
+});

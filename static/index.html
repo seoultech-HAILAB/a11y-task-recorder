@@ -55,6 +55,23 @@
               <button id="study-practice-skip" type="button" class="button quiet" hidden>본 과업으로 가기</button>
             </div>
           </section>
+          <!-- 0.5.7: a saved task is done again when something went wrong (the saved attempt is kept). -->
+          <div id="study-again" class="study-tester-tools" hidden>
+            <button id="study-again-open" type="button" class="button quiet compact">저장한 과업 다시 하기</button>
+            <div id="study-again-form" class="study-end-confirm" role="group" aria-labelledby="study-again-title" hidden>
+              <p id="study-again-title">저장한 과업 다시 하기. 앞 기록은 지우지 않습니다.</p>
+              <div class="field"><label for="study-again-task">다시 할 과업</label><select id="study-again-task"></select></div>
+              <fieldset class="study-fieldset">
+                <legend>다시 하는 이유</legend>
+                <label class="study-radio"><input type="radio" name="study-again-reason" value="technical"> 기술 문제</label>
+                <label class="study-radio"><input type="radio" name="study-again-reason" value="interrupted"> 중간에 방해받음</label>
+                <label class="study-radio"><input type="radio" name="study-again-reason" value="wrong_save"> 결과를 잘못 저장함</label>
+                <label class="study-radio"><input type="radio" name="study-again-reason" value="other"> 기타</label>
+              </fieldset>
+              <button id="study-again-yes" type="button" class="button danger">다시 하기</button>
+              <button id="study-again-no" type="button" class="button primary">취소</button>
+            </div>
+          </div>
           <!-- 0.4.4: a wrong tester number can be changed; saved results stay (confirm step only when there are any). -->
           <div id="study-tester-tools" class="study-tester-tools" hidden>
             <button id="study-tester-change" type="button" class="button quiet compact">테스터 번호 바꾸기</button>
