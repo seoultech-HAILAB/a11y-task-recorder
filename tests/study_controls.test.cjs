@@ -74,7 +74,9 @@ test('the shortcuts are taught in the practice only, never on the task screens',
   assert.doesNotMatch(visibleText, /NVDA, Ctrl|Alt, /, 'no shortcut text in the study markup');
   assert.doesNotMatch(script, /END_HINT|withEndHint|SHORTCUT_INTRO/);
   const guide = script.match(/const PRACTICE_GUIDE = ([\s\S]*?);\n/)[1];
-  for (const key of ['NVDA, Ctrl, H', 'NVDA, Ctrl, E', 'Alt, 왼쪽 화살표']) assert.ok(guide.includes(key), key);
+  for (const key of ['NVDA, Ctrl, H', 'NVDA, Ctrl, E']) assert.ok(guide.includes(key), key);
+  // 0.5.8: two keys only. Alt+Left and Alt+Home still stay inside the task, but are not taught.
+  assert.doesNotMatch(guide, /Alt/);
   // A task instruction is the catalog sentence alone.
   assert.match(script, /setText\("study-instruction", String\(task\.instruction \|\| ""\)\.trim\(\)\)/);
   const outside = script.replace(/const PRACTICE_GUIDE = [\s\S]*?;\n/, '').replace(/function practiceSubmit\(\) \{[\s\S]*?\n  \}\n/, '');
@@ -112,7 +114,6 @@ test('practice can be reopened before any task and opens by itself the first tim
   assert.match(script, /el\("study-practice-complete"\)\.hidden = practice \|\| current !== "complete";/);
   // Leaving a practice opened from the completion screen goes back there, not to /prepare.
   assert.match(script, /if \(view\.plan\.finished === view\.plan\.total\) \{ resetForms\(\); render\(\); return el\("study-complete"\)/);
-  assert.match(script.match(/const PRACTICE_GUIDE = ([\s\S]*?);\n/)[1], /Alt, Home/, 'the practice teaches the task start page key');
   assert.match(script, /if \(current === "ready" && firstTask\(\) && !practiced\(\)\) return startPractice\(\);/);
 });
 
@@ -196,4 +197,17 @@ test('a saved task is done again from an in-page group: task, reason, then 다�
   assert.match(script, /\/redo`, "POST", \{ order, reason, by: "participant" \}/);
   // Offered on the screens the tester number can be changed from, once a task is saved.
   assert.match(script, /const again = testerChangeable && savedTasks\(\)\.length > 0;/);
+});
+
+// ---- 0.5.8: Windows + NVDA check of 0.5.7 (10/29) --------------------------------------
+test('a hanging first preparation is announced after 3 s and opened again after 12 s', () => {
+  assert.match(script, /setTimeout\(\(\) => alertAgain\("사이트를 준비하고 있습니다\. 잠시 기다려 주세요\."\), 3000\)/);
+  assert.match(script, /await Promise\.race\(\[view\.siteLoading, sleep\(12000\)\]\)/);
+  // The preparation left behind stops checking once the site is opened again.
+  assert.match(script, /if \(view\.session\?\.id !== sessionId \|\| token !== view\.loadToken\) return null;/);
+});
+
+test('a time-limit end says why on 다음 과업, where focus goes', () => {
+  assert.match(script, /timeLimit \? "제한 시간이 지나 과업이 끝났습니다\. 다음 과업을 누르면 다음 지시문을 읽어 드립니다\."/);
+  assert.equal(attr(tagOf('study-next'), 'aria-describedby'), 'study-saved');
 });

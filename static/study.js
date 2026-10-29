@@ -25,7 +25,6 @@ window.Study = (() => {
   const PRACTICE_GUIDE = "연습입니다. 기록하지 않습니다. 본 과업에서 쓰는 키를 익힙니다. "
     + "지시문을 다시 들으려면 NVDA, Ctrl, H를 누르세요. 과업 중에도 됩니다. "
     + "답을 찾았거나 더 할 수 없으면 그 자리에서 NVDA, Ctrl, E를 눌러 과업을 끝내세요. "
-    + "사이트에서 이전 페이지는 Alt, 왼쪽 화살표, 과업 첫 화면은 Alt, Home입니다. "
     + "본 과업에서는 이 안내를 다시 하지 않습니다. "
     + `연습 과업: ${PRACTICE_TASK} 지금 NVDA, Ctrl, H를 한 번 눌러 본 뒤 과업 시작을 누르세요.`;
   const SITE_UNREACHABLE = "사이트에 접속할 수 없습니다. 과업 시작을 다시 누르거나 연구진에게 알려 주세요.";
@@ -418,7 +417,9 @@ window.Study = (() => {
       // Only a time-limit end (or a reopened kit) stops here; a saved result goes to the next task.
       const outcome = view.session.study_outcome;
       setText("study-result-heading", timeLimit ? "제한 시간이 지나 과업이 끝났습니다." : "과업 결과");
-      setText("study-saved", timeLimit ? "다음 과업을 누르면 다음 지시문을 읽어 드립니다."
+      // 0.5.8: focus goes to 다음 과업, so its description says why the task ended; the heading
+      // above it was not read (Windows 10/29, 1 of 1).
+      setText("study-saved", timeLimit ? "제한 시간이 지나 과업이 끝났습니다. 다음 과업을 누르면 다음 지시문을 읽어 드립니다."
         : `저장했습니다. ${labels[outcome] || "종료"}`);
       el("study-answer-form").hidden = true;
       el("study-saved-box").hidden = false;
@@ -463,13 +464,13 @@ window.Study = (() => {
     });
   }
   // Ask the extension until the site is ready or clearly needs a login; transient errors are retried.
-  async function waitForSite(sessionId, timeout = 20000) {
+  async function waitForSite(sessionId, token, timeout = 20000) {
     const deadline = Date.now() + timeout;
     let result = null, failure = null, prepared = false;
     for (;;) {
       try { result = await bridge(prepared ? "check" : "prepare"); prepared = true; failure = null; }
       catch (error) { failure = error; }
-      if (view.session?.id !== sessionId) return null;
+      if (view.session?.id !== sessionId || token !== view.loadToken) return null;
       if (!failure && (result.ready || result.reason === "login_required")) return result;
       if (Date.now() > deadline) break;
       await sleep(500);
@@ -522,7 +523,7 @@ window.Study = (() => {
     if (!current()) return;
     let result;
     try {
-      result = await waitForSite(sessionId);
+      result = await waitForSite(sessionId, token);
       // Sites open without any access code (10/28). A login page is a site error, never a prompt.
     } catch (error) {
       if (!current()) return;
@@ -580,8 +581,12 @@ window.Study = (() => {
   // ---- task actions ---------------------------------------------------------------
   async function start() {
     if (!view.ready && view.siteLoading) {
+      // 0.5.8: a first preparation that hung kept the participant in silence for about 38 s
+      // before it failed; opening the site again recovered in about 11 s (Windows 10/29, 2 of 18).
+      // After 3 s the wait is announced, and after 12 s the site is opened again.
       view.startWaiting = true;
-      try { await view.siteLoading; } finally { view.startWaiting = false; }
+      const notice = setTimeout(() => alertAgain("사이트를 준비하고 있습니다. 잠시 기다려 주세요."), 3000);
+      try { await Promise.race([view.siteLoading, sleep(12000)]); } finally { clearTimeout(notice); view.startWaiting = false; }
     }
     // A preparation that failed is tried again here; before 0.5.2 only F5 recovered (17-1).
     if (!view.ready) { alertAgain("사이트를 다시 여는 중입니다."); await reloadSite(); }
