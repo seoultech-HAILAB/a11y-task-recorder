@@ -60,6 +60,8 @@ body:has(#study-view[data-phase="active"]) .app-header { position: static; }
 .study-undo > p { margin: 0; width: 100%; color: var(--muted); }
 .study-undo .button { min-height: 44px; }
 .study-undo .study-end-confirm { width: 100%; margin-top: 4px; }
+#study-again-form > p, #study-again-form > .field, #study-again-form > .study-fieldset { flex-basis: 100%; }
+#study-again-form select { max-width: 100%; font-size: 18px; }
 .study-result { padding: 16px; border: 2px solid #247355; border-radius: 10px; background: #f3faf6; }
 .study-result h2 { margin: 0 0 12px; font-size: 20px; }
 .study-fieldset { border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px 12px; margin: 0 0 12px; }

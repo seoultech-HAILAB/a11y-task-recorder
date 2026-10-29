@@ -51,7 +51,8 @@ class AttemptTests(unittest.TestCase):
         second = self.store.prepare_study("T01")
         self.assertNotEqual(first["id"], second["id"])
         self.assertEqual(("draft", 2, first["group_id"]), (second["status"], second["round"], second["group_id"]))
-        self.assertEqual({"attempt": 2, "retry_of": first["id"], "next_attempt": None, "analysis": "include"},
+        self.assertEqual({"attempt": 2, "retry_of": first["id"], "redo_reason": "", "next_attempt": None,
+                          "analysis": "include"},
                          second["study_attempt"])
         self.assertEqual(second["id"], self.store.get_session(first["id"])["study_attempt"]["next_attempt"])
         self.assertEqual(second["id"], self.store.prepare_study("T01")["id"], "prepare is idempotent again")

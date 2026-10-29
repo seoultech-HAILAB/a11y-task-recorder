@@ -26,7 +26,7 @@ function background({ frameUrl = target } = {}) {
   const context = vm.createContext({ URL, Date, Map, Promise,
     setTimeout: fn => fn(), navigator: { userAgent: 'Chrome/151' },
     chrome: { runtime: { id: 'extension', onMessage: { addListener: fn => listeners.push(fn) },
-      onInstalled: listener, getManifest: () => ({ version: '0.5.6' }) },
+      onInstalled: listener, getManifest: () => ({ version: '0.5.8' }) },
       storage: { session: { get: async key => ({ [key]: storage[key] }),
         set: async data => Object.assign(storage, data), remove: async key => delete storage[key] } },
       tabs: { onRemoved: listener, get: async id => { if (id !== DASHBOARD) throw Error('missing'); return { id, url: 'http://127.0.0.1:8765/' }; },
@@ -174,8 +174,8 @@ test('close releases ownership only for finished sessions and removes no tabs', 
 test('manifest runs the content script in all frames and declares no browser command', () => {
   const manifest = JSON.parse(fs.readFileSync('browser-extension/manifest.json', 'utf8'));
   assert.equal(manifest.commands, undefined);
-  assert.equal(manifest.content_scripts[0].all_frames, true);
-  assert.equal(manifest.version, '0.5.6');
+  assert.ok(manifest.content_scripts.every(entry => entry.all_frames === true));
+  assert.equal(manifest.version, '0.5.8');
   assert.equal(/chrome\.commands/.test(fs.readFileSync('browser-extension/background.js', 'utf8')), false);
 });
 
@@ -409,4 +409,32 @@ test('a frame Chrome refused reports the net error instead of loading forever', 
   await flush();
   app.frames[1].url = target;
   assert.equal((await app.command('check')).ready, true, 'a later successful load clears the error');
+});
+
+// 0.5.8: Chrome drops cookies set by a cross-site page in the recorder frame, so a consent the
+// participant gave never stuck (CJ copy, Windows 10/29). The frame reads it as given.
+test('in the recorder frame only, the page reads the cookie consent as given', () => {
+  const manifest = JSON.parse(fs.readFileSync('browser-extension/manifest.json', 'utf8'));
+  const entry = manifest.content_scripts.find(item => item.js.includes('site-cookies.js'));
+  assert.deepEqual([entry.world, entry.run_at], ['MAIN', 'document_start']);
+  const run = ({ inFrame, origin, jar = '' }) => {
+    let stored = jar;
+    class Document {}
+    Object.defineProperty(Document.prototype, 'cookie', { configurable: true, get() { return stored; }, set(value) { stored = value.split(';')[0]; } });
+    const top = {};
+    const window = inFrame ? { top, parent: top } : null;
+    const self = window || top;
+    if (!inFrame) { top.top = top; top.parent = top; }
+    vm.runInNewContext(fs.readFileSync('browser-extension/site-cookies.js', 'utf8'),
+      { Document, window: self, location: { ancestorOrigins: origin ? [origin] : [] } });
+    return new Document();
+  };
+  assert.equal(run({ inFrame: true, origin: 'http://127.0.0.1:8765' }).cookie, 'isCookieAgree=1');
+  assert.equal(run({ inFrame: true, origin: 'http://127.0.0.1:8765', jar: 'a=b' }).cookie, 'a=b; isCookieAgree=1');
+  assert.equal(run({ inFrame: true, origin: 'http://127.0.0.1:8765', jar: 'isCookieAgree=0' }).cookie, 'isCookieAgree=0');
+  assert.equal(run({ inFrame: true, origin: 'https://elsewhere.example' }).cookie, '');
+  assert.equal(run({ inFrame: false }).cookie, '');
+  const doc = run({ inFrame: true, origin: 'http://127.0.0.1:8765' });
+  doc.cookie = 'x=1; path=/';
+  assert.equal(doc.cookie, 'x=1; isCookieAgree=1', 'the page still writes its own cookies');
 });

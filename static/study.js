@@ -25,7 +25,6 @@ window.Study = (() => {
   const PRACTICE_GUIDE = "연습입니다. 기록하지 않습니다. 본 과업에서 쓰는 키를 익힙니다. "
     + "지시문을 다시 들으려면 NVDA, Ctrl, H를 누르세요. 과업 중에도 됩니다. "
     + "답을 찾았거나 더 할 수 없으면 그 자리에서 NVDA, Ctrl, E를 눌러 과업을 끝내세요. "
-    + "사이트에서 이전 페이지는 Alt, 왼쪽 화살표, 과업 첫 화면은 Alt, Home입니다. "
     + "본 과업에서는 이 안내를 다시 하지 않습니다. "
     + `연습 과업: ${PRACTICE_TASK} 지금 NVDA, Ctrl, H를 한 번 눌러 본 뒤 과업 시작을 누르세요.`;
   const SITE_UNREACHABLE = "사이트에 접속할 수 없습니다. 과업 시작을 다시 누르거나 연구진에게 알려 주세요.";
@@ -350,6 +349,7 @@ window.Study = (() => {
   function currentTask() {
     return view.plan?.tasks.find(t => t.order === (view.session?.study.order ?? view.plan.current_order));
   }
+  const savedTasks = () => (view.plan?.tasks || []).filter(t => t.status === "finished");
   const firstTask = () => view.plan?.finished === 0 && (currentTask()?.order ?? 1) === 1;
 
   // ---- rendering ------------------------------------------------------------------
@@ -369,8 +369,10 @@ window.Study = (() => {
     const locked = Boolean(view.tester) && !view.changeTester;
     const testerChangeable = locked && !practice && ["ready", "ended", "complete"].includes(current);
     const undo = current === "answering" && (practice || view.session?.end_reason !== "time_limit");
+    // 저장한 과업 다시 하기 (0.5.7): from the same screens, once at least one task is saved.
+    const again = testerChangeable && savedTasks().length > 0;
     // A confirm step belongs to one phase; leaving that phase closes it.
-    const open = { end: current === "active", restart: current === "active", redo: undo, tester: testerChangeable };
+    const open = { end: current === "active", restart: current === "active", redo: undo, tester: testerChangeable, again };
     if (view.confirm && !open[view.confirm]) view.confirm = null;
     const asking = Boolean(view.confirm);
     el("study-end").hidden = current !== "active" || asking;
@@ -388,6 +390,10 @@ window.Study = (() => {
     el("study-tester-tools").hidden = !testerChangeable;
     el("study-tester-change").hidden = view.confirm === "tester";
     el("study-tester-confirm").hidden = view.confirm !== "tester";
+    el("study-again").hidden = !again || view.confirm === "tester";
+    el("study-again-open").hidden = view.confirm === "again";
+    el("study-again-form").hidden = view.confirm !== "again";
+    if (view.confirm === "again") el("study-tester-tools").hidden = true;
     el("study-next").hidden = practice || !ended;
     el("study-practice-stop").hidden = !(practice && ended);
     el("study-practice-again").hidden = !(practice && ended);
@@ -411,7 +417,9 @@ window.Study = (() => {
       // Only a time-limit end (or a reopened kit) stops here; a saved result goes to the next task.
       const outcome = view.session.study_outcome;
       setText("study-result-heading", timeLimit ? "제한 시간이 지나 과업이 끝났습니다." : "과업 결과");
-      setText("study-saved", timeLimit ? "다음 과업을 누르면 다음 지시문을 읽어 드립니다."
+      // 0.5.8: focus goes to 다음 과업, so its description says why the task ended; the heading
+      // above it was not read (Windows 10/29, 1 of 1).
+      setText("study-saved", timeLimit ? "제한 시간이 지나 과업이 끝났습니다. 다음 과업을 누르면 다음 지시문을 읽어 드립니다."
         : `저장했습니다. ${labels[outcome] || "종료"}`);
       el("study-answer-form").hidden = true;
       el("study-saved-box").hidden = false;
@@ -456,13 +464,13 @@ window.Study = (() => {
     });
   }
   // Ask the extension until the site is ready or clearly needs a login; transient errors are retried.
-  async function waitForSite(sessionId, timeout = 20000) {
+  async function waitForSite(sessionId, token, timeout = 20000) {
     const deadline = Date.now() + timeout;
     let result = null, failure = null, prepared = false;
     for (;;) {
       try { result = await bridge(prepared ? "check" : "prepare"); prepared = true; failure = null; }
       catch (error) { failure = error; }
-      if (view.session?.id !== sessionId) return null;
+      if (view.session?.id !== sessionId || token !== view.loadToken) return null;
       if (!failure && (result.ready || result.reason === "login_required")) return result;
       if (Date.now() > deadline) break;
       await sleep(500);
@@ -515,7 +523,7 @@ window.Study = (() => {
     if (!current()) return;
     let result;
     try {
-      result = await waitForSite(sessionId);
+      result = await waitForSite(sessionId, token);
       // Sites open without any access code (10/28). A login page is a site error, never a prompt.
     } catch (error) {
       if (!current()) return;
@@ -573,8 +581,12 @@ window.Study = (() => {
   // ---- task actions ---------------------------------------------------------------
   async function start() {
     if (!view.ready && view.siteLoading) {
+      // 0.5.8: a first preparation that hung kept the participant in silence for about 38 s
+      // before it failed; opening the site again recovered in about 11 s (Windows 10/29, 2 of 18).
+      // After 3 s the wait is announced, and after 12 s the site is opened again.
       view.startWaiting = true;
-      try { await view.siteLoading; } finally { view.startWaiting = false; }
+      const notice = setTimeout(() => alertAgain("사이트를 준비하고 있습니다. 잠시 기다려 주세요."), 3000);
+      try { await Promise.race([view.siteLoading, sleep(12000)]); } finally { clearTimeout(notice); view.startWaiting = false; }
     }
     // A preparation that failed is tried again here; before 0.5.2 only F5 recovered (17-1).
     if (!view.ready) { alertAgain("사이트를 다시 여는 중입니다."); await reloadSite(); }
@@ -774,6 +786,35 @@ window.Study = (() => {
   function openConfirm(name, focusId) { view.confirm = name; renderControls(); return el(focusId); }
   function closeConfirm(focusId) { view.confirm = null; renderControls(); return el(focusId); }
 
+  // ---- 저장한 과업 다시 하기 (0.5.7) ----------------------------------------------------
+  // A saved task is done again when something went wrong (a technical problem, an interruption,
+  // a wrong result). The saved attempt stays and is marked superseded in attempts.csv; the new
+  // attempt carries the reason. Focus goes to the instruction of the task done again.
+  function openAgain() {
+    const select = el("study-again-task");
+    select.replaceChildren(...savedTasks().map(task => {
+      const option = document.createElement("option");
+      const instruction = String(task.instruction || "").trim();
+      option.value = String(task.order);
+      option.textContent = `과업 ${task.order}: ${instruction.length > 40 ? `${instruction.slice(0, 40)}…` : instruction}`;
+      return option;
+    }));
+    for (const radio of document.querySelectorAll('input[name="study-again-reason"]')) radio.checked = false;
+    return openConfirm("again", "study-again-task");
+  }
+  async function redoSavedTask() {
+    const reason = document.querySelector('input[name="study-again-reason"]:checked')?.value;
+    if (!reason) throw new Error("다시 하는 이유를 골라 주세요.");
+    const order = Number(el("study-again-task").value);
+    await api(`/study/${view.tester}/redo`, "POST", { order, reason, by: "participant" });
+    view.confirm = null;
+    // The next task's draft waits (its site is loaded again when it comes); this task is prepared now.
+    view.frameTitle = "";
+    const target = await prepare();
+    if (target) message(`과업 ${order}을 다시 합니다.`);
+    return target;
+  }
+
   // ---- 되돌리기 (0.4.4) -------------------------------------------------------------
   // 과업 다시 시작 / 처음부터 다시 하기: the attempt is kept as aborted (excluded from analysis)
   // and the same task is prepared again as a new attempt; focus goes to its instruction.
@@ -942,6 +983,10 @@ window.Study = (() => {
     on("study-tester-yes", "click", () => showTesterPicker().focus());
     on("study-tester-no", "click", () => closeConfirm("study-tester-change").focus());
     escape("study-tester-confirm", "study-tester-change");
+    on("study-again-open", "click", () => { if (!view.busy) openAgain().focus(); });
+    on("study-again-yes", "click", () => busy(redoSavedTask));
+    on("study-again-no", "click", () => closeConfirm("study-again-open").focus());
+    escape("study-again-form", "study-again-open");
     on("study-tester-keep", "click", () => { if (!view.busy) keepTester().focus(); });
     on("study-next", "click", () => busy(nextTask));
     on("study-answer-form", "submit", e => { e.preventDefault(); busy(view.practice ? async () => practiceSubmit() : submitParticipant); });

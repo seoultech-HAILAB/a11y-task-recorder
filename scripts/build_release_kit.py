@@ -430,8 +430,10 @@ def build_kit(python_version: str, chrome_version: str, access_code_file: Option
         kit_catalog.write_text(kit_catalog.read_text(encoding="utf-8").replace(PUBLIC_ORIGIN, site_origin),
                                encoding="utf-8", newline="\n")
         log("사본 주소: 키트 배정표에 넣음")
-    else:
+    elif PUBLIC_ORIGIN in kit_catalog.read_text(encoding="utf-8"):
         log("사본 주소: 넣지 않음 (이 키트로는 사이트에 접속할 수 없음, 배포 금지)")
+    else:
+        log("사본 주소: 배정표에 이미 있음")
     check_catalog(kit_catalog)
     shutil.copytree(ROOT / "browser-extension", app / "browser-extension", ignore=skip)
     shutil.copy2(ROOT / "run.py", app / "run.py")
@@ -457,7 +459,8 @@ def build_kit(python_version: str, chrome_version: str, access_code_file: Option
         (app / "study_access.txt").write_text(access_code + "\n", encoding="utf-8", newline="\n")
         log("사이트 접속 코드: 키트에 내장함")
     else:
-        log("사이트 접속 코드: 내장하지 않음 (이 키트로는 사이트에 접속할 수 없음, 배포 금지)")
+        # Sites open without a code since 10/28; the code is then only the upload bearer.
+        log("사이트 접속 코드: 내장하지 않음 (서버 업로드 없음, 결과는 결과 패키지 ZIP으로 전달)")
     (staging / "평가시작.bat").write_text(
         LAUNCHER_BAT.replace("@@EXTENSION_VERSION@@", extension_version),
         encoding="utf-8",

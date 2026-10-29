@@ -39,7 +39,7 @@
   - `ended_at`은 닫은 시각. 시작했던 시도는 `task_ended_at`, `net_task_seconds`도 채운다. `end_reason`은 이미 끝낸 뒤(결과 입력 중)라면 그 값을 두고, 수행 중에 다시 시작했다면 `restart`.
   - 대시보드 이벤트 `task_abort` `{reason, from_status, trigger, by, previous_end_reason, net_task_seconds, to_tester}`.
 - 새 시도는 기존 재시도 구조를 쓴다. `study_attempts.attempt`가 1 늘고 `retry_of`가 취소된 세션을 가리키며, 세션의 `round`도 1 늘고 `group_id`는 같다. 진행도 계산은 과업마다 마지막 시도만 보므로 취소된 시도는 진행에 들어가지 않는다.
-- `GET /api/sessions/<id>`에 `study_attempt` `{attempt, retry_of, next_attempt, analysis}`와 `paused_seconds`를 더한다. `analysis`는 `include` 또는 `exclude`.
+- `GET /api/sessions/<id>`에 `study_attempt` `{attempt, retry_of, next_attempt, analysis}`와 `paused_seconds`를 더한다. `analysis`는 `include` 또는 `exclude`(0.5.7부터 저장한 뒤 다시 한 과업의 앞 시도는 `superseded`, 새 시도에 `redo_reason`).
 - API: `POST /api/sessions/<id>/abort` `{reason: restart|tester_change, trigger, by, to_tester}`. 다시 시작은 수행 중·결과 입력 중인 현재 과업에만, 번호 변경은 시작 전(draft) 과업에만 허락한다.
 
 ## 연구자 쪽
