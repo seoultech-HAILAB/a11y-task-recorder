@@ -37,7 +37,11 @@ def sync(kit: Path, appdata: Path) -> int:
         target = appdata / "nvda" / "addons" / NAME
         manifest = target / "manifest.ini"
         installed = manifest_version(manifest.read_text(encoding="utf-8", errors="replace")) if manifest.is_file() else ""
-        if wanted and installed == wanted and (target / "globalPlugins").is_dir():
+        # 0.5.10: the same version with other files (a diagnostic build) was skipped (Windows 10/30),
+        # so every file of the package is compared as well.
+        same_files = all((target / name).is_file() and (target / name).read_bytes() == bundle.read(name)
+                         for name in bundle.namelist() if not name.endswith("/"))
+        if wanted and installed == wanted and same_files:
             say("NVDA 기록 애드온이 이미 준비되어 있습니다.")
             return 0
         shutil.rmtree(target, ignore_errors=True)

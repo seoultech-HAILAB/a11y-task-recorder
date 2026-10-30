@@ -38,6 +38,10 @@ class AddonSyncTests(unittest.TestCase):
             self.package(kit, "0.5.9")
             self.assertEqual(kit_addon.INSTALLED, kit_addon.sync(kit, appdata))
             self.assertEqual(0, kit_addon.sync(kit, appdata), "same version: no NVDA restart")
+            plugin = appdata / "nvda/addons/a11yTaskRecorder/globalPlugins/a11yTaskRecorder.py"
+            plugin.write_text("# an older build of the same version\n")
+            self.assertEqual(kit_addon.INSTALLED, kit_addon.sync(kit, appdata), "same version, other files: installed again")
+            self.assertEqual(0, kit_addon.sync(kit, appdata))
             self.package(kit, "0.6.0")
             self.assertEqual(kit_addon.INSTALLED, kit_addon.sync(kit, appdata), "a new kit installs again")
             installed = (appdata / "nvda/addons/a11yTaskRecorder/manifest.ini").read_text()
