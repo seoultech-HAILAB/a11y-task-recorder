@@ -26,14 +26,16 @@ def main():
                     assert bundle.read(entry) == source.read_bytes(), entry
         assert name + "/app/chrome/chrome.exe" in names
         assert name + "/app/python/python.exe" in names
-        assert name + "/verify_live_pipeline.ps1" in names
-        assert bundle.read(name + "/verify_live_pipeline.ps1") == (root / "scripts/verify_live_pipeline.ps1").read_bytes()
-        assert name + "/검수실행.bat" in names
-        launcher = bundle.read(name + "/검수실행.bat")
+        # Installation check tools sit in _연구진용/ so a participant does not run them by mistake.
+        research = name + "/_연구진용"
+        assert research + "/verify_live_pipeline.ps1" in names
+        assert bundle.read(research + "/verify_live_pipeline.ps1") == (root / "scripts/verify_live_pipeline.ps1").read_bytes()
+        assert research + "/검수실행.bat" in names
+        launcher = bundle.read(research + "/검수실행.bat")
         assert b'"%~dp0verify_live_pipeline.ps1"' in launcher
         assert b'"%RECORDER_DIAGNOSTIC_KIT%"' in launcher
         assert b'\r\n' in launcher
-        assert name + "/windows-release-validation.md" in names
+        assert research + "/windows-release-validation.md" in names
     with zipfile.ZipFile(addon) as bundle:
         assert bundle.testzip() is None
         for source in (root / "nvda-addon").rglob("*"):

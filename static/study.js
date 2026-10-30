@@ -189,7 +189,7 @@ window.Study = (() => {
     // Out of the page during a task (0.5.6): left in place, the end trap was where NVDA's
     // Ctrl+End landed, outside the site, as "프레임 끝, 영역 끝, 빈줄" (Windows 10/29, 13).
     for (const id of ["study-page-start", "study-page-end"]) { const trap = el(id); if (trap.hidden !== active) trap.hidden = active; }
-    el("study-result").hidden = !(current === "answering" || current === "ended");
+    el("study-result").hidden = !(current === "answering" || current === "ended" || returning());
     const title = active && view.frameTitle ? view.frameTitle : RECORDER_TITLE;
     if (document.title !== title) document.title = title;
   }
@@ -368,7 +368,7 @@ window.Study = (() => {
     // back (researchers still have ?change-tester=1 and ?tester=). Not while a task is open.
     const locked = Boolean(view.tester) && !view.changeTester;
     const testerChangeable = locked && !practice && ["ready", "ended", "complete"].includes(current);
-    const undo = current === "answering" && (practice || view.session?.end_reason !== "time_limit");
+    const undo = (current === "answering" || returning()) && (practice || view.session?.end_reason !== "time_limit");
     // 저장한 과업 다시 하기 (0.5.7): from the same screens, once at least one task is saved.
     const again = testerChangeable && savedTasks().length > 0;
     // A confirm step belongs to one phase; leaving that phase closes it.
@@ -726,7 +726,7 @@ window.Study = (() => {
     if (!frame || event.source !== frame.contentWindow || typeof event.data?.kind !== "string") return;
     const data = event.data;
     if (data.kind === "a11y-study-site-key" && ["back", "start"].includes(data.action)) siteCommand(data.action, "site_key");
-    else if (data.kind === "a11y-study-site-entry" && phase() === "active") view.siteStartKey ??= (data.key || null);
+    else if (data.kind === "a11y-study-site-entry" && phase() === "active") { view.siteStartKey ??= (data.key || null); endReturning(); }
     else if (data.kind === "a11y-study-site-back" && view.pendingBack) {
       const { trigger } = view.pendingBack;
       view.pendingBack = null;
@@ -831,12 +831,23 @@ window.Study = (() => {
   }
   // 과업으로 돌아가기: the end was pressed by mistake. Recording resumes on the same page; the
   // time in the result form is not counted (server paused_seconds).
+  // 0.5.11: 과업으로 돌아가기 stays on screen (with focus) until the site has taken focus. Hiding it
+  // first dropped focus to the page for a moment, and NVDA read the page, which during a task is the
+  // whole site, as one line (Windows 10/30, 3 of 5 returns with 0.5.9, also 0.5.3 and 0.5.5).
+  function returning() { return phase() === "active" && Date.now() < (view.returningUntil || 0); }
+  function beginReturning() { view.returningUntil = Date.now() + 1500; setTimeout(endReturning, 1600); }
+  function endReturning() {
+    if (!view.returningUntil) return;
+    view.returningUntil = 0;
+    renderControls();
+  }
   async function returnToTask() {
     const data = await api(`/sessions/${view.session.id}/resume-task`, "POST", { by: "participant" });
     view.session = data.session;
     // 0.5.5: the choice and answer stay. A participant who went back to check something and
     // ended again found both emptied (Windows 10/29); they are cleared when the task is saved.
     await refreshPlan();
+    beginReturning();
     render();
     // An alert left from the result form ("성공인지 실패인지 골라 주세요.") was read again with the
     // whole site on the way back (Windows 10/29, 1 of 1); it is cleared first.
@@ -854,6 +865,7 @@ window.Study = (() => {
     if (doc) {
       const kept = view.siteFocus?.isConnected && view.siteFocus.ownerDocument === doc ? view.siteFocus : null;
       if (kept) kept.focus(); else { frame.focus(); focusSite(); }
+      endReturning();
       return;
     }
     frame.contentWindow?.postMessage({ kind: "a11y-study-focus-site", focus: true, edge: "resume" }, "*");
@@ -934,7 +946,7 @@ window.Study = (() => {
   }
   function practiceStart() { view.practice.phase = "active"; view.siteStartKey = null; renderPractice(); message("연습 중입니다."); requestAnimationFrame(() => focusSite()); return el("study-frame"); }
   function practiceEnd(by) { view.practice.phase = "answering"; view.practice.endedBy = by; renderPractice(); message("연습 과업이 끝났습니다."); return el("study-result-heading"); }
-  function practiceReturn() { message(""); view.practice.phase = "active"; renderPractice(); announce("과업으로 돌아왔습니다."); requestAnimationFrame(resumeSite); return null; }
+  function practiceReturn() { message(""); view.practice.phase = "active"; beginReturning(); renderPractice(); announce("과업으로 돌아왔습니다."); requestAnimationFrame(resumeSite); return null; }
   function practiceRestart() {
     view.practice = { phase: "ready", repeated: false, endedBy: "" };
     view.confirm = null;

@@ -122,7 +122,7 @@ test('restart and tester change call the abort API with their reasons; return us
   assert.match(script, /\/abort`, "POST", \{ reason: "tester_change", trigger: "tester_picker"/);
   assert.match(script, /\/resume-task`, "POST", \{ by: "participant" \}/);
   // A time-limit end is saved by itself and cannot be undone from the result form.
-  assert.match(script, /const undo = current === "answering" && \(practice \|\| view\.session\?\.end_reason !== "time_limit"\)/);
+  assert.match(script, /const undo = \(current === "answering" \|\| returning\(\)\) && \(practice \|\| view\.session\?\.end_reason !== "time_limit"\)/);
 });
 
 // ---- 0.5.2: Windows + NVDA check of 0.5.0 (10/28) --------------------------------------
@@ -216,4 +216,13 @@ test('a time-limit end says why on 다음 과업, where focus goes', () => {
 test('preparing a task keeps the focused button until the next instruction takes focus', () => {
   const body = script.match(/async function prepare\(retry = false\) \{[\s\S]*?\n  \}\n/)[0];
   assert.ok(body.indexOf('await refreshPlan();') < body.indexOf('resetForms();'), 'no await between hiding the forms and the instruction focus');
+});
+
+// ---- 0.5.11 -----------------------------------------------------------------------------
+test('과업으로 돌아가기 keeps its button until the site has focus, so focus never falls to the page', () => {
+  const body = script.match(/async function returnToTask\(\) \{[\s\S]*?\n  \}\n/)[0];
+  assert.ok(body.indexOf('beginReturning();') < body.indexOf('render();'), 'the button is kept before the result is hidden');
+  assert.match(script, /el\("study-result"\)\.hidden = !\(current === "answering" \|\| current === "ended" \|\| returning\(\)\);/);
+  assert.match(script, /"a11y-study-site-entry" && phase\(\) === "active"\) \{ view\.siteStartKey \?\?= \(data\.key \|\| null\); endReturning\(\); \}/);
+  assert.match(script, /function practiceReturn\(\) \{ message\(""\); view\.practice\.phase = "active"; beginReturning\(\);/);
 });
