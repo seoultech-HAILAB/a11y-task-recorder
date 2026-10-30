@@ -26,7 +26,7 @@ function background({ frameUrl = target } = {}) {
   const context = vm.createContext({ URL, Date, Map, Promise,
     setTimeout: fn => fn(), navigator: { userAgent: 'Chrome/151' },
     chrome: { runtime: { id: 'extension', onMessage: { addListener: fn => listeners.push(fn) },
-      onInstalled: listener, getManifest: () => ({ version: '0.5.11' }) },
+      onInstalled: listener, getManifest: () => ({ version: '0.5.12' }) },
       storage: { session: { get: async key => ({ [key]: storage[key] }),
         set: async data => Object.assign(storage, data), remove: async key => delete storage[key] } },
       tabs: { onRemoved: listener, get: async id => { if (id !== DASHBOARD) throw Error('missing'); return { id, url: 'http://127.0.0.1:8765/' }; },
@@ -175,7 +175,7 @@ test('manifest runs the content script in all frames and declares no browser com
   const manifest = JSON.parse(fs.readFileSync('browser-extension/manifest.json', 'utf8'));
   assert.equal(manifest.commands, undefined);
   assert.ok(manifest.content_scripts.every(entry => entry.all_frames === true));
-  assert.equal(manifest.version, '0.5.11');
+  assert.equal(manifest.version, '0.5.12');
   assert.equal(/chrome\.commands/.test(fs.readFileSync('browser-extension/background.js', 'utf8')), false);
 });
 
@@ -329,7 +329,7 @@ test('cart preparation is restricted to the captured Daiso catalog page', async 
 // back never goes past the history entry the task started on.
 // Objects made inside the vm context have another Object prototype.
 const plain = value => JSON.parse(JSON.stringify(value));
-function studyFrame({ ancestor = 'http://127.0.0.1:8765', entries = ['s0', 'k1', 'k2'], current = 2 } = {}) {
+function studyFrame({ ancestor = 'http://127.0.0.1:8765', entries = ['s0', 'k1', 'k2'], current = 2, controls = null } = {}) {
   const handlers = {};
   const posted = [];
   const backs = [];
@@ -342,9 +342,11 @@ function studyFrame({ ancestor = 'http://127.0.0.1:8765', entries = ['s0', 'k1',
     back() { backs.push(current); return { committed: Promise.resolve(), finished: Promise.resolve() }; } };
   const window = { location, parent, top: parent, navigation: nav,
     addEventListener: (name, fn) => { (handlers[name] ||= []).push(fn); } };
-  const control = name => ({ disabled: false, getClientRects: () => [{}], closest: () => null, focus: () => focused.push(name) });
-  const document = { readyState: 'complete', title: '사본', documentElement: { lang: 'ko' }, addEventListener() {},
-    querySelectorAll: () => [control('link'), control('button')] };
+  // A control that refuses focus (visibility:hidden) leaves document.activeElement where it was.
+  const control = (name, focusable = true) => { const node = { disabled: false, getClientRects: () => [{}], closest: () => null,
+    focus: () => { if (focusable) { focused.push(name); document.activeElement = node; } } }; return node; };
+  const document = { readyState: 'complete', title: '사본', documentElement: { lang: 'ko' }, addEventListener() {}, activeElement: null,
+    querySelectorAll: () => controls ? controls.map(([name, focusable]) => control(name, focusable)) : [control('link'), control('button')] };
   vm.runInNewContext(fs.readFileSync('browser-extension/content.js', 'utf8'), {
     URL, Date, Set, Element: class {}, Node: { ELEMENT_NODE: 1 }, window, document,
     MutationObserver: class { observe() {} }, setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0,
@@ -394,6 +396,15 @@ test('focus request reports the start entry and focuses only when asked', () => 
   // 0.5.0 focus trap: Shift+Tab out of the top of the site comes back in at its last control.
   frame.message({ kind: 'a11y-study-focus-site', edge: 'last' });
   assert.deepEqual(frame.focused, ['link', 'button']);
+});
+
+test('a control that refuses focus is skipped, so focus never stays on the document (0.5.12)', () => {
+  // CJ: the consented cookie dialog is still listed but hidden with visibility:hidden.
+  const frame = studyFrame({ controls: [['쿠키 사용 고지', false], ['동의', false], ['본문 바로가기', true], ['푸터', true]] });
+  frame.message({ kind: 'a11y-study-focus-site', edge: 'resume' });
+  assert.deepEqual(frame.focused, ['본문 바로가기']);
+  frame.message({ kind: 'a11y-study-focus-site', edge: 'last' });
+  assert.deepEqual(frame.focused, ['본문 바로가기', '푸터']);
 });
 
 test('a frame Chrome refused reports the net error instead of loading forever', async () => {

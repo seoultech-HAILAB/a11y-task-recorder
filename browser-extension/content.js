@@ -48,7 +48,11 @@
           node.getClientRects().length > 0 && !node.closest("[inert], [aria-hidden='true']"));
         // edge "resume": 과업으로 돌아가기 goes back to the control the task was ended on (0.5.2).
         const kept = event.data.edge === "resume" && lastFocus?.isConnected ? lastFocus : null;
-        if (event.data.focus !== false) (kept || (event.data.edge === "last" ? controls.at(-1) : controls[0]))?.focus();
+        // 0.5.12: a listed control can still refuse focus. With consent given, the CJ cookie dialog
+        // stays in the page with visibility:hidden; focus stayed on the document and NVDA read the
+        // whole site on 과업으로 돌아가기 (Windows 10/30, CJ 2 of 2). The next control is tried.
+        const order = [kept, ...(event.data.edge === "last" ? controls.reverse() : controls)].filter(Boolean);
+        if (event.data.focus !== false) order.find((node) => { node.focus(); return document.activeElement === node; });
         toRecorder({ kind: "a11y-study-site-entry", key: window.navigation?.currentEntry?.key || "" });
       } else if (event.data?.kind === "a11y-study-site-back") {
         toRecorder({ kind: "a11y-study-site-back", moved: historyBack(window.navigation, event.data.startKey) });
