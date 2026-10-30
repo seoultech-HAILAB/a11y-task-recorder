@@ -305,3 +305,72 @@ class SingleWindowAddonTests(unittest.TestCase):
         self.plugin._afterSignal("end", {"accepted": True, "speak": ""})
         self.assertEqual([("<lambda>", (220, 160)), ("<lambda>", (880, 90)), ("_speakPrompt", ("지시문입니다",)),
                           ("<lambda>", (660, 90))], calls)
+
+
+class SayAllHoldTests(unittest.TestCase):
+    """0.5.10: the site's first appearance is not read as a whole page (Windows 10/30, 3 of 7)."""
+
+    def setUp(self):
+        cls = collector_class()
+        self.plugin = cls.__new__(cls)
+        self.plugin._sayAllSaved = None
+        self.plugin._sayAllToken = 0
+        self.settings = {"virtualBuffers": {"autoSayAllOnPageLoad": True}}
+        self.later = []
+        Role = SimpleNamespace(BUTTON="button", LINK="link")
+        self.focus = SimpleNamespace(role=Role.BUTTON, name="과업 시작", appModule=SimpleNamespace(appName="chrome"))
+        self.plugin._holdSayAll.__globals__.update({
+            "config": SimpleNamespace(conf=self.settings),
+            "core": SimpleNamespace(callLater=lambda ms, fn, *args: self.later.append((ms, fn, args))),
+            "api": SimpleNamespace(getFocusObject=lambda: self.focus),
+            "controlTypes": SimpleNamespace(Role=Role),
+            "SITE_OPENING_BUTTONS": ("과업 시작",),
+            "SUPPORTED_BROWSER_APPS": {"chrome"},
+            "SAY_ALL_HOLD_MAX_MS": 40000, "SAY_ALL_RELEASE_AFTER_SITE_FOCUS_MS": 2000,
+        })
+        self.frame = "recorder"
+        self.plugin._objectFrame = lambda obj: self.frame
+        self.plugin._shouldRecord = lambda obj: False
+
+    def run_later(self):
+        pending, self.later = self.later, []
+        for _, fn, args in pending:
+            fn(*args)
+
+    def test_start_button_holds_say_all_until_the_site_has_focus(self):
+        self.plugin._holdSayAllForSiteButton()
+        self.assertFalse(self.settings["virtualBuffers"]["autoSayAllOnPageLoad"])
+        self.assertEqual(40000, self.later[0][0], "never held longer than 40 s")
+        self.later.clear()
+        self.frame = "task"
+        self.plugin.event_gainFocus(object(), lambda: None)
+        self.assertEqual(2000, self.later[0][0])
+        self.run_later()
+        self.assertTrue(self.settings["virtualBuffers"]["autoSayAllOnPageLoad"], "the participant's setting is back")
+
+    def test_a_participant_who_turned_it_off_keeps_it_off(self):
+        self.settings["virtualBuffers"]["autoSayAllOnPageLoad"] = False
+        self.plugin._holdSayAll()
+        self.run_later()
+        self.assertFalse(self.settings["virtualBuffers"]["autoSayAllOnPageLoad"])
+
+    def test_an_earlier_release_does_not_end_a_newer_hold(self):
+        self.plugin._holdSayAll()
+        first = self.later.pop()
+        self.plugin._holdSayAll()
+        first[1](*first[2])
+        self.assertFalse(self.settings["virtualBuffers"]["autoSayAllOnPageLoad"], "the second press is still held")
+        self.run_later()
+        self.assertTrue(self.settings["virtualBuffers"]["autoSayAllOnPageLoad"])
+
+    def test_other_buttons_and_site_buttons_leave_the_setting_alone(self):
+        for name, frame in (("저장", "recorder"), ("과업 시작", "task"), ("과업으로 돌아가기", "recorder")):
+            self.focus.name, self.frame = name, frame
+            self.plugin._holdSayAllForSiteButton()
+        self.assertTrue(self.settings["virtualBuffers"]["autoSayAllOnPageLoad"])
+        self.assertEqual([], self.later)
+
+    def test_closing_the_add_on_gives_the_setting_back(self):
+        self.plugin._holdSayAll()
+        self.plugin._releaseSayAll()
+        self.assertTrue(self.settings["virtualBuffers"]["autoSayAllOnPageLoad"])

@@ -13,7 +13,9 @@ from datetime import datetime, timezone
 import addonHandler
 import api
 import buildVersion
+import config
 import controlTypes
+import core
 import globalPluginHandler
 import inputCore
 import queueHandler
@@ -32,6 +34,12 @@ REQUEST_TIMEOUT_SECONDS = 0.8
 SUPPORTED_BROWSER_APPS = {"chrome", "msedge", "firefox", "brave", "opera"}
 SPEECH_MERGE_SECONDS = 1.2
 SIGNAL_SOURCE = "nvda_addon"
+# 0.5.10: the button that shows the task site; NVDA's say-all on page load is held while it comes up.
+# Not 과업으로 돌아가기: the hold did not help there; a return reads the whole site with or without
+# it (0.5.9 3 of 5, Windows 10/30), a known limitation handled separately.
+SITE_OPENING_BUTTONS = ("과업 시작",)
+SAY_ALL_RELEASE_AFTER_SITE_FOCUS_MS = 2000
+SAY_ALL_HOLD_MAX_MS = 40000
 ADDON_VERSION = addonHandler.getCodeAddon().manifest["version"]
 # Named keys stay "key" even when NVDA shows them as one localized character ("탭").
 NAMED_UNBOUND_KEYS = {
@@ -105,6 +113,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         self._activeSpeech = None
         # >0 while this add-on itself is speaking a recorder prompt (ui.message).
         self._promptDepth = 0
+        # The participant's own autoSayAllOnPageLoad while it is held for a task start (0.5.10).
+        self._sayAllSaved = None
+        self._sayAllToken = 0
         self._speechHook = getattr(
             speechExtensions,
             "pre_speechQueued",
@@ -131,6 +142,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         except Exception:
             log.debugWarning("Could not unregister an A11y Task Recorder extension point", exc_info=True)
         self._stopEvent.set()
+        self._releaseSayAll()
         try:
             self._worker.join(timeout=1.2)
         except Exception:
@@ -138,6 +150,14 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         super().terminate()
 
     def event_gainFocus(self, obj, nextHandler):
+        try:
+            if self._sayAllSaved is not None and self._objectFrame(obj) == "task":
+                # The site has focus: its first focus has been handled without a say-all.
+                token = self._sayAllToken
+                log.debug("A11y Task Recorder say-all: site focus, release in %d ms (token %d)" % (SAY_ALL_RELEASE_AFTER_SITE_FOCUS_MS, token))
+                core.callLater(SAY_ALL_RELEASE_AFTER_SITE_FOCUS_MS, self._releaseSayAll, token)
+        except Exception:
+            log.debugWarning("A11y Task Recorder say-all release scheduling failed", exc_info=True)
         try:
             if self._shouldRecord(obj):
                 self._enqueue(
@@ -188,6 +208,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         try:
             if getattr(gesture, "isModifier", False):
                 return True
+            if getattr(gesture, "mainKeyName", "") in ("enter", "numpadEnter", "space"):
+                # Before a task is active too: 과업 시작 is pressed while nothing is recorded.
+                self._queueMain(self._holdSayAllForSiteButton)
             focus = api.getFocusObject()
             if not self._shouldRecord(focus):
                 return True
@@ -414,7 +437,56 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         category=scriptCategory,
     )
     def script_startTask(self, gesture):
+        self._holdSayAll()
         self._postSignal("start")
+
+    # ---- 0.5.10: no say-all of the whole site when it comes up ---------------------------
+    # The site is shown when 과업 시작 is pressed, and NVDA treats its document as a newly loaded
+    # page: with "automatic say all on page load" on, the whole site (header to footer) was read
+    # before the first link (Windows 10/30, 3 of 7; also 0.5.7). Only that moment is held: the
+    # setting is turned off when 과업 시작 is pressed and the participant's own value comes back
+    # 2 s after the site first has focus (at most 40 s later). Pages opened during the task keep
+    # the participant's setting. (12 of 12 starts without the whole site, Windows 10/30.)
+    def _holdSayAllForSiteButton(self):
+        """Main thread, before the key acts: hold say-all if focus is a site-opening button."""
+        try:
+            focus = api.getFocusObject()
+            if focus is None or focus.role != controlTypes.Role.BUTTON:
+                return
+            if safeString(focus.name, 80).strip() not in SITE_OPENING_BUTTONS:
+                return
+            if safeString(focus.appModule.appName, 80).lower() not in SUPPORTED_BROWSER_APPS:
+                return
+            if self._objectFrame(focus) != "recorder":
+                return
+            self._holdSayAll()
+        except Exception:
+            log.debugWarning("A11y Task Recorder say-all hold check failed", exc_info=True)
+
+    def _holdSayAll(self):
+        try:
+            section = config.conf["virtualBuffers"]
+            if self._sayAllSaved is None:
+                self._sayAllSaved = bool(section["autoSayAllOnPageLoad"])
+                section["autoSayAllOnPageLoad"] = False
+            self._sayAllToken += 1
+            log.debug("A11y Task Recorder say-all: held (participant value %s, token %d)" % (self._sayAllSaved, self._sayAllToken))
+            core.callLater(SAY_ALL_HOLD_MAX_MS, self._releaseSayAll, self._sayAllToken)
+        except Exception:
+            log.debugWarning("A11y Task Recorder say-all hold failed", exc_info=True)
+
+    def _releaseSayAll(self, token=None):
+        """Give the participant's own setting back; a later hold (newer token) keeps it held."""
+        if self._sayAllSaved is None or (token is not None and token != self._sayAllToken):
+            log.debug("A11y Task Recorder say-all: release skipped (token %s, current %d, held %s)" % (token, self._sayAllToken, self._sayAllSaved is not None))
+            return
+        try:
+            config.conf["virtualBuffers"]["autoSayAllOnPageLoad"] = self._sayAllSaved
+            log.debug("A11y Task Recorder say-all: released to %s (token %s)" % (self._sayAllSaved, token))
+        except Exception:
+            log.debugWarning("A11y Task Recorder say-all restore failed", exc_info=True)
+        finally:
+            self._sayAllSaved = None
 
     @script(
         description="진행 중인 과업을 끝내고 결과 입력으로 넘어갑니다.",
