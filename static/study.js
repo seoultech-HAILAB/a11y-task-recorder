@@ -1035,5 +1035,6 @@ window.Study = (() => {
     document.addEventListener("focusin", onFocusIn);
     window.addEventListener("message", onFrameMessage);
   });
-  return { home, pausePolling };
+  // free-task.js (0.6.0) runs after every assigned task is finished.
+  return { home, pausePolling, tester: () => view.tester };
 })();

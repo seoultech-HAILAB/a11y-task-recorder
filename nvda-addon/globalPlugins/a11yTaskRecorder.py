@@ -786,21 +786,31 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         return "browser_ui"
 
     def _objectFrame(self, obj):
-        """"task" when the object sits inside an embedded frame (the study copy), else "recorder"."""
+        """"task" when the object sits inside an embedded frame (the study copy) or in a page
+        other than the recorder (a free task's own window, 0.6.0), else "recorder"."""
         frameRole = getattr(controlTypes.Role, "INTERNALFRAME", None)
+        documentRole = getattr(controlTypes.Role, "DOCUMENT", None)
         current = obj
+        outerDocument = None
         for _ in range(40):
             if current is None:
                 break
             try:
                 if frameRole is not None and current.role == frameRole:
                     return "task"
+                if documentRole is not None and current.role == documentRole:
+                    outerDocument = current
             except Exception:
                 pass
             try:
                 current = current.parent
             except Exception:
                 break
+        if outerDocument is not None:
+            # Chrome gives a document's URL as its value.
+            url = safeString(getattr(outerDocument, "value", ""), 300)
+            if url.startswith(("http://", "https://")) and not url.startswith(COLLECTOR_URL):
+                return "task"
         return "recorder"
 
     def _elementKey(self, element):

@@ -11,7 +11,7 @@
           message?.kind !== "a11y-study-command" ||
           typeof message.requestId !== "string" ||
           typeof message.sessionId !== "string" ||
-          !["prepare", "check", "start", "close", "status"].includes(message.action)) return;
+          !["prepare", "check", "start", "close", "status", "leave"].includes(message.action)) return;
       let result;
       try {
         result = await chrome.runtime.sendMessage({ kind: message.kind,

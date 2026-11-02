@@ -17,7 +17,8 @@ function background({ frameUrl = target } = {}) {
   const calls = [];
   const navigation = {};
   const sessions = { one: { id: 'one', status: 'draft', target_url: target, study: { preparation: [] } },
-    two: { id: 'two', status: 'draft', target_url: target, study: { preparation: [] } } };
+    two: { id: 'two', status: 'draft', target_url: target, study: { preparation: [] } },
+    free: { id: 'free', status: 'draft', target_url: 'https://www.example.com/a?q=1', study: { kind: 'free', preparation: [] } } };
   let active = null;
   let page = { ready: true, setup: { method: 'operator_automation', actions: [] } };
   const frames = [{ frameId: 0, parentFrameId: -1, url: 'http://127.0.0.1:8765/' },
@@ -35,6 +36,8 @@ function background({ frameUrl = target } = {}) {
         remove: async id => { calls.push(['remove', id]); },
         query: async () => [{ id: DASHBOARD, url: 'http://127.0.0.1:8765/', title: 'A11y Task Recorder' }],
         sendMessage: async (id, msg, options) => { calls.push(['page', id, msg, options]); return page; } },
+      windows: { create: async options => { calls.push(['window', options]); return { id: 90, tabs: [{ id: 91 }] }; },
+        update: async (id, options) => { calls.push(['window-update', id, options]); } },
       action: { setBadgeText: async () => {}, setBadgeBackgroundColor: async () => {}, setTitle: async () => {} },
       webNavigation: { getAllFrames: async ({ tabId }) => tabId === DASHBOARD ? frames : [],
         onCommitted: { addListener: fn => navigation.committed = fn }, onHistoryStateUpdated: { addListener: fn => navigation.history = fn },
@@ -175,7 +178,7 @@ test('manifest runs the content script in all frames and declares no browser com
   const manifest = JSON.parse(fs.readFileSync('browser-extension/manifest.json', 'utf8'));
   assert.equal(manifest.commands, undefined);
   assert.ok(manifest.content_scripts.every(entry => entry.all_frames === true));
-  assert.equal(manifest.version, '0.5.13');
+  assert.equal(manifest.version, '0.6.0');
   assert.equal(/chrome\.commands/.test(fs.readFileSync('browser-extension/background.js', 'utf8')), false);
 });
 
@@ -488,4 +491,25 @@ test('study frame refuses F5 and Ctrl+R instead of reloading the recorder (0.5.1
   assert.deepEqual(frame.posted.map(([data]) => data.action), ['reload', 'reload', 'reload']);
   const other = studyFrame({ ancestor: 'https://news.example' });
   assert.equal(other.key({ key: 'F5' }), false, 'frames outside the recorder keep the browser key');
+});
+
+test('free task (0.6.0): its own window, recorded there only, closed when the task ends', async () => {
+  const app = background();
+  assert.equal((await app.command('prepare', 'free')).ready, true);
+  assert.equal((await app.command('start', 'free')).started, true);
+  const plain = value => JSON.parse(JSON.stringify(value));
+  assert.deepEqual(plain(app.calls.find(c => c[0] === 'window')), ['window', { url: 'about:blank', focused: true, type: 'normal' }]);
+  assert.deepEqual(plain(app.calls.find(c => c[0] === 'update')), ['update', 91, { url: 'https://www.example.com/a?q=1' }]);
+  assert.equal(app.events().at(-1).payload.ui_mode, 'free_tab');
+  const before = app.events().length;
+  const event = { kind: 'recorder-event', event: { type: 'focus', url: 'https://www.example.com/a?q=1' } };
+  assert.equal((await app.message(event, { tab: { id: 91 }, frameId: 0, url: 'https://www.example.com/a?q=1' })).recorded, true);
+  assert.equal((await app.message(event, { tab: { id: DASHBOARD }, frameId: FRAME, url: target })).recorded, false);
+  assert.equal(app.events().length, before + 1);
+  assert.equal((await app.command('leave', 'free')).reason, 'session_not_finished');
+  app.sessions.free.status = 'answering';
+  assert.equal((await app.command('leave', 'free')).closed, true);
+  assert.ok(app.calls.some(c => c[0] === 'remove' && c[1] === 91));
+  assert.ok(app.calls.some(c => c[0] === 'window-update'));
+  assert.equal((await app.command('leave', 'one')).reason, 'invalid_command');
 });

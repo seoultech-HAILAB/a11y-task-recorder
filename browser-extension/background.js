@@ -42,6 +42,75 @@ function assignedUrlOk(value) {
   } catch { return false; }
 }
 
+// 0.6.0 free task: a site the tester chose, opened in its own window (real sites refuse to be
+// framed). Query and fragment are allowed; credentials and non-web schemes are not.
+function freeUrlOk(value) {
+  try {
+    const target = new URL(value);
+    return ["http:", "https:"].includes(target.protocol) && !target.username && !target.password &&
+      target.origin !== COLLECTOR;
+  } catch { return false; }
+}
+const isFree = session => session?.study?.kind === "free";
+
+async function freeCommand(message, session, state, dashboardTabId) {
+  if (!freeUrlOk(session.target_url)) return studyFailure("invalid_assignment_url");
+  if (message.action === "status") return { ok: true, sessionId: session.id, status: session.status, frame_title: "" };
+  if (message.action === "prepare" || message.action === "check") {
+    if (session.status !== "draft") return studyFailure("session_finished");
+    if (state?.sessionId !== session.id) {
+      if (state?.siteTabIds?.length) await closeSiteTabs(state);
+      state = { sessionId: session.id, tabId: dashboardTabId, mode: "free", siteTabIds: [], frameId: 0 };
+      await saveState(state);
+    }
+    return { ok: true, ready: true, sessionId: session.id };
+  }
+  if (state?.sessionId !== session.id || state.mode !== "free") return studyFailure("not_prepared");
+  if (message.action === "start") {
+    if (session.status !== "draft") return studyFailure("already_started");
+    // Recording starts first and the window opens blank, so the first page load is recorded.
+    await studyRequest(`/api/sessions/${session.id}/start`, { method: "POST", body: JSON.stringify({ study_ready: true }) });
+    await getActiveSession(true);
+    const win = await chrome.windows.create({ url: "about:blank", focused: true, type: "normal" });
+    const tabId = win.tabs?.[0]?.id;
+    state.siteTabIds = Number.isInteger(tabId) ? [tabId] : [];
+    state.siteWindowId = win.id;
+    await saveState(state);
+    if (Number.isInteger(tabId)) await chrome.tabs.update(tabId, { url: session.target_url });
+    try {
+      await studyRequest("/api/events", { method: "POST", body: JSON.stringify({
+        session_id: session.id, timestamp: new Date().toISOString(), source: "browser",
+        type: "page_ready", url: session.target_url, page_title: "",
+        payload: { kind: "study_recording_start", evidence_kind: "recorder_metadata",
+          ui_mode: "free_tab", tab_id: tabId, frame_id: 0 },
+      }) });
+    } catch { return { ok: true, ready: true, started: true, reason: "start_metadata_failed" }; }
+    return { ok: true, ready: true, started: true };
+  }
+  // "leave": the task has ended; the site window closes and the dashboard comes back for the result.
+  // "close": the result is saved.
+  if (message.action === "leave" || message.action === "close") {
+    if (message.action === "leave" && session.status !== "answering") return studyFailure("session_not_finished");
+    if (message.action === "close" && !["completed", "abandoned"].includes(session.status)) return studyFailure("session_not_finished");
+    await closeSiteTabs(state);
+    if (message.action === "close") await saveState(null);
+    else { state.siteTabIds = []; await saveState(state); }
+    try {
+      const dashboard = await chrome.tabs.get(state.tabId);
+      await chrome.windows.update(dashboard.windowId, { focused: true });
+      await chrome.tabs.update(state.tabId, { active: true });
+    } catch { /* the dashboard window is gone */ }
+    return { ok: true, closed: true, sessionId: session.id };
+  }
+  return studyFailure("invalid_command");
+}
+
+async function closeSiteTabs(state) {
+  for (const tabId of state.siteTabIds || []) {
+    try { await chrome.tabs.remove(tabId); } catch { /* already closed */ }
+  }
+}
+
 function sameOrigin(a, b) {
   try { return new URL(a).origin === new URL(b).origin; } catch { return false; }
 }
@@ -111,14 +180,20 @@ async function studyCommand(message, sender) {
     }
   } catch { return studyFailure("untrusted_origin"); }
   if (!/^[A-Za-z0-9_-]{1,100}$/.test(message.sessionId || "") ||
-      !["prepare", "check", "start", "close", "status"].includes(message.action)) return studyFailure("invalid_command");
+      !["prepare", "check", "start", "close", "status", "leave"].includes(message.action)) return studyFailure("invalid_command");
   const dashboardTabId = sender.tab?.id;
   if (!Number.isInteger(dashboardTabId)) return studyFailure("untrusted_origin");
   try {
     const { session } = await studyRequest(`/api/sessions/${message.sessionId}`);
     if (!session?.study) return studyFailure("not_assigned_task");
-    if (!assignedUrlOk(session.target_url)) return studyFailure("invalid_assignment_url");
     let state = await loadState();
+    if (isFree(session)) {
+      const { session: active } = await studyRequest("/api/active-session");
+      if (active && active.id !== session.id) return studyFailure("active_session_conflict");
+      return await freeCommand(message, session, state, dashboardTabId);
+    }
+    if (message.action === "leave") return studyFailure("invalid_command");
+    if (!assignedUrlOk(session.target_url)) return studyFailure("invalid_assignment_url");
     if (message.action === "status") {
       return { ok: true, sessionId: session.id, status: session.status,
         frame_title: state?.sessionId === session.id ? state.frameTitle || "" : "" };
@@ -241,6 +316,12 @@ async function updateBadge(session) {
 // else (other tabs, the dashboard document itself) is dropped (R6, 2026-10-11).
 async function allowedFrame(session, tabId, frameId) {
   if (!session?.study) return true;
+  // A free task records every frame of its own window's tabs (0.6.0), never the dashboard.
+  if (isFree(session)) {
+    const state = await loadState();
+    return Boolean(state && state.sessionId === session.id && state.mode === "free" &&
+      Number.isInteger(tabId) && (state.siteTabIds || []).includes(tabId));
+  }
   if (!Number.isInteger(tabId) || !Number.isInteger(frameId) || frameId === 0) return false;
   const state = await loadState();
   return Boolean(state && state.sessionId === session.id && state.tabId === tabId && state.frameId === frameId);
@@ -403,6 +484,14 @@ chrome.webNavigation.onHistoryStateUpdated.addListener((details) => {
       transition_type: details.transitionType,
     },
   }, details.tabId, details.frameId);
+});
+
+// A link that opens a new tab from the free-task site belongs to the task (0.6.0).
+chrome.tabs.onCreated?.addListener(async (tab) => {
+  const state = await loadState();
+  if (state?.mode !== "free" || !(state.siteTabIds || []).includes(tab.openerTabId)) return;
+  state.siteTabIds = [...state.siteTabIds, tab.id];
+  await saveState(state);
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {

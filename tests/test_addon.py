@@ -218,6 +218,11 @@ class SingleWindowAddonTests(unittest.TestCase):
         heading = SimpleNamespace(role="heading", parent=top)
         self.assertEqual("task", self.plugin._objectFrame(link))
         self.assertEqual("recorder", self.plugin._objectFrame(heading))
+        # 0.6.0 free task: a page in its own window is the task; the recorder page by its URL is not.
+        site = SimpleNamespace(role="document", parent=None, value="https://www.example.com/shop?q=1")
+        self.assertEqual("task", self.plugin._objectFrame(SimpleNamespace(role="link", parent=site)))
+        recorder = SimpleNamespace(role="document", parent=None, value="http://127.0.0.1:8765/?tester=T01")
+        self.assertEqual("recorder", self.plugin._objectFrame(SimpleNamespace(role="button", parent=recorder)))
 
     def test_end_gesture_syncs_focus_to_the_browse_cursor_first(self):
         # Windows 10/29: 과업으로 돌아가기 went to the last system focus, not where the participant read.

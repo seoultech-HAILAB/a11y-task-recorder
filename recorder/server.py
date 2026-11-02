@@ -27,6 +27,7 @@ from recorder.signals import ANNOUNCE_MODE, SignalBoard
 from recorder.study import ADVANCING_OUTCOMES, STUDY_OUTCOMES, load_catalog, validate_setup
 from recorder.attempts import AttemptsMixin, aborted_count, attempts_csv
 from recorder.remote_catalog import RemoteCatalog
+from recorder.free_task import FREE_KIND, FreeTaskMixin
 from recorder.site_check import failure_count, failure_line, preparation_csv
 from recorder.study_flow import StudyFlowMixin
 from recorder.upload import UploadManager
@@ -54,7 +55,7 @@ SESSION_FIELDS = {
 }
 
 
-class RecorderStore(StudyFlowMixin, AttemptsMixin):
+class RecorderStore(StudyFlowMixin, AttemptsMixin, FreeTaskMixin):
     def __init__(self, db_path: Path):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -669,9 +670,10 @@ class RecorderStore(StudyFlowMixin, AttemptsMixin):
                         validate_setup(study_setup)
                     except ValueError as error:
                         raise ApiError(HTTPStatus.BAD_REQUEST, "과업 준비 기록이 올바르지 않습니다.") from error
+                # A free task (0.6.0) is outside the catalog order.
                 progress = self._study_progress(connection, self._study_catalog(connection), study["tester"])
                 current = next((task for task in progress["tasks"] if task["order"] == progress["current_order"]), None)
-                if current is None or current["session_id"] != session_id:
+                if study.get("kind") != FREE_KIND and (current is None or current["session_id"] != session_id):
                     raise ApiError(HTTPStatus.CONFLICT, "현재 배정 과업만 시작할 수 있습니다.")
             active = connection.execute(
                 "SELECT id, title FROM sessions WHERE status = 'active' AND id != ? LIMIT 1",
@@ -1962,6 +1964,10 @@ class RecorderHandler(BaseHTTPRequestHandler):
         match = re.fullmatch(r"/api/study/([^/]+)/redo", path)
         if match:
             self._json({"session": self.server.store.redo_saved_task(match.group(1), data)})
+            return
+        match = re.fullmatch(r"/api/study/([^/]+)/free", path)
+        if match:
+            self._json({"session": self.server.store.create_free_task(match.group(1), data)}, HTTPStatus.CREATED)
             return
         match = re.fullmatch(r"/api/study/([^/]+)/(prepare|retry)", path)
         if match:

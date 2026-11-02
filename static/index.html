@@ -148,6 +148,29 @@
           <p>참여해 주셔서 감사합니다.</p>
           <button id="study-practice-complete" type="button" class="button quiet" hidden>연습 다시 하기</button>
           <button type="button" class="button quiet" data-action="export-package">결과 패키지 만들기 (담당자용)</button>
+          <section id="study-free" aria-labelledby="study-free-heading">
+            <h3 id="study-free-heading" tabindex="-1">자유 과업 (선택)</h3>
+            <p id="study-free-guide">평소 쓰는 사이트에서 하고 싶은 일을 하나 정해 해 볼 수 있습니다. 하지 않아도 됩니다. 사이트는 새 창으로 열리고, 그 창에서 한 일을 기록합니다. 로그인, 결제, 개인 정보 입력은 하지 마세요. 끝낼 때는 연습 때처럼 과업을 끝내면 됩니다.</p>
+            <form id="study-free-form">
+              <label for="study-free-url">사이트 주소</label>
+              <input id="study-free-url" type="text" inputmode="url" autocomplete="off" spellcheck="false">
+              <label for="study-free-goal">하려는 일</label>
+              <input id="study-free-goal" type="text" autocomplete="off">
+              <button id="study-free-start" type="submit" class="button">자유 과업 시작</button>
+            </form>
+            <form id="study-free-result" hidden>
+              <h3 id="study-free-result-heading" tabindex="-1">자유 과업 결과</h3>
+              <fieldset>
+                <legend>하려던 일을 했나요?</legend>
+                <label><input type="radio" name="study-free-done" value="completed"> 했습니다</label>
+                <label><input type="radio" name="study-free-done" value="blocked"> 못 했습니다</label>
+              </fieldset>
+              <label for="study-free-note">하고 싶은 말 (선택)</label>
+              <input id="study-free-note" type="text" autocomplete="off">
+              <button id="study-free-save" type="submit" class="button">저장</button>
+            </form>
+            <p id="study-free-alert" class="study-message error" role="alert"></p>
+          </section>
         </section>
         <span id="study-page-end" class="focus-trap" tabindex="0" aria-hidden="true"></span>
       </section>
@@ -513,6 +536,7 @@
     </footer>
 
     <script src="/study.js"></script>
+    <script src="/free-task.js"></script>
     <script src="/app.js"></script>
   </body>
 </html>
