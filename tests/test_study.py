@@ -106,6 +106,9 @@ class StudyTests(unittest.TestCase):
                 self.store.update_session(session["id"], data)
         updated = self.store.update_session(session["id"], {"environment_merge": {"nvda_version": "test"}})
         self.assertEqual("test", updated["environment"]["nvda_version"])
+        # 0.5.13: when NVDA was last started (silent quick navigation came after long NVDA runs).
+        updated = self.store.update_session(session["id"], {"environment_merge": {"nvda_started_at": "2026-10-31T12:00:00.000Z"}})
+        self.assertEqual(("test", "2026-10-31T12:00:00.000Z"), (updated["environment"]["nvda_version"], updated["environment"]["nvda_started_at"]))
         updated = self.store.update_session(session["id"], {"notes": "operator observation"})
         self.assertEqual("operator observation", updated["notes"])
         self.catalog["testers"][0]["tasks"][0]["task_id"] = "replacement"

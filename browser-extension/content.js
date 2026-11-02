@@ -61,8 +61,10 @@
     // In the recorder's study frame, Alt+Left and Alt+Home go to the recorder: the browser's own
     // back walks the whole tab history (earlier tasks, the recorder page) and its home page
     // replaces the recorder. Pages outside the recorder keep the browser keys.
+    // 0.5.13: F5 and Ctrl+R too. With NVDA's browse mode lost, NVDA+F5 reached the browser as F5,
+    // reloaded the recorder page, and the task ended (Windows 10/31).
     window.addEventListener("keydown", (event) => {
-      const action = siteKey(event);
+      const action = siteKey(event) || (reloadKey(event) ? "reload" : "");
       if (!action || window.parent !== window.top ||
           window.location.ancestorOrigins?.[0] !== "http://127.0.0.1:8765") return;
       event.preventDefault();
@@ -75,6 +77,9 @@
     if ((event.altKey && event.key === "ArrowLeft") || event.key === "BrowserBack") return "back";
     if ((event.altKey && event.key === "Home") || event.key === "BrowserHome") return "start";
     return "";
+  }
+  function reloadKey(event) {
+    return event.key === "F5" || event.key === "BrowserRefresh" || ((event.ctrlKey || event.metaKey) && /^r$/i.test(event.key));
   }
   function historyBack(nav, startKey) {
     const start = nav?.entries().find((entry) => entry.key === startKey);

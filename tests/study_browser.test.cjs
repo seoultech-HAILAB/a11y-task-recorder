@@ -26,7 +26,7 @@ function background({ frameUrl = target } = {}) {
   const context = vm.createContext({ URL, Date, Map, Promise,
     setTimeout: fn => fn(), navigator: { userAgent: 'Chrome/151' },
     chrome: { runtime: { id: 'extension', onMessage: { addListener: fn => listeners.push(fn) },
-      onInstalled: listener, getManifest: () => ({ version: '0.5.12' }) },
+      onInstalled: listener, getManifest: () => ({ version: '0.5.13' }) },
       storage: { session: { get: async key => ({ [key]: storage[key] }),
         set: async data => Object.assign(storage, data), remove: async key => delete storage[key] } },
       tabs: { onRemoved: listener, get: async id => { if (id !== DASHBOARD) throw Error('missing'); return { id, url: 'http://127.0.0.1:8765/' }; },
@@ -175,7 +175,7 @@ test('manifest runs the content script in all frames and declares no browser com
   const manifest = JSON.parse(fs.readFileSync('browser-extension/manifest.json', 'utf8'));
   assert.equal(manifest.commands, undefined);
   assert.ok(manifest.content_scripts.every(entry => entry.all_frames === true));
-  assert.equal(manifest.version, '0.5.12');
+  assert.equal(manifest.version, '0.5.13');
   assert.equal(/chrome\.commands/.test(fs.readFileSync('browser-extension/background.js', 'utf8')), false);
 });
 
@@ -253,7 +253,7 @@ function studyPage({ preparation = [], login = false, capture = true, url = targ
 }
 
 // A partner's test copy (SNC, http only, no /s/<id>/ path, no capture meta) is ready once the
-// assigned URL has loaded; our own copies keep the https and capture-meta rules.
+// assigned URL has loaded; hosted copies also accept HTTP(S) but still require capture meta.
 test('a partner test copy over http is ready at its assigned URL without a capture meta', async () => {
   const partner = 'http://partner.example/koref/web/user/';
   const page = studyPage({ url: partner, assigned: partner, capture: false });
@@ -265,20 +265,48 @@ test('a partner test copy over http is ready at its assigned URL without a captu
   assert.equal((await studyPage({ url: `${partner}other.do`, assigned: partner, capture: false }).run()).reason, 'wrong_url');
   assert.equal((await studyPage({ url: partner, assigned: partner, capture: false, preparation: ['cart precondition'] }).run()).reason,
     'preparation_scope_mismatch');
-  const plainCopy = 'http://study.example/s/0123456789ab/index.html';
-  assert.equal((await studyPage({ url: plainCopy, assigned: plainCopy }).run()).reason, 'wrong_url');
 });
 
-test('background accepts a partner test copy over http as the assigned URL, still not our copies over http', async () => {
+test('background accepts a partner test copy over http as the assigned URL', async () => {
   const partner = 'http://partner.example/koref/web/user/';
   const app = background({ frameUrl: partner });
   app.sessions.one.target_url = partner;
   const result = await app.command('prepare');
   assert.equal(result.ready, true);
   assert.equal(result.frameId, FRAME);
-  for (const bad of [`${partner}?x=1`, `${partner}#top`, 'http://user:pw@partner.example/koref/', 'http://study.example/s/0123456789ab/index.html', 'ftp://partner.example/']) {
+  for (const bad of [`${partner}?x=1`, `${partner}#top`, 'http://user:pw@partner.example/koref/', 'ftp://partner.example/']) {
     app.sessions.two.target_url = bad;
     assert.equal((await app.command('prepare', 'two')).reason, 'invalid_assignment_url', bad);
+  }
+});
+
+test('catalog HTTP hosted copies pass background preparation and study-page inspection', async () => {
+  for (const copy of [
+    'http://copies.fixture.test/s/0123456789ab/index.html',
+    'http://copies.fixture.test:8080/s/0123456789ab/p/0123456789abcdef.html',
+    'https://copies.fixture.test/s/0123456789ab/p/0123456789abcdef.html',
+  ]) {
+    const app = background({ frameUrl: copy });
+    app.sessions.one.target_url = copy;
+    const prepared = await app.command('prepare');
+    assert.equal(prepared.ready, true);
+    assert.equal(prepared.frameId, FRAME);
+    const inspected = await studyPage({ url: copy, assigned: copy }).run();
+    assert.equal(inspected.ready, true);
+    assert.equal(inspected.setup.actions.length, 0);
+    assert.equal(inspected.setup.excluded_from_participant_recording, true);
+    assert.equal((await studyPage({ url: copy, assigned: copy, capture: false }).run()).reason, 'capture_missing');
+    assert.equal((await studyPage({ url: copy.replace('copies.fixture.test', 'other.fixture.test'), assigned: copy }).run()).reason, 'wrong_url');
+  }
+});
+
+test('HTTP hosted copies still reject credentials, query, fragment and unsupported schemes in both layers', async () => {
+  const copy = 'http://copies.fixture.test/s/0123456789ab/p/0123456789abcdef.html';
+  for (const invalid of [copy + '?query=fixture', copy + '#section', copy.replace('http://', 'http://user:password@'), copy.replace('http:', 'ftp:')]) {
+    const app = background({ frameUrl: invalid });
+    app.sessions.one.target_url = invalid;
+    assert.equal((await app.command('prepare')).reason, 'invalid_assignment_url');
+    assert.equal((await studyPage({ url: invalid, assigned: invalid }).run()).reason, 'wrong_url');
   }
 });
 
@@ -448,4 +476,16 @@ test('in the recorder frame only, the page reads the cookie consent as given', (
   const doc = run({ inFrame: true, origin: 'http://127.0.0.1:8765' });
   doc.cookie = 'x=1; path=/';
   assert.equal(doc.cookie, 'x=1; isCookieAgree=1', 'the page still writes its own cookies');
+});
+
+test('study frame refuses F5 and Ctrl+R instead of reloading the recorder (0.5.13)', () => {
+  // NVDA+F5 reached the browser as F5 when browse mode was lost, and the reload ended the task (Windows 10/31).
+  const frame = studyFrame();
+  assert.equal(frame.key({ key: 'F5' }), true);
+  assert.equal(frame.key({ key: 'r', ctrlKey: true }), true);
+  assert.equal(frame.key({ key: 'BrowserRefresh' }), true);
+  assert.equal(frame.key({ key: 'r' }), false, 'a plain r stays with the site and NVDA');
+  assert.deepEqual(frame.posted.map(([data]) => data.action), ['reload', 'reload', 'reload']);
+  const other = studyFrame({ ancestor: 'https://news.example' });
+  assert.equal(other.key({ key: 'F5' }), false, 'frames outside the recorder keep the browser key');
 });

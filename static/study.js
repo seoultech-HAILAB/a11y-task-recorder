@@ -34,7 +34,7 @@ window.Study = (() => {
   const siteUnreachable = label => `사이트에 접속할 수 없습니다${label ? `(${label})` : ""}. 과업 시작을 다시 누르거나 연구진에게 알려 주세요.`;
   const FRAME_TITLE = "과업 사이트";
   const view = { tester: null, testerIds: [], plan: null, session: null, ready: false, busy: false, timer: null, opened: false,
-    pending: new Map(), lastPoll: 0, checking: false, signalSeq: 0, practice: null,
+    pending: new Map(), lastPoll: 0, checking: false, signalSeq: null, practice: null,
     timeLimitHandled: null, lastTitlePoll: 0, frameTitle: "", siteError: false,
     // The site of a prepared task loads in the background (0.5.0); a newer preparation or the
     // practice bumps loadToken so an older load never reports into it.
@@ -221,10 +221,15 @@ window.Study = (() => {
       }
     }, 1000);
   }
+  // 0.5.13: a page that was just (re)loaded starts after the signals already sent (home() takes
+  // the sequence first). From 0 it replayed them: after a reload during a task, the earlier
+  // NVDA+Ctrl+E ended the task again 0.66 s later (Windows 10/31).
   async function pollSignals() {
     let data;
-    try { data = await api(`/signals?after=${view.signalSeq}`); } catch { return; }
+    const first = view.signalSeq === null;
+    try { data = await api(`/signals?after=${first ? Number.MAX_SAFE_INTEGER : view.signalSeq}`); } catch { return; }
     view.signalSeq = data.seq;
+    if (first) return;
     for (const signal of data.signals) await handleSignal(signal);
   }
   async function handleSignal(signal) {
@@ -246,6 +251,8 @@ window.Study = (() => {
     stopPolling();
     showView("study");
     try {
+      // 0.5.13: start after the signals already sent (see pollSignals).
+      if (view.signalSeq === null) view.signalSeq = (await api(`/signals?after=${Number.MAX_SAFE_INTEGER}`)).seq;
       const index = await api("/study");
       view.testerIds = index.testers.map(t => t.id);
       // ?change-tester=1 (researcher only) shows the number field instead of reopening the remembered tester.
@@ -683,7 +690,17 @@ window.Study = (() => {
     finished.catch(() => {});
     return true;
   }
+  // 0.5.13: a reload during a task is refused (F5, Ctrl+R; NVDA+F5 reaches the browser as F5 when
+  // NVDA has lost browse mode, Windows 10/31). Outside a task the browser keeps it.
+  function reloadKey(event) {
+    return event.key === "F5" || event.key === "BrowserRefresh" || ((event.ctrlKey || event.metaKey) && /^r$/i.test(event.key));
+  }
+  function reloadRefused(trigger) {
+    if (!view.practice) logStudyEvent("site_reload_refused", { trigger });
+    announce("과업 중에는 새로 고침되지 않습니다.");
+  }
   function onSiteKey(event, trigger) {
+    if (reloadKey(event)) { if (phase() === "active" || view.practice?.phase === "active") { event.preventDefault(); reloadRefused(trigger); } return; }
     const action = siteKey(event);
     if (!action || el("study-view").hidden) return;
     // Outside a task the keys do nothing: the browser's back or home page would leave the recorder.
@@ -726,6 +743,7 @@ window.Study = (() => {
     if (!frame || event.source !== frame.contentWindow || typeof event.data?.kind !== "string") return;
     const data = event.data;
     if (data.kind === "a11y-study-site-key" && ["back", "start"].includes(data.action)) siteCommand(data.action, "site_key");
+    else if (data.kind === "a11y-study-site-key" && data.action === "reload") { if (phase() === "active") reloadRefused("site_key"); }
     else if (data.kind === "a11y-study-site-entry" && phase() === "active") { view.siteStartKey ??= (data.key || null); endReturning(); }
     else if (data.kind === "a11y-study-site-back" && view.pendingBack) {
       const { trigger } = view.pendingBack;

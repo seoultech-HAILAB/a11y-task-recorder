@@ -595,7 +595,7 @@ class RecorderStore(StudyFlowMixin, AttemptsMixin):
         if session.get("study"):
             if set(data) - {"environment_merge", "notes"}:
                 raise ApiError(HTTPStatus.CONFLICT, "배정 과업 정보는 변경할 수 없습니다.")
-            allowed_environment = {"nvda_version", "nvda_addon_version", "synthesizer", "speech_rate", "browser", "browser_extension_version", "os", "python_version", "speech_mode"}
+            allowed_environment = {"nvda_version", "nvda_addon_version", "nvda_started_at", "synthesizer", "speech_rate", "browser", "browser_extension_version", "os", "python_version", "speech_mode"}
             environment = data.get("environment_merge", {})
             if not isinstance(environment, dict) or set(environment) - allowed_environment:
                 raise ApiError(HTTPStatus.BAD_REQUEST, "허용되지 않은 환경 정보입니다.")

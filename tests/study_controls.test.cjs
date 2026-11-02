@@ -226,3 +226,15 @@ test('과업으로 돌아가기 keeps its button until the site has focus, so fo
   assert.match(script, /"a11y-study-site-entry" && phase\(\) === "active"\) \{ view\.siteStartKey \?\?= \(data\.key \|\| null\); endReturning\(\); \}/);
   assert.match(script, /function practiceReturn\(\) \{ message\(""\); view\.practice\.phase = "active"; beginReturning\(\);/);
 });
+
+test('a reloaded page does not replay earlier signals, and a task refuses reload keys (0.5.13)', () => {
+  // After a reload during a task the earlier NVDA+Ctrl+E ended the task again 0.66 s later (Windows 10/31).
+  assert.match(script, /signalSeq: null,/);
+  const poll = script.match(/async function pollSignals\(\) \{[\s\S]*?\n  \}\n/)[0];
+  assert.ok(poll.indexOf('if (first) return;') < poll.indexOf('handleSignal'), 'the first poll only takes the sequence');
+  assert.match(script, /if \(view\.signalSeq === null\) view\.signalSeq = \(await api\(/);
+  const keys = script.match(/function onSiteKey\(event, trigger\) \{[\s\S]*?\n  \}\n/)[0];
+  assert.ok(keys.indexOf('reloadKey(event)') < keys.indexOf('siteKey(event)'));
+  assert.match(keys, /phase\(\) === "active" \|\| view\.practice\?\.phase === "active"\) \{ event\.preventDefault\(\); reloadRefused\(trigger\);/);
+  assert.match(script, /data\.action === "reload"\) \{ if \(phase\(\) === "active"\) reloadRefused\("site_key"\); \}/);
+});

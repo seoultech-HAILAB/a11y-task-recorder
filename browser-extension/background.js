@@ -29,19 +29,16 @@ async function studyRequest(path, options = {}) {
   return body;
 }
 
-// Study copies are HTTPS; plain http is accepted only on loopback for local rehearsals.
+// Both hosted and partner copies accept HTTP(S); assignments come from the local catalog.
 function studyOriginOk(target) {
-  return target.protocol === "https:" ||
-    (target.protocol === "http:" && ["127.0.0.1", "localhost"].includes(target.hostname));
+  return ["http:", "https:"].includes(target.protocol);
 }
-// A partner's test copy (0.4.2, catalog upload_url) is any other plain http(s) URL without
-// credentials, query or fragment; the frame must then show exactly that URL (study-page.js).
+// Credentials, query and fragment remain forbidden. The frame must show the exact
+// assigned URL; hosted /s/ copies additionally require capture metadata (study-page.js).
 function assignedUrlOk(value) {
   try {
     const target = new URL(value);
-    if (!["http:", "https:"].includes(target.protocol) || target.username || target.password || target.search || target.hash) return false;
-    const hostedCopy = /^\/s\/[a-f0-9]{12}\/(?:index\.html|p\/[a-f0-9]{16}\.html)$/.test(target.pathname);
-    return !hostedCopy || studyOriginOk(target);
+    return studyOriginOk(target) && !target.username && !target.password && !target.search && !target.hash;
   } catch { return false; }
 }
 

@@ -5,13 +5,12 @@
   function inspect(message) {
     const assigned = new URL(message.targetUrl);
     const current = new URL(window.location.href);
-    const loopback = assigned.protocol === "http:" && ["127.0.0.1", "localhost"].includes(assigned.hostname);
-    // Our hosted copies live under /s/<id>/ over https (loopback http in rehearsals). Any other
-    // http(s) start URL is a partner's test copy (catalog upload_url, 0.4.2): it has no capture
-    // meta and no preparation steps, and the readiness check is the assigned URL having loaded.
+    // Catalog-assigned hosted /s/ copies accept HTTP(S) and require capture metadata.
+    // Other HTTP(S) start URLs are partner copies: no capture meta or preparation
+    // steps are required, but the exact assigned URL must have loaded.
     const hostedCopy = /^\/s\/[a-f0-9]{12}\/(?:index\.html|p\/[a-f0-9]{16}\.html)$/.test(assigned.pathname);
     if (!["http:", "https:"].includes(assigned.protocol) ||
-        (hostedCopy && assigned.protocol !== "https:" && !loopback) ||
+        assigned.username || assigned.password || assigned.search || assigned.hash ||
         (current.href !== assigned.href && current.href !== `${assigned.origin}/access`)) {
       return { ready: false, reason: "wrong_url" };
     }

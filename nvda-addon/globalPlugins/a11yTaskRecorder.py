@@ -22,6 +22,7 @@ import queueHandler
 import synthDriverHandler
 import textInfos
 import tones
+import treeInterceptorHandler
 import ui
 from logHandler import log
 from scriptHandler import script
@@ -40,6 +41,11 @@ SIGNAL_SOURCE = "nvda_addon"
 SITE_OPENING_BUTTONS = ("과업 시작",)
 SAY_ALL_RELEASE_AFTER_SITE_FOCUS_MS = 2000
 SAY_ALL_HOLD_MAX_MS = 40000
+# 0.5.13: a site control that takes focus is checked again once NVDA has handled the focus itself.
+BROWSE_CHECK_MS = 300
+BROWSE_READY_RETRIES = 5
+# Focus mode belongs to these; a letter typed there is text, not a quick navigation key.
+EDITABLE_ROLES = ("EDITABLETEXT", "PASSWORDEDIT", "COMBOBOX", "LIST", "SPINBUTTON", "SLIDER", "TERMINAL")
 ADDON_VERSION = addonHandler.getCodeAddon().manifest["version"]
 # Named keys stay "key" even when NVDA shows them as one localized character ("탭").
 NAMED_UNBOUND_KEYS = {
@@ -108,6 +114,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         self._activeSession = None
         self._activeTitle = ""
         self._environmentReportedSession = None
+        # 0.5.13: add-ons load when NVDA starts. Silent quick navigation came only after NVDA had run a
+        # while (Windows 10/31), so each session carries when NVDA was last started.
+        self._nvdaStartedAt = utcNow()
         self._sessionLock = threading.Lock()
         self._speechLock = threading.RLock()
         self._activeSpeech = None
@@ -159,6 +168,11 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         except Exception:
             log.debugWarning("A11y Task Recorder say-all release scheduling failed", exc_info=True)
         try:
+            if self._objectFrame(obj) == "task" and not self._takesText(obj):
+                core.callLater(BROWSE_CHECK_MS, self._ensureBrowseMode, obj, 0)
+        except Exception:
+            log.debugWarning("A11y Task Recorder browse mode check scheduling failed", exc_info=True)
+        try:
             if self._shouldRecord(obj):
                 self._enqueue(
                     {
@@ -171,6 +185,70 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         except Exception:
             log.debugWarning("A11y Task Recorder focus capture failed", exc_info=True)
         nextHandler()
+
+    def _takesText(self, obj):
+        roles = {getattr(controlTypes.Role, name, None) for name in EDITABLE_ROLES} - {None}
+        editable = getattr(controlTypes.State, "EDITABLE", None)
+        return getattr(obj, "role", None) in roles or (editable is not None and editable in getattr(obj, "states", ()))
+
+    def _browseState(self, obj):
+        """How NVDA treats keys at obj: "browse" (quick navigation works), "pass_through" (focus
+        mode), "buffer_not_ready" or "no_buffer" (both send the keys to the page as text)."""
+        interceptor = getattr(obj, "treeInterceptor", None)
+        if interceptor is None:
+            return "no_buffer"
+        if not getattr(interceptor, "isReady", True):
+            return "buffer_not_ready"
+        return "pass_through" if getattr(interceptor, "passThrough", False) else "browse"
+
+    def _ensureBrowseMode(self, obj, attempt=0):
+        """Put browse mode back when a site link or button took focus without it (0.5.13).
+
+        After a page change in the study frame, or 과업으로 돌아가기, NVDA read the focused link
+        ("링크 초점 맞춰짐") but H, K and Ctrl+Home said nothing until the next page: NVDA ran no
+        script for them and echoed them as typed text (Windows 10/31, 4 stretches, 27 keys, none
+        ended by waiting). Only a non-editable control in the site is touched, as NVDA's own
+        "automatic focus mode for focus changes" does. Focus mode the participant turned on with
+        NVDA+Space is left alone and only logged. Every intervention is logged.
+        """
+        try:
+            if api.getFocusObject() is not obj:
+                return
+            state = self._browseState(obj)
+            if state == "browse":
+                return
+            interceptor = getattr(obj, "treeInterceptor", None)
+            if state == "buffer_not_ready" and attempt < BROWSE_READY_RETRIES:
+                core.callLater(BROWSE_CHECK_MS, self._ensureBrowseMode, obj, attempt + 1)
+                return
+            action = ""
+            if state == "pass_through":
+                if getattr(interceptor, "disableAutoPassThrough", False):
+                    action = "kept_user_focus_mode"
+                elif not config.conf["virtualBuffers"]["autoPassThroughOnFocusChange"]:
+                    action = "kept_setting"
+                elif interceptor.shouldPassThrough(obj, reason=controlTypes.OutputReason.FOCUS):
+                    return
+                else:
+                    interceptor.passThrough = False
+                    action = "browse_mode_on"
+            else:
+                if state == "buffer_not_ready":
+                    treeInterceptorHandler.killTreeInterceptor(interceptor)
+                treeInterceptorHandler.update(obj)
+                action = "buffer_rebuilt"
+            after = self._browseState(obj)
+            log.debug("A11y Task Recorder browse mode: %s -> %s (%s, attempt %d)" % (state, after, action, attempt))
+            if self._shouldRecord(obj):
+                self._enqueue({
+                    "type": "browse_mode_check",
+                    "payload": {"kind": "frame_browse_mode", "state": state, "action": action,
+                                "state_after": after, "waited_ms": BROWSE_CHECK_MS * (attempt + 1)},
+                    "element": self._objectContext(obj),
+                    "page_title": self._foregroundTitle(),
+                })
+        except Exception:
+            log.debugWarning("A11y Task Recorder browse mode check failed", exc_info=True)
 
     def _layoutFreeGesture(self, identifiers):
         """Return the "kb:<keys>" form; NVDA lists "kb(desktop):<keys>" first."""
@@ -260,7 +338,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
     def _completeInput(self, event):
         """Main thread: add the element and window title to an input captured on the hook thread."""
         try:
-            event["element"] = self._inputContext(api.getFocusObject())
+            focus = api.getFocusObject()
+            # 0.5.13: whether this key could act as quick navigation (frame-buffer-silence rule).
+            event["payload"]["browse_state"] = self._browseState(focus)
+            event["element"] = self._inputContext(focus)
             event["page_title"] = self._foregroundTitle()
         except Exception:
             log.debugWarning("A11y Task Recorder input element capture failed", exc_info=True)
@@ -793,6 +874,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         environment = {
             "nvda_version": safeString(getattr(buildVersion, "version", ""), 80),
             "nvda_addon_version": safeString(ADDON_VERSION, 80),
+            "nvda_started_at": getattr(self, "_nvdaStartedAt", ""),
         }
         try:
             synth = synthDriverHandler.getSynth()

@@ -374,3 +374,98 @@ class SayAllHoldTests(unittest.TestCase):
         self.plugin._holdSayAll()
         self.plugin._releaseSayAll()
         self.assertTrue(self.settings["virtualBuffers"]["autoSayAllOnPageLoad"])
+
+
+class BrowseModeRestoreTests(unittest.TestCase):
+    """0.5.13: H and K were silent after a page change in the frame (Windows 10/31, 27 keys)."""
+
+    def setUp(self):
+        cls = collector_class()
+        self.plugin = cls.__new__(cls)
+        self.plugin._sayAllSaved = None
+        self.later, self.events, self.handler = [], [], MagicMock()
+        self.settings = {"virtualBuffers": {"autoPassThroughOnFocusChange": True}}
+        Role = SimpleNamespace(LINK="link", BUTTON="button", EDITABLETEXT="edit", COMBOBOX="combo", LIST="list")
+        self.link = SimpleNamespace(role=Role.LINK, states=set(), treeInterceptor=None)
+        self.focus = self.link
+        self.plugin.event_gainFocus.__globals__.update({
+            "config": SimpleNamespace(conf=self.settings),
+            "core": SimpleNamespace(callLater=lambda ms, fn, *args: self.later.append((ms, fn, args))),
+            "api": SimpleNamespace(getFocusObject=lambda: self.focus),
+            "controlTypes": SimpleNamespace(Role=Role, State=SimpleNamespace(EDITABLE="editable"),
+                                            OutputReason=SimpleNamespace(FOCUS="focus")),
+            "treeInterceptorHandler": self.handler,
+            "BROWSE_CHECK_MS": 300, "BROWSE_READY_RETRIES": 5,
+            "EDITABLE_ROLES": ("EDITABLETEXT", "COMBOBOX", "LIST"),
+        })
+        self.frame = "task"
+        self.plugin._objectFrame = lambda obj: self.frame
+        self.plugin._shouldRecord = lambda obj: True
+        # Only the add-on's own browse mode lines; event_gainFocus also files the focus itself.
+        self.plugin._enqueue = lambda event: event["type"] == "browse_mode_check" and self.events.append(event)
+        self.plugin._objectContext = lambda obj: {"role": obj.role}
+        self.plugin._foregroundTitle = lambda: "수납 : 다이소몰"
+
+    def interceptor(self, **state):
+        values = {"isReady": True, "passThrough": False, "disableAutoPassThrough": False}
+        values.update(state)
+        return SimpleNamespace(shouldPassThrough=lambda obj, reason=None: False, **values)
+
+    def focus_and_wait(self, obj=None):
+        self.plugin.event_gainFocus(obj or self.link, lambda: None)
+        while self.later:
+            pending, self.later = self.later, []
+            for _, fn, args in pending:
+                fn(*args)
+
+    def test_a_site_link_left_in_focus_mode_goes_back_to_browse_mode(self):
+        self.link.treeInterceptor = self.interceptor(passThrough=True)
+        self.focus_and_wait()
+        self.assertFalse(self.link.treeInterceptor.passThrough)
+        self.assertEqual(("pass_through", "browse_mode_on", "browse"),
+                         tuple(self.events[0]["payload"][key] for key in ("state", "action", "state_after")))
+
+    def test_a_missing_or_stuck_buffer_is_rebuilt(self):
+        def rebuilt(obj):
+            obj.treeInterceptor = self.interceptor()
+        self.handler.update.side_effect = rebuilt
+        self.focus_and_wait()
+        self.assertEqual(("no_buffer", "buffer_rebuilt", "browse"),
+                         tuple(self.events[0]["payload"][key] for key in ("state", "action", "state_after")))
+        stuck = self.link.treeInterceptor = self.interceptor(isReady=False)
+        self.events.clear()
+        self.focus_and_wait()
+        self.handler.killTreeInterceptor.assert_called_once_with(stuck)
+        self.assertEqual(1800, self.events[0]["payload"]["waited_ms"], "a loading buffer gets 1.8 s first")
+
+    def test_browse_mode_focus_editable_fields_and_the_recorder_are_left_alone(self):
+        self.link.treeInterceptor = self.interceptor()
+        self.focus_and_wait()
+        field = SimpleNamespace(role="edit", states=set(), treeInterceptor=self.interceptor(passThrough=True))
+        self.focus = field
+        self.focus_and_wait(field)
+        self.frame, self.focus = "recorder", self.link
+        self.link.treeInterceptor = self.interceptor(passThrough=True)
+        self.focus_and_wait()
+        self.assertEqual([], self.events)
+        self.assertTrue(field.treeInterceptor.passThrough)
+        self.handler.update.assert_not_called()
+
+    def test_focus_mode_the_participant_chose_is_kept_and_logged(self):
+        self.link.treeInterceptor = self.interceptor(passThrough=True, disableAutoPassThrough=True)
+        self.focus_and_wait()
+        self.assertTrue(self.link.treeInterceptor.passThrough)
+        self.assertEqual("kept_user_focus_mode", self.events[0]["payload"]["action"])
+        self.link.treeInterceptor = self.interceptor(passThrough=True)
+        self.settings["virtualBuffers"]["autoPassThroughOnFocusChange"] = False
+        self.focus_and_wait()
+        self.assertEqual("kept_setting", self.events[1]["payload"]["action"])
+
+    def test_focus_that_moved_on_is_not_touched(self):
+        self.link.treeInterceptor = self.interceptor(passThrough=True)
+        self.plugin.event_gainFocus(self.link, lambda: None)
+        self.focus = SimpleNamespace(role="button", states=set(), treeInterceptor=None)
+        for _, fn, args in self.later:
+            fn(*args)
+        self.assertTrue(self.link.treeInterceptor.passThrough)
+        self.assertEqual([], self.events)
