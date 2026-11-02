@@ -42,7 +42,20 @@ def validate_setup(receipt: dict) -> dict:
 
 def load_catalog(path: Path) -> dict:
     """Allowlist participant fields before storing or exposing a catalog."""
-    raw = json.loads(path.read_text(encoding="utf-8"))
+    return parse_catalog(json.loads(path.read_text(encoding="utf-8")))
+
+
+def task_origins(catalog: dict) -> set:
+    """scheme://host[:port] of every start URL."""
+    origins = set()
+    for tester in catalog["testers"]:
+        for task in tester["tasks"]:
+            parts = urlsplit(task["start_url"])
+            origins.add("{}://{}".format(parts.scheme, parts.netloc))
+    return origins
+
+
+def parse_catalog(raw: dict) -> dict:
     if raw["schema_version"] != 1 or not raw["id"] or not raw["testers"]:
         raise ValueError("Invalid study catalog")
     catalog = {
@@ -50,6 +63,11 @@ def load_catalog(path: Path) -> dict:
         "source": {key: raw["source"][key] for key in SOURCE_FIELDS},
         "testers": [],
     }
+    # 0.6.0: a catalog the study server sends later carries a higher revision (the kit's is 0).
+    if "revision" in raw:
+        if type(raw["revision"]) is not int or not 0 <= raw["revision"] <= 1_000_000:
+            raise ValueError("Invalid catalog revision")
+        catalog["revision"] = raw["revision"]
     # Optional: where results go when tasks run on a site we do not host (e.g. a partner's test copies).
     if raw.get("upload_url"):
         upload_url = raw["upload_url"]

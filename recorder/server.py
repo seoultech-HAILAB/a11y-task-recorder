@@ -26,6 +26,7 @@ from recorder.common import ApiError, json_load, parse_capture_instant, parse_ti
 from recorder.signals import ANNOUNCE_MODE, SignalBoard
 from recorder.study import ADVANCING_OUTCOMES, STUDY_OUTCOMES, load_catalog, validate_setup
 from recorder.attempts import AttemptsMixin, aborted_count, attempts_csv
+from recorder.remote_catalog import RemoteCatalog
 from recorder.site_check import failure_count, failure_line, preparation_csv
 from recorder.study_flow import StudyFlowMixin
 from recorder.upload import UploadManager
@@ -58,6 +59,8 @@ class RecorderStore(StudyFlowMixin, AttemptsMixin):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.study_catalog_path = Path(__file__).with_name("study_catalog.json")
+        # Set by RecorderHTTPServer (0.6.0); applies a newer catalog from the study server.
+        self.remote_catalog: Optional[RemoteCatalog] = None
         self._schema_lock = threading.Lock()
         self.initialize()
 
@@ -287,6 +290,8 @@ class RecorderStore(StudyFlowMixin, AttemptsMixin):
     def _prepare_study(self, tester: str, retry_of: Optional[str] = None) -> Dict[str, Any]:
         with self.connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
+            if self.remote_catalog is not None:
+                self.remote_catalog.apply_pending(connection)
             catalog = self._study_catalog(connection)
             progress = self._study_progress(connection, catalog, tester)
             active = connection.execute("SELECT id FROM sessions WHERE status = 'active' LIMIT 1").fetchone()
@@ -335,7 +340,7 @@ class RecorderStore(StudyFlowMixin, AttemptsMixin):
         # "tabbed" opens the site in a new tab (0.3.x), "single_window" embeds it (0.4+).
         metadata.update({"catalog_id": catalog["id"], "assignment_id": task["id"],
                          "tester": tester, "total": progress["total"], "source": catalog["source"],
-                         "ui_mode": STUDY_UI_MODE})
+                         "catalog_revision": int(catalog.get("revision", 0)), "ui_mode": STUDY_UI_MODE})
         if redo_reason:
             metadata["redo_reason"] = redo_reason
         attempt = source["round"] + 1 if retry_of else 1
@@ -1788,6 +1793,8 @@ class RecorderHTTPServer(ThreadingHTTPServer):
         # Side channel to the study server; never blocks or fails a session (0.3.4).
         self.uploads = UploadManager(store)
         self.uploads.version = __version__
+        self.remote_catalog = RemoteCatalog(store, self.uploads)
+        store.remote_catalog = self.remote_catalog
 
     def handle_error(self, request, client_address):
         # 브라우저가 keep-alive 연결을 끊는 것은 정상 동작이므로 평가자가 보는
@@ -1879,7 +1886,7 @@ class RecorderHandler(BaseHTTPRequestHandler):
             self._json(self.server.store.get_study())
             return
         if path == "/api/uploads":
-            self._json({"uploads": self.server.uploads.status()})
+            self._json({"uploads": self.server.uploads.status(), "catalog": self.server.remote_catalog.status()})
             return
         if path == "/api/signals":
             after = int((query.get("after") or ["0"])[0] or 0)
@@ -2252,6 +2259,7 @@ def main() -> None:
     if args.catalog:
         server.store.study_catalog_path = args.catalog
     server.uploads.start_retry_loop()
+    server.remote_catalog.start_loop()
     url = "http://{}:{}".format(args.host, server.server_address[1])
     print("A11y Task Recorder: {}".format(url))
     print("데이터베이스: {}".format(args.db.resolve()))
