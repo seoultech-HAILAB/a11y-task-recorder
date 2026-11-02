@@ -178,7 +178,7 @@ test('manifest runs the content script in all frames and declares no browser com
   const manifest = JSON.parse(fs.readFileSync('browser-extension/manifest.json', 'utf8'));
   assert.equal(manifest.commands, undefined);
   assert.ok(manifest.content_scripts.every(entry => entry.all_frames === true));
-  assert.equal(manifest.version, '0.6.2');
+  assert.equal(manifest.version, '0.6.3');
   assert.equal(/chrome\.commands/.test(fs.readFileSync('browser-extension/background.js', 'utf8')), false);
 });
 
