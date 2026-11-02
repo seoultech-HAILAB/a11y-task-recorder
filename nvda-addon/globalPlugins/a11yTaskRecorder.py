@@ -9,6 +9,7 @@ import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
+from urllib.parse import urlsplit
 
 import addonHandler
 import api
@@ -337,6 +338,15 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
     def _completeInput(self, event):
         """Main thread: add the element and window title to an input captured on the hook thread."""
+        capturedSession = event.get("session_id")
+        if not capturedSession:
+            return  # Never let _enqueue bind an unassigned old key to a later task.
+        with self._sessionLock:
+            currentSession = self._activeSession
+        if capturedSession != currentSession:
+            event["payload"]["context_unavailable_reason"] = "session_changed_before_context"
+            self._enqueue(event)
+            return
         try:
             focus = api.getFocusObject()
             # 0.5.13: whether this key could act as quick navigation (frame-buffer-silence rule).
@@ -344,7 +354,17 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             event["element"] = self._inputContext(focus)
             event["page_title"] = self._foregroundTitle()
         except Exception:
+            event["payload"]["context_unavailable_reason"] = "context_read_failed"
             log.debugWarning("A11y Task Recorder input element capture failed", exc_info=True)
+        with self._sessionLock:
+            currentSession = self._activeSession
+        if capturedSession != currentSession:
+            # Polling may observe the new task while an accessibility read is in
+            # progress. Keep the original key but discard that ambiguous context.
+            event.pop("element", None)
+            event.pop("page_title", None)
+            event["payload"].pop("browse_state", None)
+            event["payload"]["context_unavailable_reason"] = "session_changed_during_context"
         self._enqueue(event)
 
     def _onSpeechQueued(self, speechSequence, priority=None, **kwargs):
@@ -410,14 +430,16 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
     def _onSpeechCanceled(self):
         try:
+            # Cancellation belongs to the speech already captured, even if focus
+            # has since moved into another application or browser controls.
+            canceledAt = utcNow()
+            self._finalizeSpeech(
+                speechEndTs=canceledAt,
+                interrupted=True,
+                endReason="speech_canceled",
+            )
             focus = api.getFocusObject()
             if self._shouldRecord(focus):
-                canceledAt = utcNow()
-                self._finalizeSpeech(
-                    speechEndTs=canceledAt,
-                    interrupted=True,
-                    endReason="speech_canceled",
-                )
                 self._enqueue(
                     {
                         "type": "speech_cancel",
@@ -687,7 +709,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         context = {}
         context["scope"] = self._objectScope(obj)
         if context["scope"] == "web_content":
-            context["frame"] = self._objectFrame(obj)
+            context.update(self._frameContext(obj))
         try:
             name = safeString(obj.name, 600)
             context["name"] = name
@@ -742,19 +764,24 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         object at the cursor is recorded, with the focus object's role and name kept beside it.
         """
         target, source = focus, "focus"
+        # An address bar or tab control must not inherit the last web page's
+        # virtual cursor. Fallback is only for web content or an unknown focus
+        # object (the Chrome/NVDA failure this fallback originally addressed).
+        mayFallback = (self._objectScope(focus) == "web_content" or
+                       getattr(focus, "role", None) == getattr(controlTypes.Role, "UNKNOWN", object()))
         try:
             interceptor = getattr(focus, "treeInterceptor", None)
-            if interceptor is None:
+            if interceptor is None and mayFallback:
                 caret = api.getCaretObject()
                 interceptor = caret if hasattr(caret, "rootNVDAObject") else None
-            if interceptor is not None and not getattr(interceptor, "passThrough", True):
+            if mayFallback and interceptor is not None and not getattr(interceptor, "passThrough", True):
                 atCursor = interceptor.makeTextInfo(textInfos.POSITION_CARET).NVDAObjectAtStart
                 if atCursor is not None:
                     target, source = atCursor, "browse_cursor"
         except Exception:
             log.debugWarning("A11y Task Recorder browse cursor read failed", exc_info=True)
         try:
-            if source == "focus" and self._objectScope(focus) == "browser_ui":
+            if source == "focus" and mayFallback and self._objectScope(focus) == "browser_ui":
                 navigator = api.getNavigatorObject()
                 if navigator is not None and self._objectScope(navigator) == "web_content":
                     target, source = navigator, "navigator"
@@ -786,19 +813,30 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         return "browser_ui"
 
     def _objectFrame(self, obj):
-        """"task" when the object sits inside an embedded frame (the study copy) or in a page
-        other than the recorder (a free task's own window, 0.6.0), else "recorder"."""
+        return self._frameContext(obj)["frame"]
+
+    def _frameContext(self, obj):
+        """Describe the observed document, without claiming standalone window ownership.
+
+        The extension owns free-task window routing, but the NVDA add-on cannot
+        establish that ownership from a URL alone. Preserve that distinction in
+        the export instead of presenting the inferred task label as verified.
+        """
         frameRole = getattr(controlTypes.Role, "INTERNALFRAME", None)
         documentRole = getattr(controlTypes.Role, "DOCUMENT", None)
         current = obj
         outerDocument = None
+        nearestDocument = None
+        embedded = False
         for _ in range(40):
             if current is None:
                 break
             try:
                 if frameRole is not None and current.role == frameRole:
-                    return "task"
+                    embedded = True
                 if documentRole is not None and current.role == documentRole:
+                    if nearestDocument is None:
+                        nearestDocument = current
                     outerDocument = current
             except Exception:
                 pass
@@ -806,31 +844,51 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
                 current = current.parent
             except Exception:
                 break
-        if outerDocument is not None:
-            url = self._documentUrl(outerDocument, obj)
-            if url.startswith(("http://", "https://")) and not url.startswith(COLLECTOR_URL):
-                return "task"
-        return "recorder"
+        url = self._documentUrl(nearestDocument or outerDocument, obj) if outerDocument is not None else ""
+        context = {"frame": "recorder", "frame_attribution": "document_url_unavailable"}
+        if url:
+            context["document_url"] = url
+        if embedded:
+            context.update(frame="task", frame_attribution="embedded_frame")
+        elif url:
+            candidate, collector = urlsplit(url), urlsplit(COLLECTOR_URL)
+            origin = lambda parts: (parts.scheme, parts.hostname, parts.port or (443 if parts.scheme == "https" else 80))
+            if origin(candidate) == origin(collector):
+                context["frame_attribution"] = "recorder_document_origin"
+            else:
+                context.update(frame="task", frame_attribution="url_only_unverified")
+        return context
 
     def _documentUrl(self, document, obj):
         """The page URL. NVDA hides a Chrome document's value (0.6.0 Windows 11/02: 116 of 117
         free-task inputs were filed as "recorder"), so the browse-mode buffer's identifier, which
         is the URL in Chromium, comes first and the raw IAccessible value second."""
+        def webUrl(value):
+            url = safeString(value, 2000)
+            try:
+                parts = urlsplit(url)
+                parts.port
+                return url if parts.scheme in {"http", "https"} and parts.hostname else ""
+            except (TypeError, ValueError):
+                return ""
+
         for source in (obj, document):
             try:
-                url = safeString(getattr(getattr(source, "treeInterceptor", None), "documentConstantIdentifier", ""), 300)
+                url = webUrl(getattr(getattr(source, "treeInterceptor", None), "documentConstantIdentifier", ""))
                 if url:
                     return url
             except Exception:
                 pass
         try:
-            return safeString(document.IAccessibleObject.accValue(document.IAccessibleChildID), 300)
+            url = webUrl(document.IAccessibleObject.accValue(document.IAccessibleChildID))
+            if url:
+                return url
         except Exception:
             pass
-        return safeString(getattr(document, "value", ""), 300)
+        return webUrl(getattr(document, "value", ""))
 
     def _elementKey(self, element):
-        return safeString(
+        identity = safeString(
             element.get("unique_id")
             or element.get("ia2_unique_id")
             or "{}|{}|{}".format(
@@ -840,6 +898,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             ),
             1000,
         )
+        # Identically named controls (and recycled accessibility IDs) on a new
+        # document must not merge into the previous document's speech episode.
+        return safeString(element.get("document_url") or "", 2000) + "|" + identity
 
     def _enqueue(self, event):
         if not event.get("session_id"):

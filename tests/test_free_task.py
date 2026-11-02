@@ -71,7 +71,7 @@ class FreeTaskTests(unittest.TestCase):
     def test_url_and_goal_are_checked(self):
         self.assertEqual("http://example.com/", free_url("http://example.com/"))
         for bad in ["", "ftp://example.com/", "https://user:pw@example.com/", "https://exa mple.com/",
-                    "http://127.0.0.1:8765/", "javascript:alert(1)"]:
+                    "http://127.0.0.1:8765/", "javascript:alert(1)", "https://[broken.fixture.test/"]:
             with self.subTest(bad), self.assertRaises(ApiError):
                 free_url(bad)
         self.finish_assigned()
@@ -79,6 +79,27 @@ class FreeTaskTests(unittest.TestCase):
             self.store.create_free_task("T01", {"url": "www.example.com", "goal": ""})
         with self.assertRaises(ApiError):
             self.store.create_free_task("T01", {"url": "www.example.com", "goal": "x", "tester": "T02"})
+
+    def test_result_waiting_for_answer_is_recoverable_and_blocks_another_free_task(self):
+        self.finish_assigned()
+        session = self.store.create_free_task("T01", {"url": "https://copies.fixture.test/", "goal": "정보 찾기"})
+        self.assertIsNone(self.store.current_free_task())
+        self.store.start_session(session["id"], study_ready=True)
+        self.assertEqual(session["id"], self.store.current_free_task()["id"])
+        self.store.end_task(session["id"], {"reason": "participant_gesture"})
+        self.assertIsNone(self.store.active_session())
+        self.assertEqual("answering", self.store.current_free_task()["status"])
+        with self.assertRaises(ApiError) as caught:
+            self.store.create_free_task("T01", {"url": "https://copies.fixture.test/next", "goal": "다음 정보 찾기"})
+        self.assertEqual(409, caught.exception.status)
+
+    def test_other_active_or_answering_session_blocks_free_creation(self):
+        self.finish_assigned()
+        session = self.store.create_session({"title": "Other session", "participant": "facilitator"})
+        self.store.start_session(session["id"])
+        with self.assertRaises(ApiError) as caught:
+            self.store.create_free_task("T01", {"url": "https://copies.fixture.test/", "goal": "정보 찾기"})
+        self.assertEqual(409, caught.exception.status)
 
 
 if __name__ == "__main__":

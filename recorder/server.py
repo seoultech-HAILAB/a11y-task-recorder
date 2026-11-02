@@ -342,6 +342,7 @@ class RecorderStore(StudyFlowMixin, AttemptsMixin, FreeTaskMixin):
         metadata.update({"catalog_id": catalog["id"], "assignment_id": task["id"],
                          "tester": tester, "total": progress["total"], "source": catalog["source"],
                          "catalog_revision": int(catalog.get("revision", 0)), "ui_mode": STUDY_UI_MODE})
+        metadata["requires_answer"] = task.get("requires_answer", True)
         if redo_reason:
             metadata["redo_reason"] = redo_reason
         attempt = source["round"] + 1 if retry_of else 1
@@ -1421,13 +1422,19 @@ class RecorderStore(StudyFlowMixin, AttemptsMixin, FreeTaskMixin):
             # 요소는 뒤따르는 focus 이벤트에서 채운다.
             if not name and role in {"", "알 수 없음", "unknown"}:
                 return None
-            return {
+            result = {
                 "name": name,
                 "role": role,
                 "scope": element.get("scope", "unknown"),
                 "ia2_unique_id": element.get("ia2_unique_id"),
                 "unique_id": element.get("unique_id", ""),
             }
+            # Preserve observed context rather than turning omitted evidence into
+            # an apparent unchanged state in the derived memory view.
+            for key in ("states", "frame", "document_url", "frame_attribution"):
+                if key in element:
+                    result[key] = element[key]
+            return result
 
         def new_row(event: Dict[str, Any], kind: str) -> Dict[str, Any]:
             offset = None
@@ -1466,6 +1473,10 @@ class RecorderStore(StudyFlowMixin, AttemptsMixin, FreeTaskMixin):
 
             if event_type in {"input", "keyboard"}:
                 current = new_row(event, "input")
+                current["detail"] = dict(payload)
+                # Keep the input-time observation even when its unnamed shell is
+                # later replaced by a useful arrival-focus element.
+                current["detail"]["input_element"] = dict(event.get("element") or {})
                 current["key"] = (
                     payload.get("display_name")
                     or payload.get("chord")
@@ -1489,6 +1500,9 @@ class RecorderStore(StudyFlowMixin, AttemptsMixin, FreeTaskMixin):
                     if delta >= 0:
                         listened = round(delta, 2)
                 spoken = {
+                    "event_id": event["id"],
+                    "timestamp": event["timestamp"],
+                    "speech_end_ts": event.get("speech_end_ts"),
                     "text": payload.get("normalized_text")
                     or payload.get("raw_text")
                     or payload.get("text", ""),
@@ -1514,10 +1528,9 @@ class RecorderStore(StudyFlowMixin, AttemptsMixin, FreeTaskMixin):
                 }
             elif event_type == "marker":
                 row = new_row(event, "marker")
-                row["detail"] = {
-                    "intensity": payload.get("intensity"),
-                    "label": payload.get("label", ""),
-                }
+                row["detail"] = dict(payload)
+                row["detail"].setdefault("intensity", None)
+                row["detail"].setdefault("label", "")
                 current = None
             elif event_type == "hint":
                 row = new_row(event, "hint")
@@ -1654,7 +1667,26 @@ class RecorderStore(StudyFlowMixin, AttemptsMixin, FreeTaskMixin):
             checks["attempt_valid"] = not aborted
             warning_labels["attempt_valid"] = "다시 시작하거나 테스터 번호를 바꿔 취소된 시도입니다. 분석에서 제외하세요."
             critical_checks += ("study_outcome_recorded", "attempt_valid")
+        free_task = (payload.get("study") or {}).get("kind") == FREE_KIND
+        # Explicit telemetry-loss markers must not disappear into a generic
+        # participant marker or be mistaken for a user's lack of response.
+        reported_gap = any(
+            (event.get("payload") or {}).get("kind") == "free_launch_buffer_overflow"
+            for event in payload["events"]
+        )
+        checks["no_reported_capture_gap"] = not reported_gap
+        warning_labels["no_reported_capture_gap"] = "기록기가 이벤트 유실을 보고했습니다. 누락 구간을 사용자 무반응으로 해석하지 마세요."
+        critical_checks += ("no_reported_capture_gap",)
+        if free_task:
+            # URL recognition cannot prove that NVDA input came from the popup
+            # owned by this session. No HWND/window ownership protocol exists yet.
+            checks["free_nvda_window_attribution_verified"] = False
+            warning_labels["free_nvda_window_attribution_verified"] = (
+                "자유 과업의 NVDA 창 소유권은 아직 검증되지 않았습니다. 메모리 사용 전 기록 범위를 확인하세요."
+            )
+            critical_checks += ("free_nvda_window_attribution_verified",)
         payload["data_quality"] = {
+            "intended_use": "memory_only" if free_task else "assigned_study" if payload.get("study") else "manual_review",
             "collection_check_passed": all(checks[name] for name in critical_checks),
             "checks": checks,
             "warnings": [
@@ -1889,6 +1921,9 @@ class RecorderHandler(BaseHTTPRequestHandler):
             return
         if path == "/api/uploads":
             self._json({"uploads": self.server.uploads.status(), "catalog": self.server.remote_catalog.status()})
+            return
+        if path == "/api/free-task/current":
+            self._json({"session": self.server.store.current_free_task()})
             return
         if path == "/api/signals":
             after = int((query.get("after") or ["0"])[0] or 0)

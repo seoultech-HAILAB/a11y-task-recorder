@@ -10,6 +10,8 @@ const frameHistories = new Map();
 // "tab" is the dashboard tab and the owned frame is that iframe.
 const STUDY_TAB_KEY = "a11yStudyOwnedTab";
 let studyCommands = Promise.resolve();
+let freeLaunch = null;
+let freeTabClaims = Promise.resolve();
 // Last sub-frame load error per tab ("net::ERR_BLOCKED_BY_CSP", "net::ERR_NAME_NOT_RESOLVED", ...):
 // a frame Chrome refused shows chrome-error://, which the readiness check would otherwise
 // only see as "still loading" until the dashboard gives up (Windows pilot, 10/28).
@@ -55,6 +57,7 @@ const isFree = session => session?.study?.kind === "free";
 
 async function freeCommand(message, session, state, dashboardTabId) {
   if (!freeUrlOk(session.target_url)) return studyFailure("invalid_assignment_url");
+  if (state?.sessionId === session.id && state.tabId !== dashboardTabId) return studyFailure("wrong_dashboard_tab");
   if (message.action === "status") return { ok: true, sessionId: session.id, status: session.status, frame_title: "" };
   if (message.action === "prepare" || message.action === "check") {
     if (session.status !== "draft") return studyFailure("session_finished");
@@ -68,25 +71,64 @@ async function freeCommand(message, session, state, dashboardTabId) {
   if (state?.sessionId !== session.id || state.mode !== "free") return studyFailure("not_prepared");
   if (message.action === "start") {
     if (session.status !== "draft") return studyFailure("already_started");
-    // Recording starts first, and the new window's tab is claimed as soon as Chrome creates it
-    // (tabs.onCreated), so the first page load is recorded. The window opens on the site itself:
-    // opened blank and then navigated, focus stayed in the address bar and the page was three F6
-    // presses away (Windows 11/02, 0.6.0). A normal window, not a popup: NVDA read an extension
-    // popup's name as "_crx_<extension id>" (0.6.1).
+    // Recording starts first; first-load events are buffered until the returned window identity
+    // confirms which new tabs belong to this task. The window opens on the site itself: opened
+    // blank and then navigated, focus stayed in the address bar and the page was three F6 presses
+    // away (Windows 11/02, 0.6.0). A normal window, not a popup: NVDA read an extension popup's
+    // name as "_crx_<extension id>" (0.6.1).
     await studyRequest(`/api/sessions/${session.id}/start`, { method: "POST", body: JSON.stringify({ study_ready: true }) });
     await getActiveSession(true);
-    let dashboardWindowId = null;
-    try { dashboardWindowId = (await chrome.tabs.get(state.tabId)).windowId; } catch { /* gone */ }
-    state.awaitingSite = { dashboardWindowId };
+    state.awaitingSite = true;
     state.siteTabIds = [];
     await saveState(state);
-    const win = await chrome.windows.create({ url: session.target_url, focused: true, type: "normal", state: "maximized" });
-    const tabId = win.tabs?.[0]?.id;
-    state = await loadState();
-    state.siteTabIds = [...new Set([...(state.siteTabIds || []), ...(Number.isInteger(tabId) ? [tabId] : [])])];
-    state.siteWindowId = win.id;
-    delete state.awaitingSite;
-    await saveState(state);
+    // Creation callbacks can arrive before windows.create resolves. Keep a bounded,
+    // volatile buffer; never send an unverified new window's events to the collector.
+    const launch = { sessionId: session.id, tabs: new Map(), events: [], bytes: 0, dropped: new Map() };
+    freeLaunch = launch;
+    let tabId, createdWindowId;
+    try {
+      const win = await chrome.windows.create({ url: session.target_url, focused: true, type: "normal", state: "maximized" });
+      createdWindowId = win?.id;
+      await freeTabClaims;
+      if (!Number.isInteger(win?.id)) throw new Error("free task window missing");
+      const owned = new Set((win.tabs || []).map(tab => tab.id).filter(Number.isInteger));
+      for (const tab of launch.tabs.values()) if (tab.windowId === win.id) owned.add(tab.id);
+      // A site can open another tab while the initial window is still loading.
+      for (let pass = 0; pass < launch.tabs.size; pass++) {
+        for (const tab of launch.tabs.values()) if (owned.has(tab.openerTabId)) owned.add(tab.id);
+      }
+      if (!owned.size) throw new Error("free task tab missing");
+      tabId = win.tabs?.[0]?.id || [...owned][0];
+      state = await loadState();
+      if (state?.sessionId !== session.id) throw new Error("free task changed during launch");
+      state.siteTabIds = [...owned];
+      state.siteWindowId = win.id;
+      delete state.awaitingSite;
+      await saveState(state);
+      freeLaunch = null;
+      for (const item of launch.events) {
+        if (owned.has(item.tabId)) await sendEvent(item.event, item.tabId, item.frameId, session.id);
+      }
+      const dropped = [...launch.dropped].reduce((n, [id, count]) => n + (owned.has(id) ? count : 0), 0);
+      if (dropped) await sendEvent({ type: "marker", payload: {
+        kind: "free_launch_buffer_overflow", evidence_kind: "recorder_metadata", dropped_events: dropped,
+      } }, tabId, 0, session.id);
+    } catch {
+      freeLaunch = null;
+      if (Number.isInteger(createdWindowId)) {
+        try { await chrome.windows.remove(createdWindowId); } catch { /* Window already gone. */ }
+      }
+      // Opening the window is a recorder failure, never a participant's blocked task.
+      try {
+        await studyRequest(`/api/sessions/${session.id}/stop`, { method: "POST", body: JSON.stringify({
+          status: "abandoned", study_outcome: "technical", entered_by: "system", answer: "",
+          notes: "free_window_open_failed",
+        }) });
+        await getActiveSession(true);
+        await saveState(null);
+      } catch { /* The dashboard recovers the still-active task and offers another end attempt. */ }
+      return studyFailure("free_window_open_failed");
+    }
     try {
       await studyRequest("/api/events", { method: "POST", body: JSON.stringify({
         session_id: session.id, timestamp: new Date().toISOString(), source: "browser",
@@ -116,6 +158,9 @@ async function freeCommand(message, session, state, dashboardTabId) {
 }
 
 async function closeSiteTabs(state) {
+  if (Number.isInteger(state.siteWindowId)) {
+    try { await chrome.windows.remove(state.siteWindowId); } catch { /* Already closed or unavailable in older runtimes. */ }
+  }
   for (const tabId of state.siteTabIds || []) {
     try { await chrome.tabs.remove(tabId); } catch { /* already closed */ }
   }
@@ -337,13 +382,23 @@ async function allowedFrame(session, tabId, frameId) {
   return Boolean(state && state.sessionId === session.id && state.tabId === tabId && state.frameId === frameId);
 }
 
-async function sendEvent(event, tabId = undefined, frameId = undefined) {
+async function sendEvent(event, tabId = undefined, frameId = undefined, expectedSessionId = undefined) {
   const capturedAt = event.timestamp || new Date().toISOString();
   let session = await getActiveSession();
   if ((!session || Date.parse(capturedAt) < Date.parse(session.started_at)) && previousSession) {
     session = previousSession;
   }
   if (!session) return { recorded: false, reason: "no_active_session" };
+  if (expectedSessionId && session.id !== expectedSessionId) return { recorded: false, reason: "session_changed" };
+  const launch = freeLaunch;
+  if (launch?.sessionId === session.id && Number.isInteger(tabId) && launch.tabs.has(tabId)) {
+    const size = JSON.stringify(event).length;
+    if (launch.events.length < 128 && launch.bytes + size <= 1024 * 1024) {
+      launch.events.push({ event: { ...event, timestamp: capturedAt }, tabId, frameId });
+      launch.bytes += size;
+    } else launch.dropped.set(tabId, (launch.dropped.get(tabId) || 0) + 1);
+    return { recorded: false, queued: true };
+  }
   if (!(await allowedFrame(session, tabId, frameId))) return { recorded: false, reason: "outside_task_frame" };
   if (session.id !== environmentReportedSession) {
     await reportBrowserEnvironment(session.id);
@@ -463,8 +518,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Only the dashboard's own sub-frame counts; an embed inside the copy has its own parent.
 const studyFrameEvent = (details) => details.frameId !== 0 && (details.parentFrameId ?? 0) === 0 && /^https?:/.test(details.url);
-chrome.webNavigation.onErrorOccurred.addListener((details) => {
+chrome.webNavigation.onErrorOccurred.addListener(async (details) => {
   if (studyFrameEvent(details)) frameErrors.set(details.tabId, { url: details.url, error: details.error });
+  if (/^https?:/.test(details.url) && isFree(await getActiveSession())) {
+    // An error page may never run the content script. Keep this technical evidence
+    // without guessing a participant outcome or treating missing events as an FE.
+    return sendEvent({ type: "marker", url: details.url,
+      timestamp: new Date(details.timeStamp || Date.now()).toISOString(),
+      payload: { kind: "free_navigation_error", evidence_kind: "browser_metadata", error: details.error },
+    }, details.tabId, details.frameId);
+  }
 });
 
 chrome.webNavigation.onCommitted.addListener((details) => {
@@ -497,13 +560,19 @@ chrome.webNavigation.onHistoryStateUpdated.addListener((details) => {
 });
 
 // A link that opens a new tab from the free-task site belongs to the task (0.6.0).
-chrome.tabs.onCreated?.addListener(async (tab) => {
-  const state = await loadState();
-  if (state?.mode !== "free") return;
-  const newWindow = state.awaitingSite && tab.windowId !== state.awaitingSite.dashboardWindowId;
-  if (!newWindow && !(state.siteTabIds || []).includes(tab.openerTabId)) return;
-  state.siteTabIds = [...state.siteTabIds, tab.id];
-  await saveState(state);
+chrome.tabs.onCreated?.addListener((tab) => {
+  freeTabClaims = freeTabClaims.catch(() => {}).then(async () => {
+    if (freeLaunch) {
+      if (Number.isInteger(tab.id) && freeLaunch.tabs.size < 32) freeLaunch.tabs.set(tab.id, tab);
+      return;
+    }
+    const state = await loadState();
+    if (state?.mode !== "free" || state.awaitingSite || !Number.isInteger(tab.id)) return;
+    if (tab.windowId !== state.siteWindowId && !(state.siteTabIds || []).includes(tab.openerTabId)) return;
+    state.siteTabIds = [...new Set([...(state.siteTabIds || []), tab.id])];
+    await saveState(state);
+  });
+  return freeTabClaims;
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {

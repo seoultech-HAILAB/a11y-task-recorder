@@ -19,7 +19,9 @@ def collector_class():
         if isinstance(node, ast.FunctionDef):
             node.decorator_list = []
     import urllib.request
-    namespace = {"queue": queue, "json": json, "urllib": urllib,
+    import urllib.parse
+    namespace = {"queue": queue, "json": json, "urllib": urllib, "urlsplit": urllib.parse.urlsplit,
+                 "controlTypes": SimpleNamespace(Role=SimpleNamespace()),
                  "utcNow": lambda: "2026-10-07T00:00:00.000Z",
                  "COLLECTOR_URL": "http://127.0.0.1:8765",
                  "REQUEST_TIMEOUT_SECONDS": 0.8, "log": MagicMock(),
@@ -209,7 +211,7 @@ class SingleWindowAddonTests(unittest.TestCase):
             self.assertIn(gesture, source)
 
     def test_frame_is_task_inside_internal_frame_and_recorder_outside(self):
-        roles = SimpleNamespace(INTERNALFRAME="frame", DOCUMENT="document")
+        roles = SimpleNamespace(INTERNALFRAME="frame", DOCUMENT="document", UNKNOWN="unknown")
         self.plugin._objectFrame.__globals__.update({"controlTypes": SimpleNamespace(Role=roles)})
         top = SimpleNamespace(role="document", parent=None)
         frame = SimpleNamespace(role="frame", parent=top)
@@ -269,7 +271,7 @@ class SingleWindowAddonTests(unittest.TestCase):
     def test_input_in_browse_mode_uses_the_virtual_cursor_object(self):
         # Windows 10/28 (F4): the focus object was "unknown, unavailable" for every key in the frame.
         self.plugin.__dict__.pop("_objectContext", None)
-        roles = SimpleNamespace(INTERNALFRAME="frame", DOCUMENT="document")
+        roles = SimpleNamespace(INTERNALFRAME="frame", DOCUMENT="document", UNKNOWN="unknown")
         top = SimpleNamespace(role="document", parent=None, name="A11y Task Recorder", states=[])
         frame = SimpleNamespace(role="frame", parent=top, name="과업 사이트", states=[])
         inner_doc = SimpleNamespace(role="document", parent=frame, name="한국에너지재단", states=[])

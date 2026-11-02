@@ -1,8 +1,23 @@
 """Shared helpers for the recorder store and its study-flow mixins."""
 
 import json
+import urllib.request
 from datetime import datetime, timezone
 from typing import Any, Optional
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        # Authenticated catalog/upload requests must never forward their bearer
+        # header or payload to a redirect destination, including same-origin ones.
+        return None
+
+
+def open_no_redirect(request, *, timeout, context=None):
+    opener = urllib.request.build_opener(
+        _NoRedirect(), urllib.request.HTTPSHandler(context=context)
+    )
+    return opener.open(request, timeout=timeout)
 
 
 def utc_now() -> str:

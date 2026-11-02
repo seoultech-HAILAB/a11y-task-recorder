@@ -19,6 +19,7 @@ class FakeCatalogServer:
 
     def __init__(self):
         self.catalog = None
+        self.redirect_to = None
         self.requests = []
         outer = self
 
@@ -28,6 +29,11 @@ class FakeCatalogServer:
 
             def do_GET(self):
                 outer.requests.append({"path": self.path, "auth": self.headers.get("Authorization")})
+                if outer.redirect_to:
+                    self.send_response(302)
+                    self.send_header("Location", outer.redirect_to)
+                    self.end_headers()
+                    return
                 if self.headers.get("Authorization") != "Bearer " + CODE:
                     status, data = 401, b'{"error":"unauthorized"}'
                 elif outer.catalog is None:
@@ -174,6 +180,101 @@ class RemoteCatalogTests(unittest.TestCase):
         self.assertIn("error", result)
         self.assertTrue(self.remote.status()["last_error"])
         self.assertEqual("t1", self.store.prepare_study("T01")["study"]["task_id"])
+
+    def test_newer_pending_revision_is_not_replaced_by_a_later_stale_response(self):
+        self.fake.catalog = catalog([task(1, instruction="Newest instruction")], revision=3)
+        self.remote.refresh()
+        self.fake.catalog = catalog([task(1, instruction="Stale instruction")], revision=2)
+        self.remote.refresh()
+        self.assertEqual(3, self.remote.status()["pending_revision"])
+        session = self.store.prepare_study("T01")
+        self.assertEqual("Newest instruction", session["scenario"])
+
+    def test_same_pending_revision_cannot_silently_change_its_content(self):
+        self.fake.catalog = catalog([task(1, instruction="First revision content")], revision=2)
+        self.remote.refresh()
+        self.fake.catalog = catalog([task(1, instruction="Changed without revision")], revision=2)
+        self.remote.refresh()
+        self.assertEqual("revision_conflict", self.remote.status()["last_error"])
+        self.assertEqual("First revision content", self.store.prepare_study("T01")["scenario"])
+
+    def test_started_assignment_cannot_be_relabelled_as_a_different_goal(self):
+        first = self.store.prepare_study("T01")
+        self.finish(first)
+        self.fake.catalog = catalog([task(1, instruction="A different goal"), task(2)], revision=1)
+        self.remote.refresh()
+        second = self.store.prepare_study("T01")
+        self.assertEqual(0, self.remote.status()["revision"])
+        self.assertIn("changed executed content", self.remote.status()["last_error"])
+        self.assertEqual("t2", second["study"]["task_id"])
+        self.assertEqual("Find item 1", self.store.get_session(first["id"])["scenario"])
+
+    def test_executed_url_preparation_limit_and_answer_contract_are_immutable(self):
+        self.finish(self.store.prepare_study("T01"))
+        for field, value in [("start_url", SITE + "different.html"),
+                             ("preparation", ["different precondition"]),
+                             ("time_limit_seconds", 30), ("requires_answer", False)]:
+            with self.subTest(field=field):
+                self.fake.catalog = catalog([task(1, **{field: value}), task(2)], revision=1)
+                self.remote.refresh()
+                self.store.prepare_study("T01")
+                self.assertEqual(0, self.remote.status()["revision"])
+                self.assertIn("changed executed content", self.remote.status()["last_error"])
+
+    def test_removed_assignment_cannot_return_with_a_different_recorded_goal(self):
+        first = self.store.prepare_study("T01")
+        self.finish(first)
+        self.fake.catalog = catalog([task(1, id="T01-a2", task_id="t2")], revision=1)
+        self.remote.refresh()
+        self.store.prepare_study("T01")
+        self.assertEqual(1, self.remote.status()["revision"])
+        self.fake.catalog = catalog([task(1, instruction="Changed after removal"), task(2)], revision=2)
+        self.remote.refresh()
+        self.store.prepare_study("T01")
+        self.assertEqual(1, self.remote.status()["revision"])
+        self.assertIn("changed executed content", self.remote.status()["last_error"])
+
+    def test_assignment_with_history_cannot_move_to_a_different_tester(self):
+        self.finish(self.store.prepare_study("T01"))
+        changed = catalog([task(1, id="new-assignment", task_id="new-task")], revision=1)
+        changed["testers"].append({"id": "T02", "tasks": [task(1)]})
+        self.fake.catalog = changed
+        self.remote.refresh()
+        self.store.prepare_study("T01")
+        self.assertEqual(0, self.remote.status()["revision"])
+        self.assertIn("changed its tester", self.remote.status()["last_error"])
+
+    def test_catalog_redirect_never_forwards_the_kit_bearer(self):
+        receiver = FakeCatalogServer()
+        self.addCleanup(receiver.close)
+        receiver.catalog = catalog([task(1)], revision=1)
+        self.fake.redirect_to = receiver.origin + "/study/catalog/catalog-remote"
+        self.assertEqual({"status": 302}, self.remote.refresh())
+        self.assertEqual([], receiver.requests)
+        self.assertIsNone(self.remote.status()["pending_revision"])
+
+    def test_remote_tasks_must_be_runnable_before_revision_is_queued(self):
+        cases = [("start_url", SITE + "page.html?query=fixture"),
+                 ("start_url", SITE + "page.html#section"),
+                 ("start_url", "https://user:password@study.example.test/page.html"),
+                 ("start_url", "https://study.example.test:invalid/page.html"),
+                 ("time_limit_seconds", 0), ("time_limit_seconds", -1),
+                 ("time_limit_seconds", "600"), ("time_limit_seconds", True),
+                 ("requires_answer", "false")]
+        for field, value in cases:
+            with self.subTest(field=field, value=value):
+                self.fake.catalog = catalog([task(1, **{field: value})], revision=1)
+                self.assertEqual({"error": "invalid"}, self.remote.refresh())
+                self.assertIsNone(self.remote.status()["pending_revision"])
+                self.assertEqual(0, self.remote.status()["revision"])
+
+    def test_origin_comparison_uses_case_and_default_port_equivalence(self):
+        self.fake.catalog = catalog([task(1, start_url="https://STUDY.example.test:443/page.html")], revision=1)
+        self.assertEqual({"revision": 1}, self.remote.refresh())
+        self.assertEqual(1, self.remote.status()["pending_revision"])
+        self.fake.catalog = catalog([task(1, start_url="https://study.example.test:444/page.html")], revision=2)
+        self.assertEqual({"error": "invalid"}, self.remote.refresh())
+        self.assertEqual(1, self.remote.status()["pending_revision"])
 
 
 if __name__ == "__main__":

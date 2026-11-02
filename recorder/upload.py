@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlsplit
 
-from recorder.common import ApiError, json_load, utc_now
+from recorder.common import ApiError, json_load, utc_now, open_no_redirect
 
 UPLOAD_PATH = "/upload/session"
 UPLOAD_TIMEOUT_SECONDS = 20
@@ -274,8 +274,8 @@ class UploadManager:
             },
         )
         try:
-            with urllib.request.urlopen(request, timeout=UPLOAD_TIMEOUT_SECONDS,
-                                        context=ssl.create_default_context()) as response:
+            with open_no_redirect(request, timeout=UPLOAD_TIMEOUT_SECONDS,
+                                  context=ssl.create_default_context()) as response:
                 reply = json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as error:
             detail = ""

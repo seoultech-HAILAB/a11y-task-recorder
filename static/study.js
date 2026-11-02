@@ -268,6 +268,7 @@ window.Study = (() => {
       }
     } catch (error) { message(error.message, true); }
     resumePolling();
+    window.dispatchEvent(new Event("a11y-study-ready"));
   }
   // Typed number to a catalog id: "t1", "1", "01" and "T01" all name T01.
   function matchTester(raw) {
@@ -290,7 +291,8 @@ window.Study = (() => {
   }
   async function assertNoOtherRecording(tester) {
     const active = (await api("/active-session")).session;
-    if (active && active.study?.tester !== tester) {
+    const free = (await api("/free-task/current")).session;
+    if ((active && active.study?.tester !== tester) || (free && free.study?.tester !== tester)) {
       el("study-tester").value = view.tester || "";
       throw new Error("다른 과업이 기록 중입니다. 연구진에게 알려 주세요.");
     }

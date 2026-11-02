@@ -11,7 +11,7 @@ task is finished. The site opens in its own browser tab instead of the dashboard
 import json
 import uuid
 from http import HTTPStatus
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from urllib.parse import urlsplit
 
 from recorder.common import ApiError, utc_now
@@ -28,8 +28,8 @@ def free_url(value: Any) -> str:
     url = str(value or "").strip()
     if url and "://" not in url:
         url = "https://" + url
-    parts = urlsplit(url)
     try:
+        parts = urlsplit(url)
         parts.port  # "javascript:alert(1)" would become host "javascript", port "alert(1)"
     except ValueError:
         raise ApiError(HTTPStatus.BAD_REQUEST, "사이트 주소를 확인해 주세요. 예: www.example.com") from None
@@ -42,6 +42,15 @@ def free_url(value: Any) -> str:
 
 
 class FreeTaskMixin:
+    def current_free_task(self) -> Optional[Dict[str, Any]]:
+        """Recover an unfinished free task, including its unsaved result form."""
+        with self.connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM sessions WHERE status IN ('active', 'answering') AND study LIKE ?"
+                " ORDER BY created_at DESC LIMIT 1", ('%"kind": "free"%',)
+            ).fetchone()
+        return self.session_from_row(row) if row else None
+
     def create_free_task(self, tester: str, data: Dict[str, Any]) -> Dict[str, Any]:
         if set(data) - {"url", "goal"}:
             raise ApiError(HTTPStatus.BAD_REQUEST, "사이트 주소와 하려는 일만 보낼 수 있습니다.")
@@ -55,6 +64,8 @@ class FreeTaskMixin:
             progress = self._study_progress(connection, catalog, tester)
             if progress["finished"] < progress["total"]:
                 raise ApiError(HTTPStatus.CONFLICT, "배정 과업을 모두 마친 뒤에 자유 과업을 할 수 있습니다.")
+            if connection.execute("SELECT 1 FROM sessions WHERE status IN ('active', 'answering') LIMIT 1").fetchone():
+                raise ApiError(HTTPStatus.CONFLICT, "진행 중이거나 결과를 저장하지 않은 과업이 있습니다.")
             busy = connection.execute(
                 "SELECT id FROM sessions WHERE status IN ('draft', 'active', 'answering') AND study LIKE ? LIMIT 1",
                 ('%"kind": "free"%',)).fetchone()

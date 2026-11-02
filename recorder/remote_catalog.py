@@ -24,7 +24,7 @@ import urllib.request
 from typing import Any, Dict, Optional
 from urllib.parse import quote, urlsplit
 
-from recorder.common import utc_now
+from recorder.common import open_no_redirect, utc_now
 from recorder.study import load_catalog, parse_catalog, task_origins
 
 CATALOG_PATH = "/study/catalog/"
@@ -73,8 +73,8 @@ class RemoteCatalog:
             }
 
     # ---- fetch --------------------------------------------------------------------
-    def url(self) -> Optional[str]:
-        settings = self.uploads.settings()
+    def url(self, settings: Optional[Dict[str, Any]] = None) -> Optional[str]:
+        settings = self.uploads.settings() if settings is None else settings
         parts = urlsplit(settings["url"] or "")
         if not settings["code"] or parts.scheme not in {"https", "http"} or not parts.netloc:
             return None
@@ -87,19 +87,20 @@ class RemoteCatalog:
             return {"skipped": "busy"}
         try:
             try:
-                url = self.url()
+                settings = self.uploads.settings()
+                url = self.url(settings)
             except (OSError, ValueError, KeyError, TypeError):
                 return {"skipped": "no_kit_catalog"}
             if not url:
                 return {"skipped": "not_configured"}
             request = urllib.request.Request(url, headers={
                 "Accept": "application/json",
-                "Authorization": "Bearer {}".format(self.uploads.settings()["code"]),
+                "Authorization": "Bearer {}".format(settings["code"]),
                 "X-Recorder-Version": self.uploads.version,
             })
             try:
-                with urllib.request.urlopen(request, timeout=FETCH_TIMEOUT_SECONDS,
-                                            context=ssl.create_default_context()) as response:
+                with open_no_redirect(request, timeout=FETCH_TIMEOUT_SECONDS,
+                                      context=ssl.create_default_context()) as response:
                     body = response.read(MAX_CATALOG_BYTES + 1)
             except urllib.error.HTTPError as error:
                 # 404: the server has no catalog for this kit, so the kit's own stays in use.
@@ -116,8 +117,19 @@ class RemoteCatalog:
                 self._note(error="invalid: {}".format(error)[:200])
                 return {"error": "invalid"}
             with self.store.connect() as connection:
+                # Serialize with apply_pending: neither a newer pending response nor
+                # a just-applied revision may be replaced by a stale network result.
+                connection.execute("BEGIN IMMEDIATE")
                 current = self.store._study_catalog(connection)
-                if catalog["revision"] > int(current.get("revision", 0)):
+                pending = self._get(connection, "remote_catalog_pending")
+                pending_catalog = json.loads(pending) if pending else None
+                newest = current
+                if pending_catalog and pending_catalog["revision"] > int(current.get("revision", 0)):
+                    newest = pending_catalog
+                if catalog["revision"] == int(newest.get("revision", 0)) and catalog != newest:
+                    self._set(connection, checked_at=utc_now(), error="revision_conflict")
+                    return {"error": "revision_conflict"}
+                if catalog["revision"] > int(newest.get("revision", 0)):
                     self._set(connection, pending=json.dumps(catalog, ensure_ascii=False))
                 self._set(connection, checked_at=utc_now(), error="")
             return {"revision": catalog["revision"]}
@@ -126,12 +138,34 @@ class RemoteCatalog:
 
     def validate(self, raw: Dict[str, Any]) -> Dict[str, Any]:
         kit = load_catalog(self.store.study_catalog_path)
+        # Reject coercions before parse_catalog normalizes optional flags. Otherwise
+        # a valid remote revision can install tasks the extension cannot start.
+        for tester in raw["testers"]:
+            for task in tester["tasks"]:
+                if "requires_answer" in task and type(task["requires_answer"]) is not bool:
+                    raise ValueError("requires_answer must be boolean")
+                if type(task["time_limit_seconds"]) is not int or task["time_limit_seconds"] <= 0:
+                    raise ValueError("time_limit_seconds must be a positive integer")
+                value = task["start_url"]
+                if not isinstance(value, str):
+                    raise ValueError("invalid assignment URL")
+                parts = urlsplit(value)
+                parts.port  # Also reject malformed/out-of-range ports.
+                if (parts.scheme not in {"http", "https"} or not parts.hostname or
+                        parts.username or parts.password or parts.query or parts.fragment):
+                    raise ValueError("invalid assignment URL")
         catalog = parse_catalog(raw)
         if catalog["id"] != kit["id"]:
             raise ValueError("catalog id differs from the kit")
         if catalog.get("revision", 0) < 1:
             raise ValueError("remote catalog needs a revision")
-        if not task_origins(catalog) <= task_origins(kit):
+        def canonical_origin(value: str) -> tuple:
+            parts = urlsplit(value)
+            port = parts.port if parts.port is not None else (443 if parts.scheme == "https" else 80)
+            return parts.scheme, parts.hostname, port
+
+        if not {canonical_origin(value) for value in task_origins(catalog)} <= {
+                canonical_origin(value) for value in task_origins(kit)}:
             raise ValueError("start URL outside the kit's sites")
         catalog.pop("upload_url", None)
         if kit.get("upload_url"):
@@ -146,6 +180,7 @@ class RemoteCatalog:
             return None
         catalog = json.loads(pending)
         current = self.store._study_catalog(connection)
+        old_tasks = {task["id"]: task for tester in current["testers"] for task in tester["tasks"]}
         error = ""
         if catalog["id"] != current["id"] or catalog["revision"] <= int(current.get("revision", 0)):
             error = "stale"
@@ -153,18 +188,36 @@ class RemoteCatalog:
             return None  # a task is under way; try at the next preparation
         else:
             new_tasks = {task["id"]: task for tester in catalog["testers"] for task in tester["tasks"]}
+            new_owners = {task["id"]: tester["id"] for tester in catalog["testers"] for task in tester["tasks"]}
             for row in connection.execute(
-                "SELECT a.assignment_id, s.study FROM study_attempts a JOIN sessions s ON s.id = a.session_id"
+                "SELECT a.assignment_id, a.tester, s.study, s.started_at, s.target_url, s.scenario"
+                " FROM study_attempts a JOIN sessions s ON s.id = a.session_id"
                 " WHERE a.catalog_id = ?", (current["id"],)
             ).fetchall():
                 task = new_tasks.get(row["assignment_id"])
-                if task and task["task_id"] != json.loads(row["study"] or "{}").get("task_id"):
+                recorded = json.loads(row["study"] or "{}")
+                if task and new_owners[row["assignment_id"]] != row["tester"]:
+                    error = "assignment {} changed its tester".format(row["assignment_id"])
+                    break
+                if task and task["task_id"] != recorded.get("task_id"):
                     error = "assignment {} changed its task".format(row["assignment_id"])
                     break
+                if task and row["started_at"]:
+                    # Progress joins by assignment id. Reusing it for a different
+                    # task definition would mark the new task already completed.
+                    snapshot = {"task_id": recorded.get("task_id"), "start_url": row["target_url"],
+                                "instruction": row["scenario"], "preparation": recorded.get("preparation"),
+                                "time_limit_seconds": recorded.get("time_limit_seconds")}
+                    if "requires_answer" in recorded:
+                        snapshot["requires_answer"] = recorded["requires_answer"]
+                    elif row["assignment_id"] in old_tasks:
+                        snapshot["requires_answer"] = old_tasks[row["assignment_id"]].get("requires_answer", True)
+                    if any(task.get(key) != value for key, value in snapshot.items()):
+                        error = "assignment {} changed executed content".format(row["assignment_id"])
+                        break
         if error:
             self._set(connection, pending="", error=error[:200])
             return None
-        old_tasks = {task["id"]: task for tester in current["testers"] for task in tester["tasks"]}
         now = utc_now()
         for row in connection.execute(
             "SELECT s.id, a.assignment_id FROM sessions s JOIN study_attempts a ON s.id = a.session_id"
