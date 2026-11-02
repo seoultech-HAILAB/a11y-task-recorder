@@ -126,7 +126,9 @@ if errorlevel 1 (
 echo NVDA 애드온 연결을 확인하는 중입니다...
 powershell -NoProfile -Command "$ok=$false; for($i=0;$i -lt 20;$i++){ try { if((Invoke-RestMethod 'http://127.0.0.1:8765/api/health' -TimeoutSec 1).nvda_connected){$ok=$true;break} } catch {}; Start-Sleep -Milliseconds 700 }; if($ok){ Write-Host 'NVDA 애드온 연결 확인됨.' } else { Write-Host '경고: NVDA 애드온이 연결되지 않았습니다. 기록 시작은 차단됩니다.' }"
 :resume_dashboard
-start "" "%KIT%app\\chrome\\chrome.exe" --load-extension="%KIT%app\\browser-extension" --user-data-dir="%KIT%app\\chrome-profile-@@EXTENSION_VERSION@@" --no-first-run --no-default-browser-check --start-maximized --app="http://127.0.0.1:8765"
+rem 0.6.2: a free task hides the recorder page behind its own window; Chrome slowed that page's
+rem timers and NVDA+Ctrl+E took 49.8 s to end the task (Windows 11/02). Background throttling is off.
+start "" "%KIT%app\\chrome\\chrome.exe" --load-extension="%KIT%app\\browser-extension" --user-data-dir="%KIT%app\\chrome-profile-@@EXTENSION_VERSION@@" --no-first-run --no-default-browser-check --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --start-maximized --app="http://127.0.0.1:8765"
 endlocal
 """
 

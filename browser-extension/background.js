@@ -69,9 +69,10 @@ async function freeCommand(message, session, state, dashboardTabId) {
   if (message.action === "start") {
     if (session.status !== "draft") return studyFailure("already_started");
     // Recording starts first, and the new window's tab is claimed as soon as Chrome creates it
-    // (tabs.onCreated), so the first page load is recorded. The window opens on the site itself as
-    // a popup (no address bar): opened blank and then navigated, focus stayed in the address bar
-    // and the page was three F6 presses away (Windows 11/02).
+    // (tabs.onCreated), so the first page load is recorded. The window opens on the site itself:
+    // opened blank and then navigated, focus stayed in the address bar and the page was three F6
+    // presses away (Windows 11/02, 0.6.0). A normal window, not a popup: NVDA read an extension
+    // popup's name as "_crx_<extension id>" (0.6.1).
     await studyRequest(`/api/sessions/${session.id}/start`, { method: "POST", body: JSON.stringify({ study_ready: true }) });
     await getActiveSession(true);
     let dashboardWindowId = null;
@@ -79,7 +80,7 @@ async function freeCommand(message, session, state, dashboardTabId) {
     state.awaitingSite = { dashboardWindowId };
     state.siteTabIds = [];
     await saveState(state);
-    const win = await chrome.windows.create({ url: session.target_url, focused: true, type: "popup", state: "maximized" });
+    const win = await chrome.windows.create({ url: session.target_url, focused: true, type: "normal", state: "maximized" });
     const tabId = win.tabs?.[0]?.id;
     state = await loadState();
     state.siteTabIds = [...new Set([...(state.siteTabIds || []), ...(Number.isInteger(tabId) ? [tabId] : [])])];

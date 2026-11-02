@@ -178,7 +178,7 @@ test('manifest runs the content script in all frames and declares no browser com
   const manifest = JSON.parse(fs.readFileSync('browser-extension/manifest.json', 'utf8'));
   assert.equal(manifest.commands, undefined);
   assert.ok(manifest.content_scripts.every(entry => entry.all_frames === true));
-  assert.equal(manifest.version, '0.6.1');
+  assert.equal(manifest.version, '0.6.2');
   assert.equal(/chrome\.commands/.test(fs.readFileSync('browser-extension/background.js', 'utf8')), false);
 });
 
@@ -499,7 +499,7 @@ test('free task (0.6.0): its own window, recorded there only, closed when the ta
   assert.equal((await app.command('start', 'free')).started, true);
   const plain = value => JSON.parse(JSON.stringify(value));
   assert.deepEqual(plain(app.calls.find(c => c[0] === 'window')),
-    ['window', { url: 'https://www.example.com/a?q=1', focused: true, type: 'popup', state: 'maximized' }]);
+    ['window', { url: 'https://www.example.com/a?q=1', focused: true, type: 'normal', state: 'maximized' }]);
   assert.equal(app.events().at(-1).payload.ui_mode, 'free_tab');
   const before = app.events().length;
   const event = { kind: 'recorder-event', event: { type: 'focus', url: 'https://www.example.com/a?q=1' } };
