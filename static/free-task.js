@@ -60,6 +60,9 @@
     await bridge("prepare", session.id);
     state.seq = (await api(`/signals?after=${Number.MAX_SAFE_INTEGER}`)).seq;
     await bridge("start", session.id);
+    // The created session was a draft; watch() acts only on an active one (Windows 11/02: the end
+    // gesture was ignored 2 of 2 until a reload read the session again).
+    state.session = (await api(`/sessions/${session.id}`)).session;
     state.startedAt = Date.now();
     watch();
     return null; // the new window has focus

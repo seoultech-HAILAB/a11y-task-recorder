@@ -223,6 +223,13 @@ class SingleWindowAddonTests(unittest.TestCase):
         self.assertEqual("task", self.plugin._objectFrame(SimpleNamespace(role="link", parent=site)))
         recorder = SimpleNamespace(role="document", parent=None, value="http://127.0.0.1:8765/?tester=T01")
         self.assertEqual("recorder", self.plugin._objectFrame(SimpleNamespace(role="button", parent=recorder)))
+        # NVDA hides a Chrome document's value; the browse-mode buffer names the page (Windows 11/02).
+        hidden = SimpleNamespace(role="document", parent=None, value=None)
+        buffer = SimpleNamespace(documentConstantIdentifier="https://www.naver.com/")
+        self.assertEqual("task", self.plugin._objectFrame(SimpleNamespace(role="combobox", parent=hidden, treeInterceptor=buffer)))
+        own = SimpleNamespace(documentConstantIdentifier="http://127.0.0.1:8765/?tester=T01")
+        self.assertEqual("recorder", self.plugin._objectFrame(SimpleNamespace(role="button", parent=hidden, treeInterceptor=own)))
+        self.assertEqual("recorder", self.plugin._objectFrame(SimpleNamespace(role="button", parent=hidden)))
 
     def test_end_gesture_syncs_focus_to_the_browse_cursor_first(self):
         # Windows 10/29: 과업으로 돌아가기 went to the last system focus, not where the participant read.

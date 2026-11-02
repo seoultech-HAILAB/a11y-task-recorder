@@ -807,11 +807,27 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
             except Exception:
                 break
         if outerDocument is not None:
-            # Chrome gives a document's URL as its value.
-            url = safeString(getattr(outerDocument, "value", ""), 300)
+            url = self._documentUrl(outerDocument, obj)
             if url.startswith(("http://", "https://")) and not url.startswith(COLLECTOR_URL):
                 return "task"
         return "recorder"
+
+    def _documentUrl(self, document, obj):
+        """The page URL. NVDA hides a Chrome document's value (0.6.0 Windows 11/02: 116 of 117
+        free-task inputs were filed as "recorder"), so the browse-mode buffer's identifier, which
+        is the URL in Chromium, comes first and the raw IAccessible value second."""
+        for source in (obj, document):
+            try:
+                url = safeString(getattr(getattr(source, "treeInterceptor", None), "documentConstantIdentifier", ""), 300)
+                if url:
+                    return url
+            except Exception:
+                pass
+        try:
+            return safeString(document.IAccessibleObject.accValue(document.IAccessibleChildID), 300)
+        except Exception:
+            pass
+        return safeString(getattr(document, "value", ""), 300)
 
     def _elementKey(self, element):
         return safeString(

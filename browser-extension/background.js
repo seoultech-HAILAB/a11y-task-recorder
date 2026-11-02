@@ -68,15 +68,24 @@ async function freeCommand(message, session, state, dashboardTabId) {
   if (state?.sessionId !== session.id || state.mode !== "free") return studyFailure("not_prepared");
   if (message.action === "start") {
     if (session.status !== "draft") return studyFailure("already_started");
-    // Recording starts first and the window opens blank, so the first page load is recorded.
+    // Recording starts first, and the new window's tab is claimed as soon as Chrome creates it
+    // (tabs.onCreated), so the first page load is recorded. The window opens on the site itself as
+    // a popup (no address bar): opened blank and then navigated, focus stayed in the address bar
+    // and the page was three F6 presses away (Windows 11/02).
     await studyRequest(`/api/sessions/${session.id}/start`, { method: "POST", body: JSON.stringify({ study_ready: true }) });
     await getActiveSession(true);
-    const win = await chrome.windows.create({ url: "about:blank", focused: true, type: "normal" });
-    const tabId = win.tabs?.[0]?.id;
-    state.siteTabIds = Number.isInteger(tabId) ? [tabId] : [];
-    state.siteWindowId = win.id;
+    let dashboardWindowId = null;
+    try { dashboardWindowId = (await chrome.tabs.get(state.tabId)).windowId; } catch { /* gone */ }
+    state.awaitingSite = { dashboardWindowId };
+    state.siteTabIds = [];
     await saveState(state);
-    if (Number.isInteger(tabId)) await chrome.tabs.update(tabId, { url: session.target_url });
+    const win = await chrome.windows.create({ url: session.target_url, focused: true, type: "popup", state: "maximized" });
+    const tabId = win.tabs?.[0]?.id;
+    state = await loadState();
+    state.siteTabIds = [...new Set([...(state.siteTabIds || []), ...(Number.isInteger(tabId) ? [tabId] : [])])];
+    state.siteWindowId = win.id;
+    delete state.awaitingSite;
+    await saveState(state);
     try {
       await studyRequest("/api/events", { method: "POST", body: JSON.stringify({
         session_id: session.id, timestamp: new Date().toISOString(), source: "browser",
@@ -489,7 +498,9 @@ chrome.webNavigation.onHistoryStateUpdated.addListener((details) => {
 // A link that opens a new tab from the free-task site belongs to the task (0.6.0).
 chrome.tabs.onCreated?.addListener(async (tab) => {
   const state = await loadState();
-  if (state?.mode !== "free" || !(state.siteTabIds || []).includes(tab.openerTabId)) return;
+  if (state?.mode !== "free") return;
+  const newWindow = state.awaitingSite && tab.windowId !== state.awaitingSite.dashboardWindowId;
+  if (!newWindow && !(state.siteTabIds || []).includes(tab.openerTabId)) return;
   state.siteTabIds = [...state.siteTabIds, tab.id];
   await saveState(state);
 });
